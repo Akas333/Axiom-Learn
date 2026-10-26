@@ -116,6 +116,11 @@ export interface CanvasColors {
 	edge: string;
 	label: string;
 	hoverText: string;
+	/** Hover highlight for the node, its neighbours and their links
+	 *  (falls back to hoverText). */
+	accent?: string;
+	/** Page background, for the outline behind cluster names. */
+	background?: string;
 }
 
 export interface CanvasData {
@@ -299,6 +304,93 @@ const LIVE_ALPHA_DECAY = 0.05; // snappier anneal than the settle's 0.0228
 const DRAG_ALPHA_TARGET = 0.3; // d3-drag's own reheat constant
 const SIM_SETTLE_ALPHA = 0.005; // below this, the sim counts as settled
 const COMMIT_DEBOUNCE_MS = 250; // settle → ledger PUT delay (new drags cancel)
+/** Opening warm-up: the graph drifts into place instead of appearing frozen. */
+const OPEN_ALPHA = 0.35;
+
+/** Obsidian-style look. */
+const EDGE_REST_ALPHA = 0.42; // links at rest: visible but quiet
+const NODE_DIM_ALPHA = 0.15; // non-neighbours while a node is hovered
+const EDGE_DIM_ALPHA = 0.05;
+/** Node radius grows with link count: r = nodeSize × (BASE + STEP·√degree), capped. */
+const DEGREE_BASE = 0.8;
+const DEGREE_STEP = 0.35;
+const DEGREE_MAX_SCALE = 2.6;
+/** Concept-group colours, biggest group first (cycled past the end).
+ *  Nodes in no group (isolated, or a lone pair) stay grey. */
+export const CONCEPT_PALETTE = [
+	"#e5534b", // red
+	"#4c9aff", // blue
+	"#57c785", // green
+	"#e6a23c", // amber
+	"#a371f7", // purple
+	"#39c5cf", // teal
+	"#f778ba", // pink
+	"#ff8c42", // orange
+	"#b4d455", // lime
+	"#8b9eff", // periwinkle
+] as const;
+/** Smallest set of linked nodes that counts as a concept group. */
+const MIN_GROUP_SIZE = 3;
+/** Node names stay readable at the overview zoom (zooming in brings them to full). */
+const LABEL_REST_FLOOR = 0.55;
+
+/**
+ * Concept groups from the link structure (label propagation): every node
+ * starts as its own group and repeatedly joins the group most common among
+ * its neighbours, until nothing changes. Deterministic — nodes visit in id
+ * order and ties go to the smallest group id. Returns node id → group
+ * index (0 = biggest group), leaving out groups under MIN_GROUP_SIZE.
+ * Pure: exported for tests.
+ */
+export function conceptGroups(
+	ids: readonly string[],
+	neighbors: ReadonlyMap<string, ReadonlySet<string>>,
+	maxRounds = 30,
+): Map<string, number> {
+	const order = [...ids].sort();
+	const label = new Map(order.map((id) => [id, id]));
+	for (let round = 0; round < maxRounds; round++) {
+		let changed = false;
+		for (const id of order) {
+			const nb = neighbors.get(id);
+			if (!nb || nb.size === 0) continue;
+			const counts = new Map<string, number>();
+			for (const other of nb) {
+				const l = label.get(other);
+				if (l !== undefined) counts.set(l, (counts.get(l) ?? 0) + 1);
+			}
+			let best = label.get(id)!;
+			let bestCount = counts.get(best) ?? 0;
+			for (const [l, c] of counts) {
+				if (c > bestCount || (c === bestCount && l < best)) {
+					best = l;
+					bestCount = c;
+				}
+			}
+			if (best !== label.get(id)) {
+				label.set(id, best);
+				changed = true;
+			}
+		}
+		if (!changed) break;
+	}
+	const members = new Map<string, string[]>();
+	for (const [id, l] of label) {
+		let list = members.get(l);
+		if (!list) members.set(l, (list = []));
+		list.push(id);
+	}
+	const groups = [...members.values()]
+		.filter((m) => m.length >= MIN_GROUP_SIZE)
+		.sort((a, b) => b.length - a.length || (a[0]! < b[0]! ? -1 : 1));
+	const out = new Map<string, number>();
+	groups.forEach((m, i) => {
+		for (const id of m) out.set(id, i);
+	});
+	return out;
+}
+/** Screen px between a cluster's topmost node and its name. */
+const CLUSTER_LABEL_GAP = 14;
 
 /** Cluster region styling — a low-res world-space SPLAT bitmap (the
  *  density-field technique, Canvas-2D edition): every member node paints
@@ -557,11 +649,12 @@ function drawNameLines(
 	lines: string[],
 	world: WorldSizes,
 	color: string,
+	radius: number = world.nodeR,
 ): void {
 	context.fillStyle = color;
 	context.textAlign = "center";
 	context.textBaseline = "top";
-	const firstTop = y + world.nodeR + world.labelGap;
+	const firstTop = y + radius + world.labelGap;
 	for (let i = 0; i < lines.length; i++) {
 		context.fillText(lines[i]!, x, firstTop + i * world.labelSize * LABEL_LINE_HEIGHT);
 	}
@@ -658,6 +751,10 @@ export class GraphCanvasRenderer {
 	private regionRect: { minX: number; minY: number; w: number; h: number } | null = null;
 	/** Region labels: cluster centroid + hue, computed at splat build. */
 	private regionMeta: { id: string; label: string | null; lines: string[] | null; cx: number; cy: number; hue: number }[] = [];
+	/** Concept-group colour per node id (absent = no group, plain grey). */
+	private colorById = new Map<string, string>();
+	/** Node discs grouped by fill: ungrouped first (color null), then one per group. */
+	private nodeGroups: { color: string | null; path: Path2D }[] = [];
 	private regionTuning: RegionTuning = DEFAULT_REGION_TUNING;
 	private physicsTuning: PhysicsTuning = DEFAULT_PHYSICS_TUNING;
 	/** Gravity center for the live sim (graph bbox centroid at setData). */
@@ -665,6 +762,16 @@ export class GraphCanvasRenderer {
 	private regionBuiltVersion = -1;
 	private frameCount = 0; // draw counter for the live-sim splat throttle
 	private labelLines = new Map<string, string[]>();
+	/** Per-node disc radius (world units), sized by link count. */
+	private radiusById = new Map<string, number>();
+	/** Proposition-level neighbours (implication junctions contracted). */
+	private neighbors = new Map<string, Set<string>>();
+	/** Straight node→node links drawn on the canvas. */
+	private links: { a: CanvasNode; b: CanvasNode }[] = [];
+	/** Page colour for the outline behind cluster names. */
+	private pageBackground = "#111112";
+	/** One-shot warm-up on the first data. */
+	private warmedUp = false;
 	private worldLabelFont = "";
 	private world: WorldSizes = { nodeR: 0, glowOuter: 0, labelSize: 0, labelGap: 0 };
 
@@ -768,6 +875,7 @@ export class GraphCanvasRenderer {
 	setData(data: CanvasData): void {
 		this.data = data;
 		this.nodeById = new Map(data.nodes.map((n) => [n.id, n]));
+		if (data.colors.background) this.pageBackground = data.colors.background;
 		let minX = Infinity;
 		let minY = Infinity;
 		let maxX = -Infinity;
@@ -795,7 +903,15 @@ export class GraphCanvasRenderer {
 		this.dragId = null;
 		this.simMoved = false;
 		this.simCenter = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+		this.buildNeighbors();
 		this.buildSim();
+		// First open: let the physics run briefly so the network settles in
+		// visibly (the Obsidian feel). Later refetches stay put.
+		if (!this.warmedUp && this.sim) {
+			this.warmedUp = true;
+			this.sim.alpha(OPEN_ALPHA);
+			this.simActive = true;
+		}
 		this.geoVersion++; // new data → rebuild world geometry
 		this.markDirty();
 	}
@@ -1094,16 +1210,20 @@ export class GraphCanvasRenderer {
 		// nodeSize is world units now (2026-09-15): the on-screen hit radius
 		// is the disc's world radius × the camera zoom, plus the constant
 		// screen pad — the whole halo stays hit-testable.
-		const maxDist = this.settings.nodeSize * k + PICKING_PAD;
-		const projected: { id: string; x: number; y: number }[] = [];
+		// Each disc's own radius (sized by degree) plus the screen pad.
+		let best: CanvasNode | null = null;
+		let bestD = Infinity;
 		for (const n of this.data.nodes) {
 			if (this.visible && !this.visible.has(n.id)) continue;
 			if (isImpNodeId(n.id)) continue; // pure geometry — never picked
-			projected.push({ id: n.id, x: n.x * k + tx, y: n.y * k + ty });
+			const r = (this.radiusById.get(n.id) ?? this.settings.nodeSize) * k + PICKING_PAD;
+			const d = Math.hypot(n.x * k + tx - px, n.y * k + ty - py);
+			if (d <= r && d < bestD) {
+				bestD = d;
+				best = n;
+			}
 		}
-		const hit = pickNearest(projected, px, py, maxDist);
-		if (!hit) return null;
-		return this.nodeById.get(hit.id) ?? null;
+		return best;
 	}
 
 	private setHover(nodeId: string | null): void {
@@ -1269,51 +1389,49 @@ export class GraphCanvasRenderer {
 		const visible = this.visible;
 		const isVisible = (id: string) => !visible || visible.has(id);
 
-		// Node discs: one Path2D, one fill() per frame. Implication nodes
-		// are pure geometry — never a disc, never a label, never picked.
+		// Node discs: one Path2D, one fill() per frame, each disc sized by
+		// its link count (hubs read bigger, Obsidian-style). Implication
+		// nodes are pure geometry — never a disc, never a label, never picked.
+		this.radiusById = new Map();
 		const nodesPath = new Path2D();
+		const groups = new Map<string | null, Path2D>([[null, new Path2D()]]);
 		for (const n of data.nodes) {
 			if (!isVisible(n.id) || isImpNodeId(n.id)) continue;
-			nodesPath.moveTo(n.x + nodeR, n.y);
-			nodesPath.arc(n.x, n.y, nodeR, 0, Math.PI * 2);
+			const degree = this.neighbors.get(n.id)?.size ?? 0;
+			const r = nodeR * Math.min(DEGREE_BASE + DEGREE_STEP * Math.sqrt(degree), DEGREE_MAX_SCALE);
+			this.radiusById.set(n.id, r);
+			nodesPath.moveTo(n.x + r, n.y);
+			nodesPath.arc(n.x, n.y, r, 0, Math.PI * 2);
+			const color = this.colorById.get(n.id) ?? null;
+			let path = groups.get(color);
+			if (!path) groups.set(color, (path = new Path2D()));
+			path.moveTo(n.x + r, n.y);
+			path.arc(n.x, n.y, r, 0, Math.PI * 2);
 		}
 		this.nodesPath = nodesPath;
+		this.nodeGroups = [...groups].map(([color, path]) => ({ color, path }));
+		this.buildClusterLabels();
 
-		// Edge shafts + arrowheads (rendering arc, owner 2026-09-30): all
-		// arrows are PLAIN single shafts — the old double-shaft glyph is
-		// gone entirely. An argument's geometry: lines INTO an implication
-		// node are HEADLESS and run all the way to the imp node's CENTER
-		// (co-premise lines converge to a point); the line OUT of it starts
-		// at the center and its arrowhead lands on the conclusion's disc
-		// edge. Single-premise arguments arrive here as ordinary
-		// proposition→proposition edges and draw exactly like any arrow.
-		const arrowLen = settings.arrowLength;
+		// Links: straight node→node lines between propositions (implication
+		// junctions contracted away), no arrowheads at rest. Direction shows
+		// on hover, where the highlighted links get heads.
+		this.links = [];
 		const shafts = new Path2D();
-		const heads = new Path2D();
-		for (const e of data.edges) {
+		const seen = new Set<string>();
+		for (const e of this.propositionEdges()) {
 			if (!isVisible(e.from) || !isVisible(e.to)) continue;
 			const a = this.nodeById.get(e.from);
 			const b = this.nodeById.get(e.to);
-			if (!a || !b) continue;
-			const intoImp = isImpNodeId(e.to);
-			const outOfImp = isImpNodeId(e.from);
-			const g = arrowGeometry(a, b, outOfImp ? 0 : nodeR, intoImp ? 0 : nodeR, arrowLen);
-			if (!g) continue;
-			shafts.moveTo(g.shaftFrom.x, g.shaftFrom.y);
-			if (intoImp) {
-				// toRadius 0 put the tip AT the imp node's center: the
-				// headless shaft terminates there (no head triangle).
-				shafts.lineTo(g.tip.x, g.tip.y);
-			} else {
-				shafts.lineTo(g.shaftTo.x, g.shaftTo.y);
-				heads.moveTo(g.tip.x, g.tip.y);
-				heads.lineTo(g.left.x, g.left.y);
-				heads.lineTo(g.right.x, g.right.y);
-				heads.closePath();
-			}
+			if (!a || !b || a === b) continue;
+			const key = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			this.links.push({ a, b });
+			shafts.moveTo(a.x, a.y);
+			shafts.lineTo(b.x, b.y);
 		}
 		this.shaftsPath = shafts;
-		this.headsPath = heads;
+		this.headsPath = new Path2D();
 
 		// Cluster regions are NOT built here: they rasterize into their own
 		// low-res bitmap (see buildRegions), on their own rebuild schedule
@@ -1331,6 +1449,76 @@ export class GraphCanvasRenderer {
 			if (isVisible(n.id) && !isImpNodeId(n.id)) this.labelLines.set(n.id, wrapLabel(ctx, n.label, maxW));
 		}
 		ctx.font = prevFont;
+	}
+
+	/** Cluster name anchors: centred over each cluster, just above its
+	 *  topmost visible member (cy = that node's top edge, world units).
+	 *  Wrapped once per geometry build at the screen-fixed label size. */
+	private buildClusterLabels(): void {
+		const data = this.data;
+		const settings = this.settings;
+		this.regionMeta = [];
+		if (!data || !settings) return;
+		const isVisible = (id: string) => !this.visible || this.visible.has(id);
+		const ctx = this.ctx;
+		const prevFont = ctx.font;
+		ctx.font = `${LABEL_WEIGHT} ${settings.clusterLabelSize}px ${data.fontFamily}`;
+		for (const cluster of data.clusters) {
+			let members = 0;
+			let sumX = 0;
+			let top = Infinity;
+			for (const id of cluster.members) {
+				if (!isVisible(id) || isImpNodeId(id)) continue;
+				const n = this.nodeById.get(id);
+				if (!n) continue;
+				members++;
+				sumX += n.x;
+				top = Math.min(top, n.y - (this.radiusById.get(id) ?? settings.nodeSize));
+			}
+			if (members === 0) continue;
+			const label = cluster.label || null;
+			this.regionMeta.push({
+				id: cluster.id,
+				label,
+				cx: sumX / members,
+				cy: top,
+				hue: clusterHue(cluster.id),
+				lines: label
+					? wrapRegionLabel(label, REGION_LABEL_MAX_WIDTH, REGION_LABEL_MAX_LINES, (t) => ctx.measureText(t).width)
+					: null,
+			});
+		}
+		ctx.font = prevFont;
+	}
+
+	/** Proposition→proposition edges: the logical arrows when the caller
+	 *  supplies them, else the drawn edges that touch no junction. */
+	private propositionEdges(): CanvasEdge[] {
+		const data = this.data;
+		if (!data) return [];
+		if (data.logicalEdges) return data.logicalEdges;
+		return data.edges.filter((e) => !isImpNodeId(e.from) && !isImpNodeId(e.to));
+	}
+
+	/** Undirected neighbour sets for hover highlighting and degree sizing. */
+	private buildNeighbors(): void {
+		const neighbors = new Map<string, Set<string>>();
+		const add = (a: string, b: string) => {
+			let set = neighbors.get(a);
+			if (!set) neighbors.set(a, (set = new Set()));
+			set.add(b);
+		};
+		for (const e of this.propositionEdges()) {
+			if (e.from === e.to) continue;
+			add(e.from, e.to);
+			add(e.to, e.from);
+		}
+		this.neighbors = neighbors;
+		const ids = (this.data?.nodes ?? []).filter((n) => !isImpNodeId(n.id)).map((n) => n.id);
+		this.colorById = new Map();
+		for (const [id, g] of conceptGroups(ids, neighbors)) {
+			this.colorById.set(id, CONCEPT_PALETTE[g % CONCEPT_PALETTE.length]!);
+		}
 	}
 
 	/** (Re)create the live sim from data.nodes at their current
@@ -1647,16 +1835,6 @@ export class GraphCanvasRenderer {
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		ctx.clearRect(0, 0, w, h);
 
-		this.frameCount++;
-		// Regions: rebuild on stale geometry at rest; during the live sim,
-		// every REGION_EVERY-th frame (others blit the last bitmap).
-		if (
-			this.regionBuiltVersion !== this.geoVersion &&
-			(!this.simActive || this.frameCount % REGION_EVERY === 0)
-		) {
-			this.buildRegions();
-			this.regionBuiltVersion = this.geoVersion;
-		}
 		if (this.builtVersion !== this.geoVersion) this.buildGeometry();
 		if (!this.nodesPath) return;
 
@@ -1666,105 +1844,130 @@ export class GraphCanvasRenderer {
 
 		const ratio = zoomRatioOf(this.kFit, k);
 		const nodeAlpha = labelAlpha(ratio, settings.labelZoom);
-		const regionAlpha = 1 - nodeAlpha;
-		const { nodeR, glowOuter } = this.world;
+		const { nodeR } = this.world;
 
-		// 1. Cluster regions: one tiny world-space bitmap blit. The upscale
-		//    blur is the region softness; adjacent cluster tints blend
-		//    source-over where they overlap (decided: multiply is invisible
-		//    on the dark background).
-		if (this.regionCanvas && this.regionRect) {
-			const { minX, minY, w, h } = this.regionRect;
-			ctx.imageSmoothingEnabled = true;
-			ctx.drawImage(this.regionCanvas, minX, minY, w, h);
+		// The hovered neighbourhood (fades in/out on hoverFade). Cluster
+		// region tints are not drawn: the Obsidian look is plain nodes and
+		// links on the page background.
+		const hovered =
+			this.hoverNode && this.hoverFade > 0.01 && (!this.visible || this.visible.has(this.hoverNode.id))
+				? this.hoverNode
+				: null;
+		const f = hovered ? this.hoverFade : 0;
+		const nb = hovered ? (this.neighbors.get(hovered.id) ?? new Set<string>()) : null;
+		const accent = data.colors.accent ?? data.colors.hoverText;
+		const lerp = (a: number, b: number) => a + (b - a) * f;
+		const radiusOf = (id: string) => this.radiusById.get(id) ?? nodeR;
+
+		// 1. Links: faint hairlines at rest, dimmer while a node is hovered.
+		// Constant width on screen (÷ k); a 0 setting floors to a hairline.
+		const lineW = Math.max(settings.edgeWidth, 0.5) / k;
+		ctx.lineCap = "round";
+		ctx.lineWidth = lineW;
+		ctx.strokeStyle = rgbaFromHex(data.colors.edge, lerp(EDGE_REST_ALPHA, EDGE_DIM_ALPHA));
+		ctx.stroke(this.shaftsPath);
+
+		// 2. The hovered node's links, in the accent, with direction heads.
+		if (hovered) {
+			const hiShafts = new Path2D();
+			const hiHeads = new Path2D();
+			const arrowLen = Math.max(settings.arrowLength, nodeR * 1.2);
+			for (const { a, b } of this.links) {
+				if (a !== hovered && b !== hovered) continue;
+				hiShafts.moveTo(a.x, a.y);
+				hiShafts.lineTo(b.x, b.y);
+				const g = arrowGeometry(a, b, radiusOf(a.id), radiusOf(b.id), arrowLen);
+				if (!g) continue;
+				hiHeads.moveTo(g.tip.x, g.tip.y);
+				hiHeads.lineTo(g.left.x, g.left.y);
+				hiHeads.lineTo(g.right.x, g.right.y);
+				hiHeads.closePath();
+			}
+			ctx.lineWidth = (lineW * 1.6);
+			ctx.strokeStyle = rgbaFromHex(accent, 0.9 * f);
+			ctx.stroke(hiShafts);
+			ctx.fillStyle = rgbaFromHex(accent, 0.9 * f);
+			ctx.fill(hiHeads);
 		}
 
-		// 3. Edges: shafts + arrowheads from cached paths; width constant on
-		// screen (÷ k), geometry in world units (scales with the graph).
-		// Supports shafts: a second, thinner stroke (owner, 2026-09-29) —
-		// heads share the one fill at full geometry (shaft-only ruling).
-		// A true 0-width stroke is undefined on canvas: the ratio's 0 end
-		// floors to a hairline (0.5px on screen — hiding is the toggle's).
-		if (settings.edgeWidth > 0) {
-			ctx.strokeStyle = data.colors.edge;
-			ctx.fillStyle = data.colors.edge;
-			ctx.lineWidth = settings.edgeWidth / k;
-			ctx.lineCap = "round";
-			ctx.stroke(this.shaftsPath);
-			ctx.fill(this.headsPath);
+		// 3. Nodes: one cached path; dimmed while something is hovered,
+		// then the neighbourhood redrawn at full strength on top.
+		const nodeFill = (color: string | null | undefined, alpha: number) =>
+			rgbaFromHex(color ?? data.colors.node, alpha);
+		const restNodeAlpha = lerp(1, NODE_DIM_ALPHA);
+		for (const g of this.nodeGroups) {
+			ctx.fillStyle = nodeFill(g.color, restNodeAlpha);
+			ctx.fill(g.path);
 		}
-
-		// 4. Nodes: one cached Path2D, one fill.
-		ctx.fillStyle = data.colors.node;
-		ctx.fill(this.nodesPath);
-
-		// 6. Node labels — one global gate, faded together. World-scaled
-		// with the graph (they grow as you zoom in, Obsidian-style).
-		if (nodeAlpha > 0.01) {
-			ctx.save();
-			ctx.globalAlpha = nodeAlpha;
-			ctx.font = this.worldLabelFont;
-			for (const [id, lines] of this.labelLines) {
+		if (hovered && nb) {
+			for (const id of nb) {
 				const n = this.nodeById.get(id);
-				if (!n) continue;
-				drawNameLines(ctx, n.x, n.y, lines, this.world, data.colors.label);
-			}
-			ctx.restore();
-		}
-
-		// 7. Hover glow (topmost): halo in the node's color + the brightened
-		// name, both on the SAME fade factor. World units like everything
-		// else. Shows even when labels are zoomed out (hover is its own
-		// affordance, not a label).
-		if (this.hoverNode && this.hoverFade > 0.02) {
-			const n = this.visible && !this.visible.has(this.hoverNode.id)
-				? null // filtered out by search — no glow on hidden nodes
-				: this.hoverNode;
-			if (n) {
-				const glow = ctx.createRadialGradient(n.x, n.y, nodeR, n.x, n.y, glowOuter);
-				glow.addColorStop(0, rgbaFromHex(data.colors.node, GLOW_ALPHA * this.hoverFade));
-				glow.addColorStop(1, rgbaFromHex(data.colors.node, 0));
-				ctx.fillStyle = glow;
+				if (!n || (this.visible && !this.visible.has(id))) continue;
+				ctx.fillStyle = nodeFill(this.colorById.get(id), f);
 				ctx.beginPath();
-				ctx.arc(n.x, n.y, glowOuter, 0, Math.PI * 2);
-				ctx.arc(n.x, n.y, nodeR, 0, Math.PI * 2, true);
-				ctx.fill("evenodd");
-				ctx.save();
-				ctx.globalAlpha = this.hoverFade;
-				ctx.font = this.worldLabelFont;
-				drawNameLines(ctx, n.x, n.y, this.labelLines.get(n.id) ?? [], this.world, data.colors.hoverText);
-				ctx.restore();
+				ctx.arc(n.x, n.y, radiusOf(id), 0, Math.PI * 2);
+				ctx.fill();
 			}
+			// Soft halo + accent disc on the hovered node itself.
+			const r = radiusOf(hovered.id);
+			const outer = r * GLOW_SCALE;
+			const glow = ctx.createRadialGradient(hovered.x, hovered.y, r, hovered.x, hovered.y, outer);
+			glow.addColorStop(0, rgbaFromHex(accent, GLOW_ALPHA * f));
+			glow.addColorStop(1, rgbaFromHex(accent, 0));
+			ctx.fillStyle = glow;
+			ctx.beginPath();
+			ctx.arc(hovered.x, hovered.y, outer, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.fillStyle = rgbaFromHex(accent, f);
+			ctx.beginPath();
+			ctx.arc(hovered.x, hovered.y, r, 0, Math.PI * 2);
+			ctx.fill();
 		}
 
-		// 8. Cluster region labels — THE TOPMOST layer (user 2026-09-16:
-		// node labels and hover names drew over them before; region labels
-		// must never be occluded by content). Inverse-gated on THE zoom
-		// control (visible zoomed-out, fading as node labels come in).
-		// Viewer-relative by design (UI, not graph content): drawn at the
-		// world centroid with a font of clusterLabelSize / k — a constant
-		// size on screen at any zoom (user-tunable since 2026-09-16).
-		// Wave 7: labels are session names / file paths — pre-wrapped at
-		// the geometry build (cap + ellipsis), drawn centered on the
-		// centroid line by line.
-		if (settings.clusterLabels && regionAlpha > 0.01) {
-			ctx.save();
-			ctx.globalAlpha = regionAlpha;
-			ctx.font = `${LABEL_WEIGHT} ${settings.clusterLabelSize / k}px ${data.fontFamily}`;
+		// 4. Labels — zoom-gated together (they fade in as you zoom in,
+		// Obsidian-style). While hovering, the rest dim and the hovered
+		// neighbourhood's names show at any zoom.
+		ctx.font = this.worldLabelFont;
+		const restAlpha = Math.max(nodeAlpha, LABEL_REST_FLOOR) * lerp(1, NODE_DIM_ALPHA);
+		for (const [id, lines] of this.labelLines) {
+			const n = this.nodeById.get(id);
+			if (!n) continue;
+			const lit = hovered !== null && (id === hovered.id || nb?.has(id) === true);
+			const alpha = lit ? Math.max(restAlpha, f) : restAlpha;
+			if (alpha <= 0.01) continue;
+			ctx.globalAlpha = alpha;
+			drawNameLines(ctx, n.x, n.y, lines, this.world, lit ? data.colors.hoverText : data.colors.label, radiusOf(id));
+		}
+		ctx.globalAlpha = 1;
+
+		// 5. Cluster names — the topmost layer, a constant size on screen
+		// (font ÷ k). They show when zoomed out and give way to node names
+		// as you zoom in; they also step back while a node is hovered.
+		const clusterAlpha = (1 - nodeAlpha * 0.6) * lerp(1, 0.35);
+		const clusterInk = data.colors.hoverText;
+		if (settings.clusterLabels && clusterAlpha > 0.01) {
+			const size = settings.clusterLabelSize / k;
+			const lineH = size * REGION_LABEL_LINE_HEIGHT;
+			ctx.font = `600 ${size}px ${data.fontFamily}`;
 			ctx.textAlign = "center";
-			ctx.textBaseline = "middle";
-			// Screen px ÷ k = world units — the lines stay evenly spaced
-			// at a constant on-screen pitch at any zoom.
-			const lineH = (settings.clusterLabelSize * REGION_LABEL_LINE_HEIGHT) / k;
+			ctx.textBaseline = "bottom";
+			ctx.lineJoin = "round";
+			ctx.lineWidth = 4 / k;
+			ctx.strokeStyle = this.pageBackground;
 			for (const rm of this.regionMeta) {
 				if (!rm.lines) continue;
-				ctx.fillStyle = `hsla(${rm.hue}, 55%, 78%, 0.85)`;
-				const firstOffset = (-(rm.lines.length - 1) / 2) * lineH;
+				const bottom = rm.cy - CLUSTER_LABEL_GAP / k;
+				const color = rgbaFromHex(clusterInk, 0.9 * clusterAlpha);
 				for (let i = 0; i < rm.lines.length; i++) {
-					ctx.fillText(rm.lines[i]!, rm.cx, rm.cy + firstOffset + i * lineH);
+					const y = bottom - (rm.lines.length - 1 - i) * lineH;
+					// A page-coloured outline keeps names legible over links.
+					ctx.globalAlpha = clusterAlpha;
+					ctx.strokeText(rm.lines[i]!, rm.cx, y);
+					ctx.globalAlpha = 1;
+					ctx.fillStyle = color;
+					ctx.fillText(rm.lines[i]!, rm.cx, y);
 				}
 			}
-			ctx.restore();
 		}
 	}
 }

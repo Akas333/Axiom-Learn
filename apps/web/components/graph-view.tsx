@@ -69,12 +69,8 @@ import { FileTextIcon, ListTreeIcon, Loader2Icon, SearchIcon, SettingsIcon, Uplo
 import { incrementalLayout, propositionSessionHref, type GraphCostSummary, type GraphNode, type GraphSnapshot } from "@/src/core";
 import { planCostLabel } from "@/components/usage-format";
 import { GraphCanvasRenderer, type GraphRenderSettings } from "./graph-canvas.ts";
-import { GraphSphereRenderer } from "./graph-sphere.ts";
 import { SphereBackdrop } from "./sphere-backdrop.tsx";
 
-/** Which renderer draws the graph: the turning globe or the flat map. */
-type GraphViewMode = "sphere" | "flat";
-const VIEW_MODE_STORAGE_KEY = "lh:graph-view-mode";
 
 import { usePopoverDismiss } from "@/components/popover-dismiss";
 import { useActivity } from "@/components/activity-dock";
@@ -86,7 +82,6 @@ import { Hint } from "@/components/ui/hint";
 import {
 	ARROW_LENGTH_LADDER,
 	CHARGE_RANGE,
-	CLUSTER_LABEL_SIZE_LADDER,
 	CLUSTER_PULL_RANGE,
 	DEPTH_BASE_RADIUS_RANGE,
 	DEPTH_SPACING_RANGE,
@@ -94,18 +89,15 @@ import {
 	DEFAULT_RENDER_SETTINGS,
 	EDGE_WIDTH_LADDER,
 	GRAVITY_RANGE,
+	CLUSTER_LABEL_SIZE_LADDER,
 	LABEL_SIZE_LADDER,
 	LABEL_ZOOM_LADDER,
 	LINK_DISTANCE_RANGE,
 	LINK_STRENGTH_RANGE,
 	NODE_SIZE_LADDER,
-	REGION_BITMAP_OPTIONS,
-	REGION_BLUR_LADDER,
 	fromLadderPosition,
 	snapToLadder,
 	toLadderPosition,
-	REGION_DILATION_LADDER,
-	REGION_EDGE_ALPHA_LADDER,
 	VELOCITY_DECAY_RANGE,
 	fromOffSliderPosition,
 	fromSliderPosition,
@@ -115,9 +107,9 @@ import {
 	toSliderPosition,
 } from "@/src/core";
 
-/** The uniform node look (no state classes — canvas wants hex, not oklch):
- *  the accent color, until the state model lands. */
-const NODE_COLOR_TOKEN = "--primary";
+/** The resting node and link color (canvas wants hex, not oklch): quiet
+ *  grey, Obsidian-style. The hover neighbourhood uses --primary-soft. */
+const NODE_COLOR_TOKEN = "--muted-foreground";
 
 /** Per-device graph camera persistence (zoom+pan view state). v1 in the
  *  key: the stored shape is the renderer's d3 transform {k, x, y}. */
@@ -554,100 +546,7 @@ function GraphSettingsControl({
 								onChange={(p) =>
 									changeSettings((cur) => ({ ...cur, labelZoom: fromLadderPosition(p, LABEL_ZOOM_LADDER) }))}
 							/>
-							{/* Regions: the blurred cluster tints. Sliders + a fixed-set
-						    dropdown for the bitmap resolution (it's a discrete
-						    choice, not a free number). Server-persisted like the
-						    sizes; every range end was sweep-validated on the real
-						    graph. The enable switch is a COMPUTE switch: off skips
-						    the whole build (splat/blur/readback/blit), not just
-						    the paint. */}
-						<div className="mt-1.5 flex flex-col gap-1.5 border-t pt-1.5">
-							<span className="text-[10px] font-medium text-muted-foreground">
-								Regions
-							</span>
-							<label className="flex cursor-pointer items-center justify-between text-[11px] text-muted-foreground">
-								<span>Background colors</span>
-								<input
-									type="checkbox"
-									checked={settings.regions.enabled}
-									onChange={(e) =>
-										changeSettings((cur) => ({
-											...cur,
-											regions: { ...cur.regions, enabled: e.target.checked },
-										}))}
-										className="accent-primary"
-								/>
-							</label>
-							<SettingSlider
-								label="Dilation"
-								disabled={!regionTuning.enabled}
-								min={0}
-								max={100}
-								step={10}
-								value={toLadderPosition(regionTuning.dilation, REGION_DILATION_LADDER)}
-								display={sizeDisplay(regionTuning.dilation)}
-								onChange={(p) =>
-									changeSettings((cur) => ({
-										...cur,
-										regions: { ...cur.regions, dilation: fromLadderPosition(p, REGION_DILATION_LADDER) },
-									}))}
-							/>
-							<SettingSlider
-								label="Blur"
-								disabled={!regionTuning.enabled}
-								min={0}
-								max={100}
-								step={10}
-								value={toLadderPosition(regionTuning.blur, REGION_BLUR_LADDER)}
-								display={sizeDisplay(regionTuning.blur)}
-								onChange={(p) =>
-									changeSettings((cur) => ({
-										...cur,
-										regions: { ...cur.regions, blur: fromLadderPosition(p, REGION_BLUR_LADDER) },
-									}))
-								}
-							/>
-							<SettingSlider
-								label="Edge alpha"
-								disabled={!regionTuning.enabled}
-								min={0}
-								max={100}
-								step={10}
-								value={toLadderPosition(regionTuning.edgeAlpha, REGION_EDGE_ALPHA_LADDER)}
-								display={sizeDisplay(regionTuning.edgeAlpha)}
-								onChange={(p) =>
-									changeSettings((cur) => ({
-										...cur,
-										regions: { ...cur.regions, edgeAlpha: fromLadderPosition(p, REGION_EDGE_ALPHA_LADDER) },
-									}))}
-							/>
-							<label
-								className={`flex items-center justify-between gap-2 text-[11px] text-muted-foreground${!regionTuning.enabled ? " opacity-40" : ""}`}
-							>
-								<span>Bitmap resolution</span>
-								<select
-									disabled={!regionTuning.enabled}
-									className="rounded-md border bg-background px-1.5 py-0.5 text-xs tabular-nums text-foreground"
-									value={regionTuning.bitmap}
-									onChange={(e) =>
-										changeSettings((cur) => ({
-											...cur,
-											regions: { ...cur.regions, bitmap: Number(e.target.value) },
-										}))
-									}
-								>
-									{REGION_BITMAP_OPTIONS.map((o) => (
-										<option key={o} value={o}>
-											{o}
-										</option>
-									))}
-								</select>
-							</label>
-							{/* Cluster labels moved here 2026-09-16 (user: cluster
-							    stuff lives in the regions section). Decoupled from
-							    the Background colors switch above — labels follow
-							    their own clusterLabels toggle. Size is screen px
-							    (constant at any zoom, unlike node labels). */}
+							{/* Cluster names: drawn above each cluster in its colour. */}
 							<label className="flex cursor-pointer items-center justify-between text-[11px] text-muted-foreground">
 								<span>Cluster labels</span>
 								<input
@@ -671,7 +570,6 @@ function GraphSettingsControl({
 										clusterLabelSize: fromLadderPosition(p, CLUSTER_LABEL_SIZE_LADDER),
 									}))}
 							/>
-						</div>
 						{/* Physics: the live sim's forces. Every value feeds the SAME
 						    engine the server settle runs (createGraphSimulation);
 						    changing one rebuilds the sim from the current positions —
@@ -1063,22 +961,7 @@ export function GraphView({
 	// The renderer instance lives across snapshot refetches and settings
 	// changes (its camera is never reset by either); `posRef` carries the
 	// frozen layout out of the layout effect.
-	const rendererRef = useRef<GraphCanvasRenderer | GraphSphereRenderer | null>(null);
-	// Sphere is the default look; the flat map keeps drag + live physics.
-	const [viewMode, setViewMode] = useState<GraphViewMode>(() => {
-		try {
-			return localStorage.getItem(VIEW_MODE_STORAGE_KEY) === "flat" ? "flat" : "sphere";
-		} catch {
-			return "sphere";
-		}
-	});
-	useEffect(() => {
-		try {
-			localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
-		} catch {
-			// best-effort
-		}
-	}, [viewMode]);
+	const rendererRef = useRef<GraphCanvasRenderer | null>(null);
 	const posRef = useRef<Map<string, { x: number; y: number }> | null>(null);
 
 	// The id set that survives the current search — consumed by the
@@ -1395,8 +1278,7 @@ export function GraphView({
 			onCameraMove: (t) => {
 				setSelected(null);
 				setCtxNode(null);
-				// The sphere's camera is yaw/pitch, not the flat map's pan.
-				if (viewMode === "flat") persistCamera(t);
+				persistCamera(t);
 			},
 			// Live physics settled: persist the new rest state. Fire-and-
 			// forget — the next snapshot fetch carries the ledger anyway.
@@ -1408,10 +1290,7 @@ export function GraphView({
 				}).catch((err) => console.error("[graph] positions commit failed", err));
 			},
 		};
-		const renderer =
-			viewMode === "sphere"
-				? new GraphSphereRenderer(canvas, callbacks)
-				: new GraphCanvasRenderer(canvas, callbacks, initialCamera);
+		const renderer = new GraphCanvasRenderer(canvas, callbacks, initialCamera);
 		rendererRef.current = renderer;
 		return () => {
 			rendererRef.current = null;
@@ -1428,7 +1307,7 @@ export function GraphView({
 			}
 			renderer.destroy();
 		};
-	}, [isEmpty, viewMode]);
+	}, [isEmpty]);
 
 	// Feed #1 — data: positions + edges + clusters + resolved colors. Runs
 	// after the layout effect (same commit, declaration order) and after
@@ -1448,24 +1327,27 @@ export function GraphView({
 			logicalEdges: snapshot.logicalEdges.map((e) => ({ from: e.from, to: e.to })),
 			impLinks: snapshot.impLinks,
 			clusters: snapshot.clusters.map((c) => ({ id: c.id, label: c.label, members: c.members })),
-			// The sphere follows the reference: white dots, grey mesh lines.
+			// Obsidian-style palette: grey nodes and faint grey links at
+			// rest; the hovered neighbourhood lights up in the accent.
 			colors: {
-				node: tokenHex(viewMode === "sphere" ? "--foreground" : NODE_COLOR_TOKEN),
-				edge: tokenHex(viewMode === "sphere" ? "--muted-foreground" : "--ring"),
+				node: tokenHex(NODE_COLOR_TOKEN),
+				edge: tokenHex(NODE_COLOR_TOKEN),
 				label: tokenHex("--muted-foreground"),
 				hoverText: tokenHex("--foreground"),
+				accent: tokenHex("--primary-soft"),
+				background: tokenHex("--background"),
 			},
 			// Match the app typography (Geist via the body's stack).
 			fontFamily: getComputedStyle(document.body).fontFamily,
 		});
-	}, [snapshot, isEmpty, viewMode]);
+	}, [snapshot, isEmpty]);
 
 	// Feed #2 — settings: just marks the frame dirty. No rebuild, no
 	// re-layout, no camera touch (the whole point of the new renderer).
 	const deferredSettings = useDeferredValue(settings);
 	useEffect(() => {
 		rendererRef.current?.setSettings(deferredSettings);
-	}, [deferredSettings, isEmpty, viewMode]);
+	}, [deferredSettings, isEmpty]);
 
 	// Feed #3 — visibility: hidden nodes drop out of rendering, picking,
 	// hover, AND labels; edges drop when either endpoint is hidden.
@@ -1473,7 +1355,7 @@ export function GraphView({
 		rendererRef.current?.setVisible(query.trim() ? visibleIds : null);
 		// The open detail card cannot outlive its node's visibility.
 		setSelected((sel) => (sel && visibleIds.has(sel.node.id) ? sel : null));
-	}, [visibleIds, query, viewMode]);
+	}, [visibleIds, query]);
 
 	// Feed #4 — region tuning. `isEmpty` in the deps (same as Feed #2):
 	// the settings fetch resolves BEFORE the snapshot creates the renderer,
@@ -1481,14 +1363,14 @@ export function GraphView({
 	// the renderer would silently keep the default tuning forever.
 	useEffect(() => {
 		rendererRef.current?.setRegionTuning(regionTuning);
-	}, [regionTuning, isEmpty, viewMode]);
+	}, [regionTuning, isEmpty]);
 
 	// Feed #5 — physics tuning: rebuilds the live sim in place (drag pins
 	// survive; a mid-settle change re-anneals, the honest response). Same
 	// isEmpty dep as Feed #4 — see there.
 	useEffect(() => {
 		rendererRef.current?.setPhysicsTuning(physicsTuning);
-	}, [physicsTuning, isEmpty, viewMode]);
+	}, [physicsTuning, isEmpty]);
 
 	// Position the detail card: below the clicked node, flipped above near
 	// the bottom edge, clamped horizontally. Imperative (ref + layout effect,
@@ -1534,38 +1416,9 @@ export function GraphView({
 					{/* THE single canvas: every layer (hulls, edges, nodes, both
 					    label systems, hover) draws into it, once per frame. */}
 					<canvas
-						key={viewMode}
 						ref={canvasRef}
-						className={`block h-full w-full touch-none ${viewMode === "sphere" ? "cursor-grab" : ""}`}
+						className="block h-full w-full touch-none"
 					/>
-					{/* Sphere / Flat switch (styled after the reference's OS tabs). */}
-					<div
-						role="radiogroup"
-						aria-label="Graph view"
-						className="lh-no-drag absolute bottom-3 left-3 z-10 flex gap-0.5 rounded-lg border bg-card/80 p-1 text-xs shadow-lg backdrop-blur"
-					>
-						{(["sphere", "flat"] as const).map((mode) => (
-							<button
-								key={mode}
-								type="button"
-								role="radio"
-								aria-checked={viewMode === mode}
-								data-testid={`graph-view-${mode}`}
-								onClick={() => {
-									setSelected(null);
-									setCtxNode(null);
-									setViewMode(mode);
-								}}
-								className={`rounded-md px-2.5 py-1 font-medium capitalize transition-colors ${
-									viewMode === mode
-										? "bg-foreground/90 text-background"
-										: "text-muted-foreground hover:bg-accent hover:text-foreground"
-								}`}
-							>
-								{mode}
-							</button>
-						))}
-					</div>
 					{/* The context menu's anchor: a zero-size point at the
 					    right-click position (canvas-relative == container-relative,
 					    the canvas fills this div). */}
