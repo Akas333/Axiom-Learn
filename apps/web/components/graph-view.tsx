@@ -69,6 +69,54 @@ import { FileTextIcon, ListTreeIcon, Loader2Icon, SearchIcon, SettingsIcon, Uplo
 import { incrementalLayout, propositionSessionHref, type GraphCostSummary, type GraphNode, type GraphSnapshot } from "@/src/core";
 import { planCostLabel } from "@/components/usage-format";
 import { GraphCanvasRenderer, type GraphRenderSettings } from "./graph-canvas.ts";
+import { GraphSphereRenderer } from "./graph-sphere.ts";
+
+/** Which renderer draws the graph: the turning globe or the flat map. */
+type GraphViewMode = "sphere" | "flat";
+const VIEW_MODE_STORAGE_KEY = "lh:graph-view-mode";
+
+/** The empty graph's backdrop: the bare lattice globe, turning behind the
+ *  heading (the reference hero). Purely decorative — no pointer input. */
+function SphereBackdrop() {
+	const ref = useRef<HTMLCanvasElement | null>(null);
+	useEffect(() => {
+		const canvas = ref.current;
+		if (!canvas) return;
+		const noop = () => {};
+		const renderer = new GraphSphereRenderer(canvas, {
+			onSelect: noop,
+			onContext: noop,
+			onStageClick: noop,
+			onCameraMove: noop,
+			onCommit: noop,
+		}, { latticePoints: 2400 });
+		renderer.setZoom(1.9);
+		renderer.setData({
+			nodes: [],
+			edges: [],
+			clusters: [],
+			colors: {
+				node: tokenHex("--foreground"),
+				edge: tokenHex("--foreground"),
+				label: tokenHex("--muted-foreground"),
+				hoverText: tokenHex("--foreground"),
+			},
+			fontFamily: getComputedStyle(document.body).fontFamily,
+		});
+		return () => renderer.destroy();
+	}, []);
+	return (
+		<canvas
+			ref={ref}
+			aria-hidden
+			className="pointer-events-none absolute inset-0 block h-full w-full"
+			style={{
+				maskImage: "radial-gradient(ellipse at center, black 35%, transparent 80%)",
+				WebkitMaskImage: "radial-gradient(ellipse at center, black 35%, transparent 80%)",
+			}}
+		/>
+	);
+}
 import { usePopoverDismiss } from "@/components/popover-dismiss";
 import { useActivity } from "@/components/activity-dock";
 import { useServerEvent, useServerResync } from "@/components/server-events";
@@ -1056,7 +1104,22 @@ export function GraphView({
 	// The renderer instance lives across snapshot refetches and settings
 	// changes (its camera is never reset by either); `posRef` carries the
 	// frozen layout out of the layout effect.
-	const rendererRef = useRef<GraphCanvasRenderer | null>(null);
+	const rendererRef = useRef<GraphCanvasRenderer | GraphSphereRenderer | null>(null);
+	// Sphere is the default look; the flat map keeps drag + live physics.
+	const [viewMode, setViewMode] = useState<GraphViewMode>(() => {
+		try {
+			return localStorage.getItem(VIEW_MODE_STORAGE_KEY) === "flat" ? "flat" : "sphere";
+		} catch {
+			return "sphere";
+		}
+	});
+	useEffect(() => {
+		try {
+			localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
+		} catch {
+			// best-effort
+		}
+	}, [viewMode]);
 	const posRef = useRef<Map<string, { x: number; y: number }> | null>(null);
 
 	// The id set that survives the current search — consumed by the
@@ -1341,54 +1404,55 @@ export function GraphView({
 				}
 			}, 250);
 		};
-		const renderer = new GraphCanvasRenderer(
-			canvas,
-			{
-				onSelect: (nodeId, pos) => {
-					const snap = snapshotRef.current;
-					const node = snap?.nodes.find((n) => n.id === nodeId);
-					if (!snap || !node) return;
-					setSelected({
-						node,
-						sourceIds: snap.nodeSessions[node.id] ?? [],
-						anchor: pos,
-					});
-				},
-				onStageClick: () => setSelected(null),
-				// Right-click → the node context menu (node interlude). Null
-				// (empty stage) closes a stale menu; a pick opens one anchored
-				// at the pointer. The name comes from the snapshot — what the
-				// canvas shows is what the menu and dialog speak.
-				onContext: (nodeId, pos) => {
-					if (nodeId === null) {
-						setCtxNode(null);
-						return;
-					}
-					const node = snapshotRef.current?.nodes.find((n) => n.id === nodeId);
-					if (!node) return;
-					setCtxNode({ id: node.id, name: node.name, x: pos.x, y: pos.y });
-				},
-				// Any camera move detaches the card from its node — close
-				// it, and (debounced) remember where the camera stands. The
-				// context menu closes with it: a menu floating over a moved
-				// graph is anchored to nothing.
-				onCameraMove: (t) => {
-					setSelected(null);
-					setCtxNode(null);
-					persistCamera(t);
-				},
-				// Live physics settled: persist the new rest state. Fire-and-
-				// forget — the next snapshot fetch carries the ledger anyway.
-				onCommit: (positions) => {
-					void fetch("/api/graph/positions", {
-						method: "PUT",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify(positions),
-					}).catch((err) => console.error("[graph] positions commit failed", err));
-				},
+		const callbacks: ConstructorParameters<typeof GraphCanvasRenderer>[1] = {
+			onSelect: (nodeId, pos) => {
+				const snap = snapshotRef.current;
+				const node = snap?.nodes.find((n) => n.id === nodeId);
+				if (!snap || !node) return;
+				setSelected({
+					node,
+					sourceIds: snap.nodeSessions[node.id] ?? [],
+					anchor: pos,
+				});
 			},
-			initialCamera,
-		);
+			onStageClick: () => setSelected(null),
+			// Right-click → the node context menu (node interlude). Null
+			// (empty stage) closes a stale menu; a pick opens one anchored
+			// at the pointer. The name comes from the snapshot — what the
+			// canvas shows is what the menu and dialog speak.
+			onContext: (nodeId, pos) => {
+				if (nodeId === null) {
+					setCtxNode(null);
+					return;
+				}
+				const node = snapshotRef.current?.nodes.find((n) => n.id === nodeId);
+				if (!node) return;
+				setCtxNode({ id: node.id, name: node.name, x: pos.x, y: pos.y });
+			},
+			// Any camera move detaches the card from its node — close
+			// it, and (debounced) remember where the camera stands. The
+			// context menu closes with it: a menu floating over a moved
+			// graph is anchored to nothing.
+			onCameraMove: (t) => {
+				setSelected(null);
+				setCtxNode(null);
+				// The sphere's camera is yaw/pitch, not the flat map's pan.
+				if (viewMode === "flat") persistCamera(t);
+			},
+			// Live physics settled: persist the new rest state. Fire-and-
+			// forget — the next snapshot fetch carries the ledger anyway.
+			onCommit: (positions) => {
+				void fetch("/api/graph/positions", {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(positions),
+				}).catch((err) => console.error("[graph] positions commit failed", err));
+			},
+		};
+		const renderer =
+			viewMode === "sphere"
+				? new GraphSphereRenderer(canvas, callbacks)
+				: new GraphCanvasRenderer(canvas, callbacks, initialCamera);
 		rendererRef.current = renderer;
 		return () => {
 			rendererRef.current = null;
@@ -1405,7 +1469,7 @@ export function GraphView({
 			}
 			renderer.destroy();
 		};
-	}, [isEmpty]);
+	}, [isEmpty, viewMode]);
 
 	// Feed #1 — data: positions + edges + clusters + resolved colors. Runs
 	// after the layout effect (same commit, declaration order) and after
@@ -1425,23 +1489,24 @@ export function GraphView({
 			logicalEdges: snapshot.logicalEdges.map((e) => ({ from: e.from, to: e.to })),
 			impLinks: snapshot.impLinks,
 			clusters: snapshot.clusters.map((c) => ({ id: c.id, label: c.label, members: c.members })),
+			// The sphere follows the reference: white dots, grey mesh lines.
 			colors: {
-				node: tokenHex(NODE_COLOR_TOKEN),
-				edge: tokenHex("--ring"),
+				node: tokenHex(viewMode === "sphere" ? "--foreground" : NODE_COLOR_TOKEN),
+				edge: tokenHex(viewMode === "sphere" ? "--muted-foreground" : "--ring"),
 				label: tokenHex("--muted-foreground"),
 				hoverText: tokenHex("--foreground"),
 			},
 			// Match the app typography (Geist via the body's stack).
 			fontFamily: getComputedStyle(document.body).fontFamily,
 		});
-	}, [snapshot, isEmpty]);
+	}, [snapshot, isEmpty, viewMode]);
 
 	// Feed #2 — settings: just marks the frame dirty. No rebuild, no
 	// re-layout, no camera touch (the whole point of the new renderer).
 	const deferredSettings = useDeferredValue(settings);
 	useEffect(() => {
 		rendererRef.current?.setSettings(deferredSettings);
-	}, [deferredSettings, isEmpty]);
+	}, [deferredSettings, isEmpty, viewMode]);
 
 	// Feed #3 — visibility: hidden nodes drop out of rendering, picking,
 	// hover, AND labels; edges drop when either endpoint is hidden.
@@ -1449,7 +1514,7 @@ export function GraphView({
 		rendererRef.current?.setVisible(query.trim() ? visibleIds : null);
 		// The open detail card cannot outlive its node's visibility.
 		setSelected((sel) => (sel && visibleIds.has(sel.node.id) ? sel : null));
-	}, [visibleIds, query]);
+	}, [visibleIds, query, viewMode]);
 
 	// Feed #4 — region tuning. `isEmpty` in the deps (same as Feed #2):
 	// the settings fetch resolves BEFORE the snapshot creates the renderer,
@@ -1457,14 +1522,14 @@ export function GraphView({
 	// the renderer would silently keep the default tuning forever.
 	useEffect(() => {
 		rendererRef.current?.setRegionTuning(regionTuning);
-	}, [regionTuning, isEmpty]);
+	}, [regionTuning, isEmpty, viewMode]);
 
 	// Feed #5 — physics tuning: rebuilds the live sim in place (drag pins
 	// survive; a mid-settle change re-anneals, the honest response). Same
 	// isEmpty dep as Feed #4 — see there.
 	useEffect(() => {
 		rendererRef.current?.setPhysicsTuning(physicsTuning);
-	}, [physicsTuning, isEmpty]);
+	}, [physicsTuning, isEmpty, viewMode]);
 
 	// Position the detail card: below the clicked node, flipped above near
 	// the bottom edge, clamped horizontally. Imperative (ref + layout effect,
@@ -1494,8 +1559,9 @@ export function GraphView({
 		<div className="relative h-full w-full">
 			{isEmpty ? (
 				// The empty graph keeps the first action clear without zero-valued statistics.
-				<div className="flex h-full w-full items-center justify-center px-4">
-					<div className="flex flex-col items-center gap-4 text-center text-muted-foreground">
+				<div className="relative flex h-full w-full items-center justify-center overflow-hidden px-4">
+					<SphereBackdrop />
+					<div className="relative flex flex-col items-center gap-4 text-center text-muted-foreground">
 						<h1 className="text-3xl font-medium text-foreground sm:text-5xl sm:leading-[1.15]">
 							Knowledge <span className="lh-outline-text">graph</span>
 						</h1>
@@ -1508,7 +1574,39 @@ export function GraphView({
 				<div ref={containerRef} className="relative h-full w-full">
 					{/* THE single canvas: every layer (hulls, edges, nodes, both
 					    label systems, hover) draws into it, once per frame. */}
-					<canvas ref={canvasRef} className="block h-full w-full touch-none" />
+					<canvas
+						key={viewMode}
+						ref={canvasRef}
+						className={`block h-full w-full touch-none ${viewMode === "sphere" ? "cursor-grab" : ""}`}
+					/>
+					{/* Sphere / Flat switch (styled after the reference's OS tabs). */}
+					<div
+						role="radiogroup"
+						aria-label="Graph view"
+						className="lh-no-drag absolute bottom-3 left-3 z-10 flex gap-0.5 rounded-lg border bg-card/80 p-1 text-xs shadow-lg backdrop-blur"
+					>
+						{(["sphere", "flat"] as const).map((mode) => (
+							<button
+								key={mode}
+								type="button"
+								role="radio"
+								aria-checked={viewMode === mode}
+								data-testid={`graph-view-${mode}`}
+								onClick={() => {
+									setSelected(null);
+									setCtxNode(null);
+									setViewMode(mode);
+								}}
+								className={`rounded-md px-2.5 py-1 font-medium capitalize transition-colors ${
+									viewMode === mode
+										? "bg-foreground/90 text-background"
+										: "text-muted-foreground hover:bg-accent hover:text-foreground"
+								}`}
+							>
+								{mode}
+							</button>
+						))}
+					</div>
 					{/* The context menu's anchor: a zero-size point at the
 					    right-click position (canvas-relative == container-relative,
 					    the canvas fills this div). */}
