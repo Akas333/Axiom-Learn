@@ -21,7 +21,7 @@ describe("standalone JavaScript tracing exclusions and native workaround policy"
 			}
 			// The explicit includes remain necessary: this raw ignore still matches SDK data.
 			assert.equal(ignored(file("node_modules/@earendil-works/pi-ai/dist/providers/data/models.json")), true);
-			assert.ok(nextConfig.outputFileTracingIncludes!["*"]!.includes("node_modules/@earendil-works/pi-ai/dist/providers/data/**/*"));
+			assert.ok(nextConfig.outputFileTracingIncludes!["*"]!.includes("../../node_modules/@earendil-works/pi-ai/dist/providers/data/**/*"));
 		});
 		it(`does not confuse dependency suffixes with data directories (${windows ? "Windows" : "POSIX"})`, () => {
 			for (const relative of ["node_modules/gcp-metadata/build/src/index.js", "node_modules/form-data/lib/form_data.js", "node_modules/@swc/helpers/_/_ts_metadata.js", "node_modules/@swc/helpers/_/_ts_metadata/index.js", "node_modules/somedata/runtime.js"]) {
@@ -37,28 +37,36 @@ describe("standalone JavaScript tracing exclusions and native workaround policy"
 		assert.equal(ignore(`${root}/node_modules/gcp-metadata/build/src/index.js`), false);
 	});
 	it("preserves all secret exclusions exactly", () => {
-		assert.deepEqual(patterns, ["**/data/**/*", "auth.json", "chatgpt-credentials.json*", "github-copilot-credentials.json*", "xai-credentials.json*", ".env*"]);
+		assert.deepEqual(patterns, [
+			"**/data/**/*", "auth.json", "chatgpt-credentials.json*", "github-copilot-credentials.json*", "xai-credentials.json*", ".env*",
+			// Monorepo: the engine package's dev key store, credentials and data.
+			"../../packages/engine/auth.json", "../../packages/engine/*-credentials.json*", "../../packages/engine/data/**/*",
+		]);
 	});
 	it("retains exactly the narrow native-Turbopack closure workaround and existing runtime includes", () => {
+		// Monorepo: globs are relative to apps/legacy, dependencies are hoisted
+		// to the repo root, and the engine's prompts are read from disk.
 		assert.deepEqual(nextConfig.outputFileTracingIncludes!["*"], [
-			"node_modules/@puppeteer/browsers/lib/browser-data/**/*.js",
-			"node_modules/pdfjs-dist/legacy/**/*",
-			"node_modules/pdfjs-dist/standard_fonts/**/*",
-			"node_modules/@napi-rs/canvas-*/**/*",
-			"node_modules/@resvg/resvg-js-*/**/*",
-			"node_modules/@earendil-works/pi-ai/dist/providers/data/**/*",
-			"node_modules/@earendil-works/pi-ai/dist/auth/oauth/{load,github-copilot,xai,device-code}.js",
-			"node_modules/@earendil-works/pi-ai/dist/utils/sleep.js",
-			"node_modules/@earendil-works/pi-agent-core/dist/**/*.json",
-			"node_modules/gcp-metadata/**/*",
-			"node_modules/json-bigint/**/*",
-			"node_modules/bignumber.js/**/*",
+			"../../packages/engine/src/agent/system-prompt.md",
+			"../../packages/engine/src/agent/prompts/**/*.md",
+			"../../node_modules/@puppeteer/browsers/lib/browser-data/**/*.js",
+			"../../node_modules/pdfjs-dist/legacy/**/*",
+			"../../node_modules/pdfjs-dist/standard_fonts/**/*",
+			"../../node_modules/@napi-rs/canvas-*/**/*",
+			"../../node_modules/@resvg/resvg-js-*/**/*",
+			"../../node_modules/@earendil-works/pi-ai/dist/providers/data/**/*",
+			"../../node_modules/@earendil-works/pi-ai/dist/auth/oauth/{load,github-copilot,xai,device-code}.js",
+			"../../node_modules/@earendil-works/pi-ai/dist/utils/sleep.js",
+			"../../node_modules/@earendil-works/pi-agent-core/dist/**/*.json",
+			"../../node_modules/gcp-metadata/**/*",
+			"../../node_modules/json-bigint/**/*",
+			"../../node_modules/bignumber.js/**/*",
 		]);
 	});
 	it("limits the workaround to its three packages, never learner data or unrelated dependencies", () => {
 		const closure = nextConfig.outputFileTracingIncludes!["*"]!.slice(-3);
 		const included = picomatch(closure, { dot: true });
-		for (const file of ["node_modules/gcp-metadata/build/src/index.js", "node_modules/json-bigint/lib/parse.js", "node_modules/bignumber.js/bignumber.js"]) assert.equal(included(file), true, file);
-		for (const file of ["data/private.json", "nested/data/private.json", "auth.json", ".env.local", "node_modules/unrelated/runtime.js", "node_modules/gcp-metadata-lookalike/index.js"]) assert.equal(included(file), false, file);
+		for (const file of ["../../node_modules/gcp-metadata/build/src/index.js", "../../node_modules/json-bigint/lib/parse.js", "../../node_modules/bignumber.js/bignumber.js"]) assert.equal(included(file), true, file);
+		for (const file of ["data/private.json", "nested/data/private.json", "auth.json", ".env.local", "../../packages/engine/auth.json", "../../node_modules/unrelated/runtime.js", "../../node_modules/gcp-metadata-lookalike/index.js"]) assert.equal(included(file), false, file);
 	});
 });

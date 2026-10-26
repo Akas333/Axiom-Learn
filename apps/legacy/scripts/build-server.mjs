@@ -15,6 +15,14 @@ import * as path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const STANDALONE = path.join(ROOT, ".next", "standalone");
+// Monorepo layout: outputFileTracingRoot is the repo root, so the standalone
+// tree mirrors it — this app's server.js sits at <standalone>/apps/legacy/,
+// the engine's runtime-read files at <standalone>/packages/engine/, and the
+// hoisted node_modules at the standalone root.
+const MONOREPO_ROOT = path.resolve(ROOT, "..", "..");
+const APP_OUT = path.join(STANDALONE, path.relative(MONOREPO_ROOT, ROOT));
+const ENGINE_OUT = path.join(STANDALONE, "packages", "engine");
+const PAYLOAD_DIRS = [STANDALONE, APP_OUT, ENGINE_OUT];
 
 const copyTree = (from, to) => {
 	fs.cpSync(from, to, { recursive: true });
@@ -22,26 +30,26 @@ const copyTree = (from, to) => {
 
 const exists = (p) => fs.existsSync(p);
 
-if (!exists(path.join(STANDALONE, "server.js"))) {
-	console.error("[build-server] .next/standalone/server.js missing — run `next build` first (output: 'standalone').");
+if (!exists(path.join(APP_OUT, "server.js"))) {
+	console.error(`[build-server] ${path.relative(ROOT, APP_OUT)}/server.js missing — run \`next build\` first (output: 'standalone').`);
 	process.exit(1);
 }
 
 // 1) Static assets: public/ → standalone/public, .next/static → standalone/.next/static
 const staticFrom = path.join(ROOT, ".next", "static");
-const staticTo = path.join(STANDALONE, ".next", "static");
+const staticTo = path.join(APP_OUT, ".next", "static");
 if (!exists(staticFrom)) {
 	console.error("[build-server] .next/static missing — the build looks incomplete.");
 	process.exit(1);
 }
 copyTree(staticFrom, staticTo);
 if (exists(path.join(ROOT, "public"))) {
-	copyTree(path.join(ROOT, "public"), path.join(STANDALONE, "public"));
+	copyTree(path.join(ROOT, "public"), path.join(APP_OUT, "public"));
 }
 
 // 2) Safety: the repo's real data/ must NEVER ride along in the bundle.
-const leakedData = path.join(STANDALONE, "data");
-if (exists(leakedData)) {
+const leakedData = PAYLOAD_DIRS.map((dir) => path.join(dir, "data")).find(exists);
+if (leakedData) {
 	console.error("[build-server] REFUSING: standalone contains a data/ directory — repo session data would ship in the app.");
 	console.error("             Check outputFileTracingExcludes in next.config.ts.");
 	process.exit(1);
@@ -52,10 +60,11 @@ if (exists(leakedData)) {
 // (the DEV BYOK key store, 0600) byte-identical into the DMG (caught in
 // the 2026-10-08 payload audit; excluded in next.config.ts — this guard
 // makes a regression loud instead of silent).
-const subscriptionSecrets = fs.readdirSync(STANDALONE).filter((name) => /^(chatgpt|github-copilot|xai)-credentials\.json/.test(name));
-for (const secret of ["auth.json", ...subscriptionSecrets, ".env", ".env.local"]) {
-	if (exists(path.join(STANDALONE, secret))) {
-		console.error(`[build-server] REFUSING: standalone contains ${secret} — dev secrets would ship in the app.`);
+for (const dir of PAYLOAD_DIRS.filter(exists)) {
+	const subscriptionSecrets = fs.readdirSync(dir).filter((name) => /^(chatgpt|github-copilot|xai)-credentials\.json/.test(name));
+	for (const secret of ["auth.json", ...subscriptionSecrets, ".env", ".env.local"]) {
+		if (!exists(path.join(dir, secret))) continue;
+		console.error(`[build-server] REFUSING: standalone contains ${path.relative(STANDALONE, path.join(dir, secret))} — dev secrets would ship in the app.`);
 		console.error("             Check outputFileTracingExcludes in next.config.ts.");
 		process.exit(1);
 	}
@@ -69,7 +78,7 @@ for (const secret of ["auth.json", ...subscriptionSecrets, ".env", ".env.local"]
 // generic dist/** earlier broke pi-ai / pi-agent-core's runtime dist/.
 // Never touch ROOT/dist or ROOT/node_modules/electron (the running app
 // and the build runtime); native canvas/resvg packages stay untouched.
-for (const extra of ["dist", path.join("node_modules", "electron")]) {
+for (const extra of ["dist", path.join(path.relative(STANDALONE, APP_OUT), "dist"), path.join("node_modules", "electron")]) {
 	const target = path.join(STANDALONE, extra);
 	if (exists(target)) {
 		fs.rmSync(target, { recursive: true, force: true });
@@ -83,7 +92,7 @@ for (const asset of [
 	path.join("src", "agent", "system-prompt.md"),
 	path.join("src", "agent", "prompts", "teacher", "20-teaching.md"),
 ]) {
-	if (!exists(path.join(STANDALONE, asset))) {
+	if (!exists(path.join(ENGINE_OUT, asset))) {
 		console.error(`[build-server] prompt asset missing from the trace: ${asset}`);
 		process.exit(1);
 	}

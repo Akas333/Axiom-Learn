@@ -54,6 +54,12 @@ files:
   - "!**/*"
   - electron/**/*
   - package.json
+  # Monorepo: the shell's host adapters live in the engine package; ship
+  # them inside the asar as engine-host/ (electron/main.cjs engineHost()).
+  - from: ../../packages/engine/src/host
+    to: engine-host
+    filter:
+      - "*.cjs"
   # Auto-update (Wave C, 2026-10-10): electron-updater + its runtime tree
   # re-included explicitly. The negation above excludes node_modules, and
   # the shell's bare positives can't re-include them — these explicit
@@ -65,27 +71,33 @@ files:
   # builder-util-runtime → debug, sax; fs-extra → graceful-fs, jsonfile,
   # universalify; debug → ms; jsonfile → universalify (again); js-yaml →
   # argparse. Keep in sync when electron-updater bumps (npm ls --all).
-  - node_modules/electron-updater/**/*
-  - node_modules/fs-extra/**/*
-  - node_modules/js-yaml/**/*
-  - node_modules/lazy-val/**/*
-  - node_modules/lodash.escaperegexp/**/*
-  - node_modules/lodash.isequal/**/*
-  - node_modules/semver/**/*
-  - node_modules/tiny-typed-emitter/**/*
-  - node_modules/builder-util-runtime/**/*
-  - node_modules/debug/**/*
-  - node_modules/sax/**/*
-  - node_modules/graceful-fs/**/*
-  - node_modules/jsonfile/**/*
-  - node_modules/universalify/**/*
-  - node_modules/ms/**/*
-  - node_modules/argparse/**/*
-  # Main-process ID-token signature verification (no bundled OAuth implementation).
-  - node_modules/jose/**/*
+  # Monorepo: npm workspaces hoist every dependency to the repo root, where
+  # the collector above no longer finds them (verified: the asar shipped
+  # with no node_modules). Copy the shell's runtime tree explicitly instead.
+  - from: ../../node_modules
+    to: node_modules
+    filter:
+      - "electron-updater/**/*"
+      - "fs-extra/**/*"
+      - "js-yaml/**/*"
+      - "lazy-val/**/*"
+      - "lodash.escaperegexp/**/*"
+      - "lodash.isequal/**/*"
+      - "semver/**/*"
+      - "tiny-typed-emitter/**/*"
+      - "builder-util-runtime/**/*"
+      - "debug/**/*"
+      - "sax/**/*"
+      - "graceful-fs/**/*"
+      - "jsonfile/**/*"
+      - "universalify/**/*"
+      - "ms/**/*"
+      - "argparse/**/*"
+      # jose: main-process ID-token signature verification.
+      - "jose/**/*"
 extraResources:
   # Attribution/license for the bounded local Pi cutoff-selector port.
-  - from: docs/compaction-accounting.md
+  - from: ../../docs/compaction-accounting.md
     to: licenses/pi-compaction.md
   # Copy from the PARENT dir (.next), not .next/standalone itself:
   # electron-builder hard-excludes a copy's root node_modules and the

@@ -13,9 +13,11 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
+// Monorepo: dependencies are hoisted to the repo root; the server source is in the engine.
+const MONOREPO_ROOT = path.resolve(ROOT, "..", "..");
 const require = createRequire(import.meta.url);
 const { SCOPES } = require("../../../packages/engine/src/host/chatgpt.cjs");
-const sdk = (file) => import(pathToFileURL(path.join(ROOT, "node_modules/@earendil-works/pi-ai/dist", file)));
+const sdk = (file) => import(pathToFileURL(path.join(MONOREPO_ROOT, "node_modules/@earendil-works/pi-ai/dist", file)));
 const { createModels } = await sdk("index.js");
 const { builtinProviders } = await sdk("providers/all.js");
 const { githubCopilotProvider } = await sdk("providers/github-copilot.js");
@@ -66,7 +68,7 @@ async function run(mode) {
 	}), { mode: 0o600 });
 	const port = await freePort(), origin = `http://localhost:${port}`;
 	let logs = "", exited = false;
-	const child = spawn(process.execPath, [path.join(ROOT, "node_modules/next/dist/bin/next"), mode, "-p", String(port)], { cwd: ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
+	const child = spawn(process.execPath, [path.join(MONOREPO_ROOT, "node_modules/next/dist/bin/next"), mode, "-p", String(port)], { cwd: ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
 	const exit = new Promise((resolve) => child.once("exit", () => { exited = true; resolve(); }));
 	try {
 		await timeout(new Promise((resolve, reject) => {
@@ -100,7 +102,7 @@ async function run(mode) {
 		const login = await (await request("/api/subscriptions", { providerId: "chatgpt", op: "login" })).json();
 		assert(login.browserAction); assert(!JSON.stringify(login).includes("auth.openai.com"));
 		if (mode === "dev") {
-			const file = path.join(ROOT, "src/server/web-subscriptions.ts"), times = await fs.stat(file);
+			const file = path.join(MONOREPO_ROOT, "packages/engine/src/server/web-subscriptions.ts"), times = await fs.stat(file);
 			await fs.utimes(file, new Date(), new Date());
 			try { assert.equal((await request("/api/models")).status, 200); assert.equal((await request("/api/subscriptions")).status, 200); }
 			finally { await fs.utimes(file, times.atime, times.mtime); }

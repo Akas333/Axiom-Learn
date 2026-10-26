@@ -32,13 +32,17 @@ jobs:
       - run: npm ci
       - name: Tag must match package.json
         if: github.event_name == 'push'
+        # The desktop app's version, and the engine's (sent as the user agent),
+        # must both equal the tag.
         run: |
           node --input-type=module -e '
             import fs from "node:fs";
-            const {version} = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            if (process.env.GITHUB_REF_NAME !== `v${version}`) {
-              console.error("Release tag must equal v" + version);
-              process.exit(1);
+            for (const file of ["apps/legacy/package.json", "packages/engine/package.json"]) {
+              const {version} = JSON.parse(fs.readFileSync(file, "utf8"));
+              if (process.env.GITHUB_REF_NAME !== `v${version}`) {
+                console.error(file + ": release tag must equal v" + version);
+                process.exit(1);
+              }
             }
           '
       - run: npm run typecheck
@@ -104,9 +108,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     # Apple's notarization queue has taken ~2 hours for this team.
     timeout-minutes: 180
+    # Monorepo: the desktop app (Next.js + Electron shell) is apps/legacy.
     defaults:
       run:
         shell: bash
+        working-directory: apps/legacy
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -123,7 +129,9 @@ jobs:
         with:
           xcode-version: latest-stable
       - run: npm ci
+        working-directory: .
       - name: Native renderer tests on this OS
+        working-directory: packages/engine
         run: npx electron --import tsx --test tests/pdf-native-render.test.ts tests/pdf-ops.test.ts tests/svg-native-render.test.ts tests/browser-service.test.ts
         env:
           NODE_ENV: test
@@ -211,13 +219,13 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           path: |
-            dist/*.dmg
-            dist/*.zip
-            dist/*.exe
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.blockmap
-            dist/latest*.yml
+            apps/legacy/dist/*.dmg
+            apps/legacy/dist/*.zip
+            apps/legacy/dist/*.exe
+            apps/legacy/dist/*.AppImage
+            apps/legacy/dist/*.deb
+            apps/legacy/dist/*.blockmap
+            apps/legacy/dist/latest*.yml
 
   # The last gate before a human publishes: after ALL three packaging jobs
   # have uploaded, fail the run unless the tag's single draft release holds
@@ -255,6 +263,7 @@ jobs:
         run: gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
       - name: Select the tag's single draft
         # Machine JSON on stdout (release id + asset ids); warnings on stderr.
+        working-directory: apps/legacy
         run: npx tsx scripts/verify-release.ts select "$RUNNER_TEMP/releases.json" --tag "$GITHUB_REF_NAME" > "$RUNNER_TEMP/draft.json"
       - name: Download the three update feeds
         env:
@@ -274,4 +283,5 @@ jobs:
             echo "downloaded $name ($(wc -c < "$RUNNER_TEMP/metadata/$name") bytes)"
           done
       - name: Verify draft assets and update feeds
+        working-directory: apps/legacy
         run: npx tsx scripts/verify-release.ts verify "$RUNNER_TEMP/releases.json" "$RUNNER_TEMP/metadata" --tag "$GITHUB_REF_NAME"

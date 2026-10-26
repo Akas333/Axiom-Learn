@@ -114,7 +114,7 @@ describe("backend-only preload wiring and packaging", () => {
 	for (const platform of ["darwin", "win32", "linux"]) {
 		it(`${platform} uses the real server launch with the intended argument order`, async () => {
 			const launch = await serverLaunch(platform);
-			const entry = path.join("/fixture/resources with spaces", "server", "standalone", "server.js");
+			const entry = path.join("/fixture/resources with spaces", "server", "standalone", "apps", "legacy", "server.js");
 			assert.equal(launch.binary, "/fixture/Axiom Learn");
 			assert.deepEqual(launch.args, platform === "darwin"
 				? ["--require", path.join("/fixture/resources with spaces", "server-title-guard.cjs"), entry]

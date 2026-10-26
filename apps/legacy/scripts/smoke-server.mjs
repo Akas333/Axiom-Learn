@@ -36,17 +36,19 @@ import * as path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const STANDALONE = path.join(ROOT, ".next", "standalone");
-const SERVER = path.join(STANDALONE, "server.js");
+// Monorepo: the standalone tree mirrors the repo, so this app's server.js
+// sits at <standalone>/apps/legacy/server.js (same path electron/main.cjs uses).
+const SERVER = path.join(STANDALONE, path.relative(path.resolve(ROOT, "..", ".."), ROOT), "server.js");
 const ELECTRON_MODE = process.argv.includes("--electron");
 const RUNTIME = ELECTRON_MODE ? createRequire(import.meta.url)("electron") : process.execPath;
 
 const POLL_MS = 500;
 const BOOT_TIMEOUT_MS = 30_000;
 /** GET-only probes — the routes that exercised today's failure class. */
-const PROBES = ["/api/graph", "/api/models", "/api/settings"];
+const PROBES = ["/api/graph", "/api/models", "/api/settings", "/api/settings/prompts"];
 
 if (!fs.existsSync(SERVER)) {
-	console.error("[smoke-server] .next/standalone/server.js missing — run next build first.");
+	console.error(`[smoke-server] ${path.relative(ROOT, SERVER)} missing — run next build first.`);
 	process.exit(1);
 }
 
@@ -109,7 +111,7 @@ async function main() {
 
 	console.log(`[smoke-server] runtime: ${ELECTRON_MODE ? "Electron bundled Node" : "host Node"}`);
 	const child = spawn(RUNTIME, [SERVER], {
-		cwd: STANDALONE,
+		cwd: path.dirname(SERVER),
 		env: {
 			...probeEnv(process.env, home),
 			...(ELECTRON_MODE ? { ELECTRON_RUN_AS_NODE: "1" } : {}),

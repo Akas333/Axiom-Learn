@@ -176,8 +176,11 @@ async function connectBrowserService(): Promise<import("puppeteer-core").Browser
 		// Dev: the bare electron binary needs the repo root as the app arg —
 		// flagless it would open Electron's default app instead of our shell.
 		const appArgs = process.versions.electron ? ["--browser-service"] : [
-			// src/agent/subagents → repo root
-			path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".."),
+			// The desktop shell's folder (its package.json "main" is the
+			// Electron entry): src/agent/subagents → monorepo root → apps/legacy.
+			// LH_DESKTOP_APP_DIR overrides it for other shells.
+			process.env.LH_DESKTOP_APP_DIR ??
+				path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "..", "apps", "legacy"),
 			"--browser-service",
 		];
 		const proc = spawn(binary, appArgs, {

@@ -7,8 +7,13 @@ import * as path from "node:path";
 import { describe, it } from "node:test";
 
 const source = fs.readFileSync(new URL("../scripts/build-server.mjs", import.meta.url), "utf8");
-const STANDALONE = path.join(".next", "standalone");
-const PROMPT = path.join("src", "agent", "system-prompt.md");
+// Fixtures mirror the monorepo: the app at apps/legacy, and a standalone tree
+// that mirrors the repo root (server at apps/legacy/, prompts under the engine).
+const APP = path.join("apps", "legacy");
+const STANDALONE = path.join(APP, ".next", "standalone");
+const APP_OUT = path.join(STANDALONE, APP);
+const ENGINE_OUT = path.join(STANDALONE, "packages", "engine");
+const PROMPT = path.join(ENGINE_OUT, "src", "agent", "system-prompt.md");
 
 function withPayload(test: (fixture: {
 	root: string;
@@ -22,14 +27,14 @@ function withPayload(test: (fixture: {
 		fs.writeFileSync(target, content);
 	};
 	try {
-		write(path.join("scripts", "build-server.mjs"), source);
-		write(path.join(STANDALONE, "server.js"));
-		write(path.join(".next", "static", "runtime.js"));
-		write(path.join("public", "asset.txt"));
-		write(path.join(STANDALONE, PROMPT));
-		write(path.join(STANDALONE, "src", "agent", "prompts", "teacher", "20-teaching.md"));
-		test({ root, write, run: () => spawnSync(process.execPath, [path.join(root, "scripts", "build-server.mjs")], {
-			cwd: root, encoding: "utf8", timeout: 10_000,
+		write(path.join(APP, "scripts", "build-server.mjs"), source);
+		write(path.join(APP_OUT, "server.js"));
+		write(path.join(APP, ".next", "static", "runtime.js"));
+		write(path.join(APP, "public", "asset.txt"));
+		write(PROMPT);
+		write(path.join(ENGINE_OUT, "src", "agent", "prompts", "teacher", "20-teaching.md"));
+		test({ root, write, run: () => spawnSync(process.execPath, [path.join(root, APP, "scripts", "build-server.mjs")], {
+			cwd: path.join(root, APP), encoding: "utf8", timeout: 10_000,
 		}) });
 	} finally {
 		fs.rmSync(root, { recursive: true, force: true });
@@ -44,6 +49,9 @@ describe("desktop standalone payload", () => {
 				write(extra);
 				write(path.join(STANDALONE, extra));
 			}
+			// The app's own previous installers, traced under the app dir.
+			write(path.join(APP, "dist", "old.app", "nested.dmg"));
+			write(path.join(APP_OUT, "dist", "old.app", "nested.dmg"));
 			const runtime = [
 				"node_modules/@earendil-works/pi-ai/dist/index.js",
 				"node_modules/@earendil-works/pi-agent-core/dist/index.js",
@@ -55,12 +63,14 @@ describe("desktop standalone payload", () => {
 			const result = run();
 			assert.equal(result.status, 0, String(result.stderr));
 			assert.equal(fs.existsSync(path.join(root, STANDALONE, "dist")), false);
+			assert.equal(fs.existsSync(path.join(root, APP_OUT, "dist")), false);
+			assert.ok(fs.existsSync(path.join(root, APP, "dist", "old.app", "nested.dmg")));
 			assert.equal(fs.existsSync(path.join(root, STANDALONE, "node_modules", "electron")), false);
 			assert.ok(fs.existsSync(path.join(root, "dist", "old.app", "nested.dmg")));
 			assert.ok(fs.existsSync(path.join(root, "node_modules", "electron", "dist", "electron.exe")));
 			for (const file of runtime) assert.ok(fs.existsSync(path.join(root, STANDALONE, file)), file);
-			assert.ok(fs.existsSync(path.join(root, STANDALONE, ".next", "static", "runtime.js")));
-			assert.ok(fs.existsSync(path.join(root, STANDALONE, "public", "asset.txt")));
+			assert.ok(fs.existsSync(path.join(root, APP_OUT, ".next", "static", "runtime.js")));
+			assert.ok(fs.existsSync(path.join(root, APP_OUT, "public", "asset.txt")));
 		});
 	});
 
@@ -75,19 +85,22 @@ describe("desktop standalone payload", () => {
 	});
 
 	it("still refuses leaked developer data or keys", () => {
-		for (const leaked of ["data/chat.json", "auth.json", ".env", ".env.local"]) {
-			withPayload(({ write, run }) => {
-				write(path.join(STANDALONE, leaked));
-				const result = run();
-				assert.equal(result.status, 1, leaked);
-				assert.match(String(result.stderr), /REFUSING/);
-			});
+		// Any payload dir: the standalone root, the app, or the engine package.
+		for (const dir of [STANDALONE, APP_OUT, ENGINE_OUT]) {
+			for (const leaked of ["data/chat.json", "auth.json", ".env", ".env.local"]) {
+				withPayload(({ write, run }) => {
+					write(path.join(dir, leaked));
+					const result = run();
+					assert.equal(result.status, 1, path.join(dir, leaked));
+					assert.match(String(result.stderr), /REFUSING/);
+				});
+			}
 		}
 	});
 
 	it("still refuses a missing runtime prompt asset", () => {
 		withPayload(({ root, run }) => {
-			fs.rmSync(path.join(root, STANDALONE, PROMPT));
+			fs.rmSync(path.join(root, PROMPT));
 			const result = run();
 			assert.equal(result.status, 1);
 			assert.match(String(result.stderr), /prompt asset missing/);

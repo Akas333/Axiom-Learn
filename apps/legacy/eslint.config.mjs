@@ -9,12 +9,11 @@ import importPlugin from "eslint-plugin-import";
  * way — this is not a style linter.
  *
  *   components/**  →  "@/src/core"  (the pure core barrel) — ONLY
- *   app/**         →  "@/src/core" + "@/src/server" (the server barrel) — ONLY
- *   src/core/**    →  never imports src/agent, src/server, src/store (pure
- *                    core: adapters implement core/ports.ts, never the reverse)
- *   src/agent/**   →  never imports src/server, src/store (dependencies —
- *                    the storage ports, the composition — arrive via
- *                    factories/closures from the chat-handler)
+ *   app/**         →  "@/src/core" + "@/src/server" (the server barrel) + the
+ *                    engine's route handlers ("@/src/http/routes/*") — ONLY
+ *
+ * "@/src" is the engine package (packages/engine/src); its own layer rules
+ * (core / agent / http) live in packages/engine/eslint.config.mjs.
  *
  * tests/ and scripts/ are internal — unrestricted.
  */
@@ -41,7 +40,7 @@ export default defineConfig([
 					zones: [
 						{
 							target: "./components",
-							from: "./src",
+							from: "../../packages/engine/src",
 							// NOTE: the plugin resolves `except` relative to the zone's `from` path.
 							except: ["./core/index.ts"],
 							message:
@@ -49,22 +48,11 @@ export default defineConfig([
 						},
 						{
 							target: "./app",
-							from: "./src",
-							except: ["./core/index.ts", "./server/index.ts"],
+							from: "../../packages/engine/src",
+							// http/routes: the route-handler shims (app/api/**/route.ts).
+							except: ["./core/index.ts", "./server/index.ts", "./http/routes"],
 							message:
 								"app/ (transport + server components) imports ONLY the barrels: `@/src/core` and `@/src/server` (architecture: docs/architecture.md).",
-						},
-						{
-							target: "./src/core",
-							from: ["./src/agent", "./src/server", "./src/store"],
-							message:
-								"Pure core never imports IO layers (agent/server/store): adapters implement core/ports.ts, and the composition root (src/server/stores.ts) passes them in (architecture: docs/architecture.md).",
-						},
-						{
-							target: "./src/agent",
-							from: ["./src/server", "./src/store"],
-							message:
-								"The agent layer receives its dependencies (storage ports via factories/closures) — it never imports the server layer or store adapters (architecture: docs/architecture.md).",
 						},
 					],
 				},

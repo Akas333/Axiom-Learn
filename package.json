@@ -13,7 +13,10 @@
 		"typecheck": "turbo run typecheck",
 		"dev:server": "npm run dev -w @axiom/server",
 		"dev:legacy": "npm run dev -w axiom-learn",
-		"desktop:legacy": "npm run desktop:dev -w axiom-learn"
+		"desktop:legacy": "npm run desktop:dev -w axiom-learn",
+		"lint": "turbo run lint",
+		"desktop:dist": "npm run desktop:dist -w axiom-learn",
+		"dev:web": "npm run dev -w @axiom/web"
 	},
 	"devDependencies": {
 		"turbo": "^2.5.0"

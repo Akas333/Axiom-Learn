@@ -59,6 +59,10 @@ const nextConfig: NextConfig = {
 			"github-copilot-credentials.json*",
 			"xai-credentials.json*",
 			".env*",
+			// The engine package's dev key store and data (config.ts ROOT).
+			"../../packages/engine/auth.json",
+			"../../packages/engine/*-credentials.json*",
+			"../../packages/engine/data/**/*",
 		],
 	},
 	// Empirically verified gaps (2026-09-17 standalone smoke): the tracer
@@ -74,35 +78,41 @@ const nextConfig: NextConfig = {
 	// caught it; unit tests run unbundled and never see it.
 	outputFileTracingIncludes: {
 		"*": [
+			// Monorepo: globs are relative to this app, and dependencies are
+			// hoisted to the repo root — hence ../../node_modules below.
+			// The engine reads its prompts from disk at request time
+			// (config.ts ROOT → standalone/packages/engine).
+			"../../packages/engine/src/agent/system-prompt.md",
+			"../../packages/engine/src/agent/prompts/**/*.md",
 			// The standalone trace omitted this entire runtime-imported directory
 			// in 0.3.0, so importing puppeteer-core failed before browser startup.
-			"node_modules/@puppeteer/browsers/lib/browser-data/**/*.js",
-			"node_modules/pdfjs-dist/legacy/**/*",
-			"node_modules/pdfjs-dist/standard_fonts/**/*",
+			"../../node_modules/@puppeteer/browsers/lib/browser-data/**/*.js",
+			"../../node_modules/pdfjs-dist/legacy/**/*",
+			"../../node_modules/pdfjs-dist/standard_fonts/**/*",
 			// Wave E (2026-10-10): pdf_render paints via @napi-rs/canvas — its
 			// platform binary (@napi-rs/canvas-<platform>-<arch>) is a dynamic
 			// optional-dep require the tracer cannot see. Builds run per-OS and
 			// npm installs only the current platform's binary, so this glob
 			// resolves to exactly one Skia binary per build.
-			"node_modules/@napi-rs/canvas-*/**/*",
+			"../../node_modules/@napi-rs/canvas-*/**/*",
 			// Wave E stage 2: resvg rasterizes visual-maker SVGs natively; same
 			// per-platform-binary story as the canvas above (one per build).
-			"node_modules/@resvg/resvg-js-*/**/*",
-			"node_modules/@earendil-works/pi-ai/dist/providers/data/**/*",
+			"../../node_modules/@resvg/resvg-js-*/**/*",
+			"../../node_modules/@earendil-works/pi-ai/dist/providers/data/**/*",
 			// Public native OAuth factories load these flows through variable imports.
 			// Electron main uses the same standalone SDK; the offline runtime gate
 			// evaluates their real toAuth paths without login or provider requests.
-			"node_modules/@earendil-works/pi-ai/dist/auth/oauth/{load,github-copilot,xai,device-code}.js",
-			"node_modules/@earendil-works/pi-ai/dist/utils/sleep.js",
-			"node_modules/@earendil-works/pi-agent-core/dist/**/*.json",
+			"../../node_modules/@earendil-works/pi-ai/dist/auth/oauth/{load,github-copilot,xai,device-code}.js",
+			"../../node_modules/@earendil-works/pi-ai/dist/utils/sleep.js",
+			"../../node_modules/@earendil-works/pi-agent-core/dist/**/*.json",
 			// Next 16.3.2 native Turbopack applies unanchored excludes while
 			// traversing modules; **/data/**/* still prunes gcp-metadata and
 			// its private runtime chain. Includes are applied after traversal.
 			// This is the verified GoogleAuth closure, not a general dep copy;
 			// the offline native Pi gate must catch future SDK closure changes.
-			"node_modules/gcp-metadata/**/*",
-			"node_modules/json-bigint/**/*",
-			"node_modules/bignumber.js/**/*",
+			"../../node_modules/gcp-metadata/**/*",
+			"../../node_modules/json-bigint/**/*",
+			"../../node_modules/bignumber.js/**/*",
 		],
 	},
 	// Framework-free core lives in src/ (plain TS, imported by routes and CLI alike).

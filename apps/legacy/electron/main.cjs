@@ -25,10 +25,26 @@
  */
 
 const { app, BrowserWindow, Menu, ipcMain, session, shell } = require("electron");
-const { createChatGPT, fileStore } = require("../../../packages/engine/src/host/chatgpt.cjs");
-const { attachChatGPTChild, trustedSender, chatGPTControl } = require("../../../packages/engine/src/host/chatgpt-ipc.cjs");
-const { createSubscriptions, loadSubscriptionSDK } = require("../../../packages/engine/src/host/subscriptions.cjs");
-const { attachSubscriptionChild, subscriptionControl } = require("../../../packages/engine/src/host/subscription-ipc.cjs");
+// The engine's host adapters (packages/engine/src/host). Packaged builds copy
+// them into the asar as engine-host/ (electron-builder.yml `files`); in dev
+// the shell reads the workspace source directly.
+function engineHost(name) {
+	if (app.isPackaged) {
+		try {
+			return require(`../engine-host/${name}`);
+		} catch (err) {
+			// Only "this file isn't packaged" falls through (a packaged code path
+			// run from a source checkout, as the tests do); any other load error
+			// from inside the module still surfaces.
+			if (err?.code !== "MODULE_NOT_FOUND" || !String(err.message).includes(`engine-host/${name}`)) throw err;
+		}
+	}
+	return require(`../../../packages/engine/src/host/${name}`);
+}
+const { createChatGPT, fileStore } = engineHost("chatgpt.cjs");
+const { attachChatGPTChild, trustedSender, chatGPTControl } = engineHost("chatgpt-ipc.cjs");
+const { createSubscriptions, loadSubscriptionSDK } = engineHost("subscriptions.cjs");
+const { attachSubscriptionChild, subscriptionControl } = engineHost("subscription-ipc.cjs");
 const { desktopAPIHeaders } = require("./desktop-api.cjs");
 const { openWebSubscriptionBrowser } = require("./web-subscription-browser.cjs");
 const { randomBytes } = require("node:crypto");
@@ -60,7 +76,9 @@ const DATA_DIR = () => path.join(app.getPath("userData"), "data");
 function serverEntry() {
 	// extraResources ships the whole .next payload under server/standalone/
 	// (copied from .next with an explicit filter — see electron-builder.yml).
-	return path.join(process.resourcesPath, "server", "standalone", "server.js");
+	// Monorepo: the standalone tree mirrors the repo root, so this app's
+	// server.js lives under apps/legacy/ (node_modules stay at the top).
+	return path.join(process.resourcesPath, "server", "standalone", "apps", "legacy", "server.js");
 }
 
 // ─── Single instance: two instances would fight over the data dir ─────────
