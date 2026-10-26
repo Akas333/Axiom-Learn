@@ -10,7 +10,7 @@
 		"./*": "./*"
 	},
 	"scripts": {
-		"test": "NODE_ENV=test tsx --test tests/*.test.ts",
+		"test": "NODE_ENV=test tsx --test --import ./tests/support/isolated-env.ts tests/*.test.ts",
 		"typecheck": "tsc --noEmit",
 		"lint": "eslint ."
 	},
