@@ -13,7 +13,7 @@
  * healthy. The dock's chips + graph refetch track progress live through
  * /api/graph/status, as with session runs.
  */
-import { extraction, NotesImportError } from "../../server/index.ts";
+import { extraction, initAuthEnv, NotesImportError } from "../../server/index.ts";
 import {
 	ModelsNotConfiguredError,
 	PROVIDER_KEY_MISSING_CODE,
@@ -46,6 +46,7 @@ export async function POST(request: Request) {
 		return Response.json({ results: [] as ImportResult[], error: "no files" }, { status: 400 });
 	}
 
+	initAuthEnv(); // keys hand-added to auth.json since boot (see chat-handler)
 	const results: ImportResult[] = [];
 	const queue = files.map((file, requestIndex) => ({ file, requestIndex }));
 	const workers = Array.from({ length: Math.min(3, files.length) }, async () => {

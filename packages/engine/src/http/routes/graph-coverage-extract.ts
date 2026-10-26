@@ -10,7 +10,7 @@
  * flight (the dock is the source of truth for that); failures are logged
  * by the pipeline and leave coverage untouched — the button stays honest.
  */
-import { extraction, extractionStatuses } from "../../server/index.ts";
+import { extraction, extractionStatuses, initAuthEnv } from "../../server/index.ts";
 
 
 export async function POST(request: Request) {
@@ -29,6 +29,7 @@ export async function POST(request: Request) {
 	}
 	// Fire-and-forget, like the trigger: the dock + the coverage panel's
 	// running flags track progress; the promise never blocks the response.
+	initAuthEnv(); // keys hand-added to auth.json since boot (see chat-handler)
 	void extraction.runExtraction(chatId).catch((err: unknown) => {
 		console.error(`[chat ${chatId}] manual extraction failed:`, err);
 	});

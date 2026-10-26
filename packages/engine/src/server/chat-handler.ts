@@ -32,7 +32,7 @@ import { collectToolCallIds } from "./pi/call-ids.ts";
 import { providerEventNote } from "../agent/provider-events.ts";
 import { effectiveSettings, stores } from "./stores.ts";
 import { searchAvailable, searchProvider } from "./search.ts";
-import { providerKeyPresent } from "./keys.ts";
+import { initAuthEnv, providerKeyPresent } from "./keys.ts";
 import {
 	extractionEnabled,
 	graphToolsEnabled,
@@ -211,6 +211,11 @@ export async function handleChatInput(
 	// persist (nothing durable changes); wake-pipeline turns ride the same
 	// path. The affected tier is strong — the conversation chain's own tier
 	// (a chat.model override still resolves through it).
+	// Re-sync the key file into env first: pi-ai reads keys from env, and a
+	// key hand-added to auth.json after boot would otherwise pass the gate
+	// below (which also reads the file) yet fail mid-stream as "Provider is
+	// not configured". Idempotent; never resurrects an API-deleted key.
+	initAuthEnv();
 	if (isSubscriptionProvider(conversation.provider)) {
 		await refreshConnectionCatalog(conversation.provider);
 		if (input.type === "steers" && !connectionBackgroundAllowed(conversation.provider)) {
