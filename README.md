@@ -59,9 +59,19 @@ All three platforms support in-app updates.
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
-npm test           # deterministic, no LLM, no network
+npm run dev:server   # API server (Hono) on http://127.0.0.1:8787
+npm run dev:legacy   # current Next.js app on http://localhost:3000
+npm test             # all packages via Turborepo; deterministic, no LLM, no network
+npm run typecheck
 ```
+
+The repo is an npm-workspaces monorepo:
+
+| Folder | What it is |
+|---|---|
+| `packages/engine` | The backend: domain core, teaching agents, stores, and every `/api` route handler (`src/http`) |
+| `apps/server` | Hono server that mounts the engine's routes (hosted web + desktop) |
+| `apps/legacy` | The current Next.js UI and Electron shell, being replaced by a new front end |
 
 See the [development guide](docs/development.md), [architecture](docs/architecture.md), and [desktop release guide](docs/desktop-release.md).
 

@@ -19,3 +19,9 @@ xai-credentials.json*
 
 # dev-fresh launcher scratch (fresh-user sim): disposable per launch
 .fresh-data/
+
+# monorepo
+.turbo/
+# written by `next dev` on every start
+apps/legacy/AGENTS.md
+apps/legacy/CLAUDE.md
