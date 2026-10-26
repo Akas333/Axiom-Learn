@@ -298,7 +298,7 @@ body {
  * bundle. Tailwind v4 never scans node_modules, so without this line those
  * classes are dead — code blocks and mermaid containers rendered unstyled.
  * (Streamdown README, "Tailwind CSS setup".) */
-@source "../node_modules/streamdown/dist/*.js";
+@source "../../../node_modules/streamdown/dist/*.js";
 
 /* Token the streamdown utilities reference (code-block/mermaid chrome uses
  * bg-sidebar / border-sidebar): map it onto the app's card surface. */
