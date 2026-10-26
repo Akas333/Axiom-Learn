@@ -81,7 +81,7 @@ import {
 } from "@/src/core";
 import { ReadingThinkingField } from "@/components/reading-thinking";
 import { currentUserThinkingOpen, setAllUserThinkingOpen } from "@/components/thinking-block";
-import { slotsConfigured, type ModelsSettings } from "@/src/core";
+import { derivePlanStatuses, slotsConfigured, type ModelsSettings } from "@/src/core";
 import { useSettingsSaved } from "@/components/settings-signal";
 
 /** One width for everything: transcript, cards, and the bottom blob share this column. */
