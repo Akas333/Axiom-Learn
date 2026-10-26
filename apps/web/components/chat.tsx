@@ -60,6 +60,7 @@ import { ThinkingCard, type PracticeThinkingData } from "@/components/practice-c
 import { GraphContextCard, type GraphContextData } from "@/components/graph-context-card";
 import { TopBar } from "@/components/top-bar";
 import { LhMark } from "@/components/lh-mark";
+import { PLAN_CONFIRM_MESSAGE, PlanConfirmBar } from "@/components/plan-confirm-bar";
 import type { ArtifactPartProps, JobRecord, Phase3, QuestionAnswerData, QuestionFormDraft, TurnUsage, SessionPricing } from "@/src/core";
 import type { LhViewMessage } from "@/src/core";
 import { PhaseChip, PhaseDivider } from "@/components/phase-divider";
@@ -547,6 +548,12 @@ export function Chat({
 	// color-coded dotted divider at each boundary; the header chip reads the
 	// session's current phase.
 	const phases = useMemo(() => phaseTimeline(messages), [messages]);
+	// The plan is waiting on the learner: the teacher presented it and ended
+	// its turn (planning phase, nothing running, no open question).
+	const planAwaitingConfirm =
+		phases.at(-1) === "plan" &&
+		messages.at(-1)?.role === "assistant" &&
+		messages.some((m) => m.parts.some((p) => p.type === "data-plan-block"));
 
 	const [text, setText] = useState("");
 	/* The composer's value MIRROR ("nothing gets lost" round, owner
@@ -1635,6 +1642,12 @@ export function Chat({
 						    the summarizer holds the model gate. Mutually exclusive with
 						    the THINKING placeholder by construction (the gate sits
 						    BEFORE beginTurn; the settle kick runs after endTurn). */}
+							{planAwaitingConfirm && !busy && !pending && !compacting && !error && (
+								<PlanConfirmBar
+									onConfirm={() => void send({ type: "text", text: PLAN_CONFIRM_MESSAGE })}
+									onChange={() => composerInputRef.current?.focus()}
+								/>
+							)}
 							{compacting && (
 								<span className="flex items-center gap-2 font-ui text-xs font-medium text-muted-foreground">
 									<BrailleSpinner label="Compacting context" />

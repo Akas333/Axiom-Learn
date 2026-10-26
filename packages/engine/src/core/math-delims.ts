@@ -36,10 +36,26 @@ function replaceEscapedDollars(content: string): string {
 
 /** Read old \(...\)/\[...\] syntax without touching literal content or
  * reparsing native math as Markdown. Dollar authoring remains native. */
+/** An inline code span whose whole body is `$...$` — the model wrapped math
+ * dollars inside backticks, so the dollars would show literally. Keep it as
+ * code (it is usually program syntax, e.g. MATLAB) and drop the dollars. */
+const CODED_MATH = /^(`+)\$([^$\n]+)\$\1$/;
+const unwrapCodedMathSpan = (raw: string) => {
+	const m = CODED_MATH.exec(raw);
+	return m ? `${m[1]}${m[2]!.trim()}${m[1]}` : raw;
+};
+
+/** Display-only: strip math dollars that sit inside inline code spans. */
+export function unwrapCodedMath(markdown: string): string {
+	if (!markdown.includes("`$")) return markdown;
+	return readContentSpans(markdown).map(span => span.kind === "code" ? unwrapCodedMathSpan(span.raw) : span.raw).join("");
+}
+
 export function transformMathDelimiters(markdown: string): string {
 	let offset = 0;
 	return readContentSpans(markdown).map(span => {
 		const start = offset; offset += span.raw.length;
+		if (span.kind === "code") return unwrapCodedMathSpan(span.raw);
 		if (span.kind !== "math") return span.raw;
 		if (span.open === "$") return "$" + replaceEscapedDollars(span.body) + span.close;
 		if (span.open !== "\\(" && span.open !== "\\[") return span.raw;
@@ -117,5 +133,5 @@ export function healOverescapedCommands(text: string): string {
 /** Presentation-only, language-independent recovery. Shape parsing, saved
  * identities, grading and model history must use the unprojected source. */
 export function repairMathForDisplay(text: string): string {
-	return healOverescapedCommands(restoreMathEscapes(recoverDocumentLayout(text)));
+	return unwrapCodedMath(healOverescapedCommands(restoreMathEscapes(recoverDocumentLayout(text))));
 }
