@@ -21,12 +21,12 @@ import { Separator } from "@/components/ui/separator";
 import { AnsweredCard } from "@/components/answered-card";
 import { artifactRenderers } from "@/components/artifacts";
 import { SubagentSteerCard } from "@/components/artifacts/steer-card";
-import { Composer } from "@/components/composer";
+import { Composer, COMPOSER_SHELL } from "@/components/composer";
 import { useEnterSubmits } from "@/components/enter-submits";
 import { blurAfterPointerClick } from "@/components/focus-hygiene";
 import { dockStateKey } from "@/components/dock-state-key";
 import { QueuedSteersBody, type QueuedSteerLine } from "@/components/queued-steers";
-import { DictationBar, DictationMicButton, finishDictation, joinDictation, useDictation } from "@/components/dictation";
+import { DictationProvider, finishDictation, joinDictation, useDictation } from "@/components/dictation";
 import { useFieldCycle } from "@/components/field-cycle";
 import { JobsContext } from "@/components/jobs-context";
 import { StatsBar } from "@/components/stats-bar";
@@ -1682,6 +1682,7 @@ export function Chat({
 				    anchored to the dock block's top edge, so it rides every
 				    height morph (typing, a question growing the band, the
 				    fold) and NEVER overlaps the composer. */}
+				<DictationProvider value={dictation}>
 				<DockOverlay
 					pending={pending}
 					initialQuestionDraft={pending ? questionDraft(pending.toolCallId)?.form : undefined}
@@ -1700,9 +1701,6 @@ export function Chat({
 					contextTokens={contextTokens}
 					pricing={pricing}
 					onReserve={setDockReserve}
-					// The idle mic lives inside the composer row; the strip below
-					// shows while recording, or when a card replaces the composer.
-					dictationSlot={pending || activeProblem || dictation.active ? <DictationBar dictation={dictation} /> : undefined}
 					dictationCancel={dictation.cancel}
 					queuedSteers={visibleQueuedSteers(steerQueue, nativeMessages)}
 					setupCta={
@@ -1743,7 +1741,7 @@ export function Chat({
 							nextProblem={nextReady}
 							onNext={sendNext}
 							placeholder={nextReady ? "Ask anything, or press Enter for the next one." : "↵ to send — ask, answer, or steer the lesson"}
-							trailing={<DictationMicButton dictation={dictation} />}
+							dictation={dictation}
 						/>
 					}
 					onSubmitAnswer={(output) => {
@@ -1763,6 +1761,7 @@ export function Chat({
 						submitAnswer(pending.tool, pending.toolCallId, reading ? { ...output, readingThinking: reading } : output);
 					}}
 				/>
+				</DictationProvider>
 				</Conversation>
 
 				{/* The session-scoped focuses (chrome-melt wave, 2026-09-19): mounted
@@ -1943,7 +1942,6 @@ function DockOverlay({
 	onReserve,
 	plan,
 	onOpenPlan,
-	dictationSlot,
 	dictationCancel,
 	setupCta,
 	queuedSteers,
@@ -1984,11 +1982,9 @@ function DockOverlay({
 	plan?: React.ReactNode;
 	/** Opens the full-DAG popup (the marginalia + chip share it). */
 	onOpenPlan: () => void;
-	/** The dictation strip (STT wave): rendered in the stats bar's middle
-	 *  slot — the mic button + live meter (components/dictation.tsx). */
-	dictationSlot?: React.ReactNode;
-	/** Esc in a pending question's field stops dictation (the strip is the
-	 *  stats bar's; the stop belongs to the page-owned hook, threaded down). */
+	/** Esc in a pending question's field stops dictation (the stop belongs
+	 *  to the page-owned hook, threaded down; the mic itself comes from the
+	 *  DictationProvider wrapped around this overlay). */
 	dictationCancel?: () => void;
 	/** The queued-steer indicator's lines (composer steering, 2026-10-03):
 	 *  already filtered by visibleQueuedSteers — only undrained steers. */
@@ -2401,7 +2397,7 @@ function DockOverlay({
 							claim={revealPending}
 						/>
 					)}
-					<div ref={shellRef} className="pointer-events-auto overflow-hidden rounded-3xl border border-input/70 bg-card shadow-lg">
+					<div ref={shellRef} className={`pointer-events-auto overflow-hidden ${COMPOSER_SHELL}`}>
 						<div
 						ref={contentRef}
 						key={mode}
@@ -2448,7 +2444,6 @@ function DockOverlay({
 						turns={turns}
 						contextTokens={contextTokens}
 						pricing={pricing}
-						dictationSlot={dictationSlot}
 						chatId={chatId}
 					/>
 					{/* The scroll-down disc (moved here from the Conversation,

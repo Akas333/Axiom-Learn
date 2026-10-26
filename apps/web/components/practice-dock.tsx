@@ -4,6 +4,7 @@ import { ChevronRightIcon } from "lucide-react";
 import { ToolContentResponse } from "@/components/ai-elements/message";
 import { Button } from "@/components/ui/button";
 import { joinDictation, useDictationTarget } from "@/components/dictation";
+import { THINKING_TEXTAREA, ThinkingField } from "@/components/thinking-field";
 import { useEnterSubmits } from "@/components/enter-submits";
 import { cn } from "@/lib/utils";
 
@@ -113,13 +114,23 @@ export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmi
 
 			{/* The learner's half: Enter SENDS (owner round 2, 2026-10-05);
 			    Shift+Enter makes a newline — less to decide about. */}
-			<div
-				data-testid="practice-thinking-field"
-				className="m-1.5 rounded-[10px] border border-border/70 bg-background/60 transition-colors focus-within:border-primary/50"
+			<ThinkingField
+				testId="practice-thinking-field"
+				label="Thinking through the problem"
+				className="m-2"
+				hint={compactionRunning ? "compacting session…" : "↵ submits · ⇧↵ newline"}
+				action={
+					<Button
+						type="button"
+						data-testid="practice-send"
+						disabled={thinking.trim().length === 0 || compactionRunning}
+						onClick={() => submit()}
+						className="h-9 rounded-xl px-3.5 text-sm font-medium"
+					>
+						Submit thinking
+					</Button>
+				}
 			>
-				<div className="px-2.5 pt-2 text-xs font-medium text-muted-foreground">
-					Your thinking
-				</div>
 				<textarea
 					value={thinking}
 					onChange={(e) => {
@@ -142,31 +153,11 @@ export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmi
 							submit();
 						}
 					}}
-					placeholder="Work here, think out loud."
+					placeholder="Work through it here — think out loud."
 					rows={4}
-					className={cn(
-						"field-sizing-content lh-input max-h-64 min-h-16 w-full resize-none bg-transparent px-2.5 pb-2 outline-none placeholder:text-muted-foreground",
-					)}
+					className={cn(THINKING_TEXTAREA, "max-h-64 min-h-16")}
 				/>
-				{/* The submit row (owner round 4, 2026-10-05): IDENTICAL to the
-				    question dock's — hint left, the SAME Button (h-9, px-3.5),
-				    one p-1 row. Corner radii concentric: shell 16 − m-1.5 (6) =
-				    field 10 − p-1 (4) = button 6. */}
-				<div className="flex items-center justify-between gap-2 p-1">
-					<span aria-hidden className="pl-1.5 text-xs text-muted-foreground">
-						{compactionRunning ? "compacting session…" : "↵ submits · ⇧↵ newline"}
-					</span>
-					<Button
-						type="button"
-						data-testid="practice-send"
-						disabled={thinking.trim().length === 0 || compactionRunning}
-						onClick={() => submit()}
-						className="ml-auto h-9 rounded-[6px] px-3.5 text-sm font-medium"
-					>
-						Submit thinking
-					</Button>
-				</div>
-			</div>
+			</ThinkingField>
 		</div>
 	);
 }

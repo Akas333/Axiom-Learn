@@ -1,19 +1,19 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "@/lib/navigation";
-import { Composer } from "@/components/composer";
-import { DictationBar, DictationMicButton, joinDictation, useDictation } from "@/components/dictation";
-import { DumbbellIcon, GraduationCapIcon, PlusIcon, XIcon } from "lucide-react";
+import { Composer, COMPOSER_SHELL } from "@/components/composer";
+import { joinDictation, useDictation } from "@/components/dictation";
+import { PlusIcon, XIcon } from "lucide-react";
 import { LhMark } from "@/components/lh-mark";
 import { SphereBackdrop } from "@/components/sphere-backdrop";
 import { Hint } from "@/components/ui/hint";
-import { ModelControl } from "@/components/model-picker";
+import { StatsBar } from "@/components/stats-bar";
 import { useFieldCycle } from "@/components/field-cycle";
 import { SidebarToggle } from "@/components/sidebar";
 import { SetupDialog } from "@/components/setup-dialog";
 import { useStrongKeyless, useZeroKeys, ZeroKeysPill } from "@/components/setup-cta";
 import { ChainTableOverlay } from "@/components/chain-table.tsx";
-import { ComposerActions } from "@/components/composer-actions";
+import { ComposerActions, SessionModeToggle } from "@/components/composer-actions";
 import type { ChatSettings, GraphSnapshot } from "@/src/core";
 
 /** The draft's pick set (owner round 10): the SAME shape the home pick
@@ -180,7 +180,7 @@ export function DraftShell({
 						</h1>
 						<div className={`${DOCK} mt-9`}>
 							{setupCta && <ComposerActions setup={setupCta} />}
-							<div className="overflow-hidden rounded-3xl border border-input/70 bg-card shadow-lg">
+							<div className={COMPOSER_SHELL}>
 								<Composer
 									busy={busy}
 									value={text}
@@ -196,51 +196,46 @@ export function DraftShell({
 											? "Describe a topic, or pick nodes from your graph…"
 											: "Ask about any topic — the teacher starts by finding what you know…"
 									}
-									aboveToolbar={
-										dictation.active ? (
-											<div className="px-1">
-												<DictationBar dictation={dictation} />
-											</div>
-										) : null
-									}
-									toolbar={
-										<>
-											{mode === "practice" && (
-												<Hint label="Pick nodes from your graph" side="bottom">
-													<button
-														type="button"
-														aria-label="Pick nodes from your graph"
-														data-testid="practice-props-chip"
-														onClick={onOpenPicker}
-														className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
-													>
-														<PlusIcon className="size-5" />
-													</button>
-												</Hint>
-											)}
-											<ModeSwitch mode={mode} onModeChange={onModeChange} />
-											{picks.length > 0 && (
-												<span className="flex items-center gap-1 rounded-full bg-(--pill) py-1 pl-3 pr-1 text-sm text-foreground">
-													{picks.length} {picks.length === 1 ? "node" : "nodes"}
-													<button
-														type="button"
-														aria-label="Clear picked nodes"
-														data-testid="practice-props-clear"
-														onClick={onClearPicks}
-														className="flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-(--pill-hover) hover:text-foreground"
-													>
-														<XIcon className="size-3.5" />
-													</button>
-												</span>
-											)}
-											<div className="ml-auto flex items-center gap-0.5">
-												<ModelControl variant="plain" />
-												<DictationMicButton dictation={dictation} />
-											</div>
-										</>
+									dictation={dictation}
+									leading={
+										mode === "practice" ? (
+											<Hint label="Pick nodes from your graph" side="bottom">
+												<button
+													type="button"
+													aria-label="Pick nodes from your graph"
+													data-testid="practice-props-chip"
+													onClick={onOpenPicker}
+													className="flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
+												>
+													<PlusIcon className="size-5" />
+												</button>
+											</Hint>
+										) : undefined
 									}
 								/>
 							</div>
+							<StatsBar
+								turns={[]}
+								leadingSlot={
+									<div className="flex items-center gap-2">
+										<SessionModeToggle mode={mode} onChange={(m) => onModeChange?.(m)} testIdPrefix="draft-mode" />
+										{picks.length > 0 && (
+											<span className="flex items-center gap-1 rounded-full bg-(--pill) py-0.5 pl-2.5 pr-0.5 text-sm text-foreground">
+												{picks.length} {picks.length === 1 ? "node" : "nodes"}
+												<button
+													type="button"
+													aria-label="Clear picked nodes"
+													data-testid="practice-props-clear"
+													onClick={onClearPicks}
+													className="flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-(--pill-hover) hover:text-foreground"
+												>
+													<XIcon className="size-3.5" />
+												</button>
+											</span>
+										)}
+									</div>
+								}
+							/>
 						</div>
 					</div>
 					{overlay}
@@ -254,37 +249,6 @@ export function DraftShell({
 					<SidebarToggle />
 				</div>
 			</header>
-		</div>
-	);
-}
-
-/** Teach | Practice: a dark track with the selected chip raised (the
- *  reference's Search | Computer switch). */
-function ModeSwitch({ mode, onModeChange }: { mode: "teach" | "practice"; onModeChange?: (m: "teach" | "practice") => void }) {
-	return (
-		<div role="radiogroup" aria-label="Session type" className="flex items-center rounded-full bg-background/70 p-0.5" data-testid="draft-mode-switch">
-			{(["teach", "practice"] as const).map((m) => {
-				const on = mode === m;
-				const Icon = m === "teach" ? GraduationCapIcon : DumbbellIcon;
-				return (
-					<button
-						key={m}
-						type="button"
-						role="radio"
-						aria-checked={on}
-						data-testid={`draft-mode-${m}`}
-						onClick={() => onModeChange?.(m)}
-						className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-sm transition-colors ${
-							on
-								? "border border-input bg-card text-foreground shadow-sm"
-								: "border border-transparent text-muted-foreground hover:text-foreground"
-						}`}
-					>
-						<Icon className="size-4" />
-						{m === "teach" ? "Teach" : "Practice"}
-					</button>
-				);
-			})}
 		</div>
 	);
 }

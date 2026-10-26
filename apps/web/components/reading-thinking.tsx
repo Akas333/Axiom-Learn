@@ -1,6 +1,7 @@
 
 import { useCallback } from "react";
 import { joinDictation, useDictationTarget } from "@/components/dictation";
+import { THINKING_TEXTAREA, ThinkingField } from "@/components/thinking-field";
 
 /**
  * The reading-thinking field (owner design 2026-10-03, "two questions per
@@ -46,13 +47,13 @@ export function ReadingThinkingField({
 		claim,
 	);
 	return (
-		<div
-			data-testid="reading-thinking-field"
-			className="pointer-events-auto mb-2 rounded-2xl border bg-card/60 px-3 py-2 transition-colors focus-within:border-primary/50"
+		<ThinkingField
+			label="Thinking while reading"
+			testId="reading-thinking-field"
+			className="pointer-events-auto mb-2"
+			hint={onOpen ? "↵ opens the check · ⇧↵ newline" : undefined}
+			mic={claim}
 		>
-			<div className="pb-1 text-xs font-medium text-muted-foreground">
-				Thinking while reading
-			</div>
 			<textarea
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
@@ -93,10 +94,10 @@ export function ReadingThinkingField({
 						e.currentTarget.blur();
 					}
 				}}
-				placeholder="Whatever comes to mind as you read."
+				placeholder="What's on your mind as you read?"
 				rows={1}
-				className="field-sizing-content lh-input max-h-40 w-full resize-none bg-transparent py-0.5 outline-none placeholder:text-muted-foreground/70"
+				className={`${THINKING_TEXTAREA} min-h-10`}
 			/>
-		</div>
+		</ThinkingField>
 	);
 }

@@ -53,3 +53,36 @@ export function NodePickerControl({ count, onOpen, onClear }: {
 		</div>
 	);
 }
+
+/** Teach | Practice — the quiet text toggle that sits at the left of the
+ *  row under the composer (home and the new-session draft share it). */
+export function SessionModeToggle({
+	mode,
+	onChange,
+	testIdPrefix = "home-mode",
+}: {
+	mode: "teach" | "practice";
+	onChange: (mode: "teach" | "practice") => void;
+	/** Kept per surface so existing selectors keep working. */
+	testIdPrefix?: string;
+}) {
+	return (
+		<div role="radiogroup" aria-label="Session type" className="flex items-center gap-0.5" data-testid={`${testIdPrefix}-switch`}>
+			{(["teach", "practice"] as const).map((m) => (
+				<button
+					key={m}
+					type="button"
+					role="radio"
+					aria-checked={mode === m}
+					data-testid={`${testIdPrefix}-${m}`}
+					onClick={() => onChange(m)}
+					className={`rounded-lg px-2 py-1 text-sm transition-colors ${
+						mode === m ? "bg-(--pill) text-foreground" : "text-muted-foreground hover:text-foreground"
+					}`}
+				>
+					{m === "teach" ? "Teach" : "Practice"}
+				</button>
+			))}
+		</div>
+	);
+}

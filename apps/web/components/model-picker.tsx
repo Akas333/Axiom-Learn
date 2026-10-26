@@ -339,7 +339,7 @@ export function ModelControl({
 			<div
 				className={
 					variant === "combined"
-						? "flex items-center rounded-lg border border-input transition-colors focus-within:border-primary hover:border-muted-foreground/60"
+						? "flex items-center rounded-lg transition-colors hover:bg-(--pill)"
 						: "contents"
 				}
 			>

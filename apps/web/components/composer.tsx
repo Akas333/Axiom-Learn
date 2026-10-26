@@ -1,16 +1,19 @@
 
-import { ArrowRightIcon, ArrowUpIcon, CircleStopIcon, SquareIcon } from "lucide-react";
+import { ArrowRightIcon, CircleStopIcon, CornerDownLeftIcon } from "lucide-react";
+import { DictationButton, DictationMeter, type Dictation } from "@/components/dictation";
 import { cn } from "@/lib/utils";
-import { Hint } from "@/components/ui/hint";
 
 /**
- * The chat composer — content row ONLY (the persistent rounded shell lives in
- * the chat view's overlay, so the shell can later morph chat → question
- * without remounting).
+ * The composer bar — ONE row inside a rounded pill: an optional leading
+ * control, the text, then (while dictating) the dot meter, the ↵ send
+ * button and the mic. The pill itself is COMPOSER_SHELL, applied by the
+ * host (the chat view's shell also morphs into the question card, so it
+ * lives outside this component). Home, new-session and chat all use it.
  *
- * Corner-radius math (concentric with the shell): shell rounded-2xl (16px) −
- * row padding p-1.5 (6px) = button rounded-[10px] = 25% of the 40px button.
+ * Corner-radius math (concentric with the shell): shell rounded-3xl (24px)
+ * − row padding p-2 (8px) ≈ button rounded-xl (12px).
  */
+export const COMPOSER_SHELL = "rounded-3xl border border-input/70 bg-card shadow-lg";
 /** What one Enter press does, in precedence order: stop a busy stream,
  *  otherwise send the message, otherwise — practice sessions only — fire
  *  the next-problem signal while the between-problems pause is live
@@ -48,9 +51,8 @@ export function Composer({
 	placeholder = "Ask, answer, or steer the lesson…",
 	nextProblem = false,
 	onNext,
-	toolbar,
-	aboveToolbar,
-	trailing,
+	leading,
+	dictation,
 }: {
 	busy: boolean;
 	value: string;
@@ -62,63 +64,50 @@ export function Composer({
 	/** The page's handle to the textarea — the dictation-end focus (owner,
 	 *  2026-10-01): a run ending hands the cursor to the bare composer. */
 	inputRef?: React.RefObject<HTMLTextAreaElement | null>;
-	/** Escape while a dictation runs stops it (STT wave, 2026-09-17). No-op
-	 *  when absent — Esc otherwise means nothing in the composer. */
+	/** Escape while a dictation runs stops it. No-op when absent. */
 	onEscape?: () => void;
-	/** The textarea's placeholder (owner refinement round, 2026-09-24):
-	 *  active sessions read "Ask, answer, or steer the lesson…"; the fresh
-	 *  new-session page asks the graph view's opening question instead. */
 	placeholder?: string;
 	/** The practice pause is live (owner round 16): Enter on the empty
-	 *  composer fires the next-problem signal instead of doing nothing —
-	 *  the keyboard-first move-on. */
+	 *  composer fires the next-problem signal instead of doing nothing. */
 	nextProblem?: boolean;
-	/** The signal's dispatcher (send({type:"next"})) — the chip and the
-	 *  empty-Enter share it. */
+	/** The signal's dispatcher (send({type:"next"})). */
 	onNext?: () => void;
-	/** In-card controls (the new-session hero): when present the textarea
-	 *  spans the card and these sit on a row beneath it, with a round send
-	 *  button at the far right. */
-	toolbar?: React.ReactNode;
-	/** A full-width row between the textarea and the toolbar (dictation). */
-	aboveToolbar?: React.ReactNode;
-	/** Extra controls after the send button in the one-row layout (mic). */
-	trailing?: React.ReactNode;
+	/** A control before the text (the draft's "+ pick nodes"). */
+	leading?: React.ReactNode;
+	/** The page's dictation engine: adds the meter + mic to the row. */
+	dictation?: Dictation;
 }) {
-	const hero = toolbar !== undefined;
 	const act = () => {
 		const action = enterAction({ busy, canSend, nextProblem });
 		if (action === "stop") onStop();
 		else if (action === "send") onSend();
 		else if (action === "next") onNext?.();
 	};
+	const stopMode = busy && !canSend;
 	return (
 		<form
 			data-testid="composer"
-			className={hero ? "flex flex-col gap-2 p-3" : "flex items-end gap-1 py-1.5 pl-2 pr-1.5"}
+			className="flex items-end gap-1 p-2"
 			onSubmit={(e) => {
 				e.preventDefault();
 				act();
 			}}
 		>
+			{leading ? <div className="flex shrink-0 items-center">{leading}</div> : null}
 			<textarea
 				ref={inputRef}
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				onKeyDown={(e) => {
-					// Esc ends dictation before anything else Esc might someday mean
-					// here (the dictate decisions: click-again or Esc to stop).
-					// stopPropagation claims the Esc (keyboard wave A): the
-					// window-level chain must not also abort a turn under us.
+					// Esc ends dictation; stopPropagation claims it so the
+					// window-level chain doesn't also abort a turn.
 					if (e.key === "Escape" && onEscape) {
 						e.preventDefault();
 						e.stopPropagation();
 						onEscape();
 						return;
 					}
-					// Chat convention: Enter sends, Shift+Enter is a newline.
-					// ⌘/Ctrl+Enter also sends — the universal submit shortcut
-					// across every input in the app (thinking field, answers).
+					// Enter sends, Shift+Enter is a newline, ⌘/Ctrl+Enter sends.
 					if (e.key === "Enter" && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
 						e.preventDefault();
 						act();
@@ -127,67 +116,43 @@ export function Composer({
 				placeholder={placeholder}
 				autoFocus={autoFocus}
 				rows={1}
-				className={
-					hero
-						? "field-sizing-content lh-input max-h-60 min-h-14 w-full resize-none bg-transparent px-2 pt-1.5 text-base outline-none placeholder:text-muted-foreground/70"
-						: "field-sizing-content lh-input max-h-48 min-h-10 flex-1 resize-none bg-transparent px-2.5 py-2 outline-none placeholder:text-muted-foreground/70"
-				}
-			/>
-			{hero && aboveToolbar}
-			{hero ? (
-				<div className="flex items-center gap-1.5">
-					{toolbar}
-					<button
-						type="submit"
-						aria-label={busy && !canSend ? "Stop" : "Send"}
-						data-testid="composer-send"
-						disabled={!busy && !canSend}
-						className="ml-1 flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-90 disabled:opacity-30"
-					>
-						{busy && !canSend ? <SquareIcon className="size-4" /> : <ArrowUpIcon className="size-5" />}
-					</button>
-				</div>
-			) : null}
-			{/* The button follows the text (owner report 2026-10-03): while
-				 a turn runs WITH text typed it stays the SEND affordance
-				 (click = steer — steering must be clickable, not Enter-only);
-				 only an empty composer morphs it to Stop. ESC keeps its
-				 confirm-popup abort in every state, so stop is never
-				 unreachable. No tooltip — the ↵ glyph is the affordance
-				 (owner, subtlety round 2026-09-25).
-
-				 THE NEXT MORPH (owner round 16 refinement, 2026-10-06): an
-				 empty composer in the practice pause morphs the button into
-				 a wide green NEXT PROBLEM — the affordance IS the button
-				 (click and Enter share one lane), and typing anything
-				 returns the regular send. The green is the app's correct-
-				 answer register (answered-card's green-500/600). */}
-				{hero ? null : nextProblem && !busy && !canSend ? (
-					<button
-						type="submit"
-						data-testid="next-problem-button"
-						aria-label="Next problem"
-						className="mb-0.5 flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-green-600 px-4 font-ui text-xs font-medium text-white transition-colors hover:bg-green-500"
-					>
-						Next problem
-						<ArrowRightIcon className="size-4" />
-					</button>
-				) : (
-					<button
-						type="submit"
-						aria-label={busy && !canSend ? "Stop" : "Send"}
-						disabled={!busy && !canSend}
-						className={cn(
-							"mb-0.5 flex size-9 shrink-0 items-center justify-center rounded-full transition-colors",
-							busy && !canSend
-								? "text-foreground hover:bg-(--pill)"
-								: "bg-foreground text-background hover:opacity-90 disabled:bg-transparent disabled:text-muted-foreground/50",
-						)}
-					>
-						{busy && !canSend ? <CircleStopIcon className="size-[22px]" /> : <ArrowUpIcon className="size-[18px]" />}
-					</button>
+				className={cn(
+					"field-sizing-content lh-input max-h-48 min-h-9 flex-1 resize-none bg-transparent py-2 outline-none placeholder:text-muted-foreground/70",
+					leading ? "px-1.5" : "px-3",
 				)}
-				{!hero && trailing ? <div className="mb-0.5 flex shrink-0 items-center">{trailing}</div> : null}
+			/>
+			{dictation ? <DictationMeter dictation={dictation} /> : null}
+			{/* The practice pause morphs the button into a wide green NEXT
+			    PROBLEM on an empty composer (owner round 16); typing brings
+			    the regular send back. While a turn runs with nothing typed the
+			    button is Stop; with text it stays Send (a steer). */}
+			{nextProblem && !busy && !canSend ? (
+				<button
+					type="submit"
+					data-testid="next-problem-button"
+					aria-label="Next problem"
+					className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-green-600 px-4 font-ui text-xs font-medium text-white transition-colors hover:bg-green-500"
+				>
+					Next problem
+					<ArrowRightIcon className="size-4" />
+				</button>
+			) : (
+				<button
+					type="submit"
+					aria-label={stopMode ? "Stop" : "Send"}
+					data-testid="composer-send"
+					disabled={!busy && !canSend}
+					className={cn(
+						"flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors",
+						stopMode || canSend
+							? "text-foreground hover:bg-(--pill)"
+							: "text-muted-foreground/50",
+					)}
+				>
+					{stopMode ? <CircleStopIcon className="size-5" /> : <CornerDownLeftIcon className="size-5" />}
+				</button>
+			)}
+			{dictation ? <DictationButton dictation={dictation} /> : null}
 		</form>
 	);
 }

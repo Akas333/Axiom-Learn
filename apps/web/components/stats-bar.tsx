@@ -60,7 +60,6 @@ export function StatsBar({
 	turns,
 	contextTokens = null,
 	pricing,
-	dictationSlot,
 	chatId,
 	leadingSlot,
 }: {
@@ -72,11 +71,6 @@ export function StatsBar({
 	 *  record; absent on the draft surfaces, where it binds the strong
 	 *  slot (the new-session default). */
 	chatId?: string;
-	/** The dictation strip (STT wave, 2026-09-17): the row's middle is dead
-	 *  space between the session data and the model control — the mic
-	 *  button lives there, and while recording the meter unfurls to fill
-	 *  whatever width the row has (owner placement). */
-	dictationSlot?: ReactNode;
 	/** The row's LEFT edge (practice sessions, 2026-10-04): the home
 	 *  composer's teach | practice switch rides here — before the session
 	 *  data (which renders nothing pre-chat on that surface). */
@@ -128,7 +122,7 @@ export function StatsBar({
 			// (so its transparent gradient area never blocks scrolling) — this row
 			// must re-enable events or every control on it is dead (the model-
 			// control wave caught this live: buttons rendered, clicks never landed).
-			className="pointer-events-auto relative flex items-center justify-between gap-3 px-3 pt-2.5 text-sm text-muted-foreground"
+			className="pointer-events-auto relative flex items-center justify-between gap-3 px-4 pt-2.5 text-sm text-muted-foreground"
 		>
 			{/* The summary button + its popover: the popover anchors to this
 			    wrapper, CENTERED over the button itself (owner, stats round 2)
@@ -212,12 +206,9 @@ export function StatsBar({
 				)}
 			</div>
 			)}
-			{/* The middle slot: dictation (owner, 2026-09-17). flex-1 lets the
-			    meter expand into the row's free width; justify-center keeps the
-			    lone idle mic button visually centered. */}
-			{dictationSlot && (
-				<div className="flex min-w-0 flex-1 items-center justify-center">{dictationSlot}</div>
-			)}
+			{/* Dictation lives inside the input itself now (the mic + meter
+			    in the composer pill and the thinking fields). */}
+			<div className="flex-1" />
 			{/* The model + thinking control — one controller for the conversation
 			    agents (prober/teacher); the record's `turns` above still folds
 			    the ACTUAL models billed, regardless of what the picker says. */}

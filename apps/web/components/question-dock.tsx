@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownIcon, ChevronRightIcon, PlayIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { finishDictation, isDictationActive, joinDictation, useDictationTarget } from "@/components/dictation";
+import { THINKING_TEXTAREA, ThinkingField } from "@/components/thinking-field";
 import { useEnterSubmits } from "@/components/enter-submits";
 import { ToolContentResponse } from "@/components/ai-elements/message";
 import { cn } from "@/lib/utils";
@@ -830,25 +831,32 @@ function QuestionDockForm({
 				</div>
 			)}
 
-			{/* The learner's half of the dock — a composer TWIN: a labeled, bordered
-			    field with Submit docked inside, exactly like the chat composer's
-			    send. Select modes get "Your thinking" (Enter makes a newline — it
-			    is for dumping, soon dictated; the button submits); text mode
-			    keeps "Your answer" with Enter-to-submit. */}
+			{/* The learner's half of the dock: the shared ThinkingField (same
+			    look as the reading field and the practice card). Select modes
+			    ask for the reasoning behind the pick; text mode is the answer
+			    itself. Enter submits in both; Shift+Enter is a newline. */}
 			<form
-				className="border-t border-border/60 p-1.5"
+				className="border-t border-border/60 p-2"
 				onSubmit={(e) => {
 					e.preventDefault();
 					submit();
 				}}
 			>
-				<div
-					data-testid={qd.mode === "text" ? "answer-field" : "thinking-field"}
-					className="rounded-[10px] border border-border/70 bg-background/60 transition-colors focus-within:border-primary/50"
+				<ThinkingField
+					testId={qd.mode === "text" ? "answer-field" : "thinking-field"}
+					label={qd.mode === "text" ? "Your answer" : "Thinking about your answer"}
+					hint={compactionRunning ? "compacting session…" : "↵ submits · ⇧↵ newline"}
+					mic={dictationClaim}
+					action={
+						<Button
+							type="submit"
+							disabled={!canSubmit || compactionRunning}
+							className="h-9 rounded-xl px-3.5 text-sm font-medium"
+						>
+							Submit answer
+						</Button>
+					}
 				>
-					<div className="px-2.5 pt-2 text-xs font-medium text-muted-foreground">
-						{qd.mode === "text" ? "Your answer" : "Your thinking"}
-					</div>
 					{qd.mode === "text" ? (
 						<textarea
 							value={text}
@@ -875,7 +883,7 @@ function QuestionDockForm({
 							}}
 							placeholder="Type your answer…"
 							rows={1}
-							className="field-sizing-content lh-input max-h-48 min-h-10 w-full resize-none bg-transparent px-2.5 py-2 outline-none placeholder:text-muted-foreground"
+							className={cn(THINKING_TEXTAREA, "min-h-10")}
 						/>
 					) : (
 						<textarea
@@ -903,29 +911,17 @@ function QuestionDockForm({
 									submit();
 								}
 							}}
-							placeholder="Why this answer? Whatever comes to mind."
+							placeholder="Why this answer? What's on your mind?"
 							rows={1}
 							className={cn(
-								"field-sizing-content lh-input max-h-48 w-full resize-none bg-transparent px-2.5 py-2 outline-none placeholder:text-muted-foreground/70",
+								THINKING_TEXTAREA,
 								// Phase-scaled prominence: teaching invites depth,
 								// probing stays quick.
 								phase === "teach" ? "min-h-[4.5rem]" : "min-h-10",
 							)}
 						/>
 					)}
-					<div className="flex items-center justify-between gap-2 p-1">
-						<span aria-hidden className="pl-1.5 text-xs text-muted-foreground">
-								{compactionRunning ? "compacting session…" : "↵ submits · ⇧↵ newline"}
-						</span>
-						<Button
-							type="submit"
-							disabled={!canSubmit || compactionRunning}
-							className="ml-auto h-9 rounded-[6px] px-3.5 text-sm font-medium"
-						>
-							Submit answer
-						</Button>
-					</div>
-				</div>
+				</ThinkingField>
 			</form>
 		</div>
 	);

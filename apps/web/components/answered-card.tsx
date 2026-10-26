@@ -49,9 +49,9 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 		    captured while reading are chronologically PRIOR to the question —
 		    rendered as its own user-side block ABOVE the card, the unified
 		    ThinkingBlock, instead of an inset inside the answer. Same muted
-		    rail as before; the label is now plain "Your thinking". */}
+		    rail as before; labelled like the live field it came from. */}
 		{answer.readingThinking && (
-			<ThinkingBlock testId="reading-thinking-block" label="Your thinking" text={answer.readingThinking} defaultOpen />
+			<ThinkingBlock testId="reading-thinking-block" label="Thinking while reading" text={answer.readingThinking} defaultOpen />
 		)}
 		{/* [&>*:last-child]:mb-0 (owner round, 2026-10-07): on ask cards the
 		    thinking row is the last child — its my-3 stacked with the card's
@@ -186,7 +186,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 				    the accent lift read too light); rail only, heights identical. */
 				<ThinkingBlock
 					testId="your-thinking"
-					label="Your thinking"
+					label="Thinking about your answer"
 					text={answer.thinking ?? answer.note ?? ""}
 					inCard
 				/>

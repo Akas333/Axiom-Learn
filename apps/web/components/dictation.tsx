@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Loader2Icon, MicIcon } from "lucide-react";
 import { useSettingsDialog } from "@/components/settings/settings-dialog";
 import { Hint } from "@/components/ui/hint";
@@ -520,27 +520,30 @@ export function useDictation({ append }: { append: (text: string) => void }): Di
 	};
 }
 
+/** The page's one dictation engine, shared with the fields that host a
+ *  mic (question, practice and reading-thinking fields) so it needn't be
+ *  threaded through every dock prop. Absent = those fields show no mic. */
+const DictationContext = createContext<Dictation | null>(null);
+export const DictationProvider = DictationContext.Provider;
+export function useDictationContext(): Dictation | null {
+	return useContext(DictationContext);
+}
+
+/** Dots the meter shows (each grows into a bar with the voice level). */
+const DOT_COUNT = 16;
+
 /**
- * The stats-bar dictation slot (owner placement, round 1): the row's middle
- * is one strip that is always the full free width —
- *
- *   idle      a wide, quiet "Dictate" button (mic + label, grayed out — the
- *             whole middle is the affordance, per the owner).
- *   active    optimistic from the CLICK: red stop pill + the fixed-width
- *             meter (no interim text ever shifts it). Spinner while
- *             Deepgram flushes the last final.
- *   error     the wide button again, label swapped for the failure reason
- *             (full text in the tooltip), cleared on the next click.
+ * The mic button that lives INSIDE an input (composer, thinking fields):
+ * a quiet glyph at rest; while recording a filled accent square that
+ * stops on click (or Esc). A keyless error deep-links Settings → Keys.
  */
-/** Compact idle mic for in-card toolbars. While recording it renders
- *  nothing: the caller shows DictationBar (Stop + meter) instead. */
-export function DictationMicButton({ dictation }: { dictation: Dictation }) {
-	const { error, toggle, active, clearError } = dictation;
+export function DictationButton({ dictation }: { dictation: Dictation }) {
+	const { phase, error, toggle, active, clearError } = dictation;
 	const { open: openSettings } = useSettingsDialog();
-	if (active) return null;
 	const keyless = error === DICTATION_KEYLESS;
+	const label = active ? "Stop dictation (Esc)" : (error ?? "Dictate");
 	return (
-		<Hint label={error ?? "Dictate"} action={error ? undefined : "toggle-dictation"} side="top">
+		<Hint label={label} action={active || error ? undefined : "toggle-dictation"} side="top">
 			<button
 				type="button"
 				onClick={() => {
@@ -551,39 +554,39 @@ export function DictationMicButton({ dictation }: { dictation: Dictation }) {
 						toggle();
 					}
 				}}
-				aria-label={error ? `Dictation failed: ${error}` : "Start dictation"}
+				disabled={phase === "stopping"}
+				aria-label={active ? "Stop dictation" : error ? `Dictation failed: ${error}` : "Start dictation"}
+				aria-pressed={active}
 				data-testid="dictation-toggle"
-				className={`flex size-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-(--pill) ${
-					error ? "text-destructive" : "text-muted-foreground hover:text-foreground"
+				className={`flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+					active
+						? "bg-primary/25 text-(--primary-soft) hover:bg-primary/35"
+						: error
+							? "text-destructive hover:bg-(--pill)"
+							: "text-muted-foreground hover:bg-(--pill) hover:text-foreground"
 				}`}
 			>
-				<MicIcon className="size-[18px]" />
+				{phase === "stopping" || phase === "connecting" ? (
+					<Loader2Icon className="size-[18px] animate-spin" />
+				) : (
+					<MicIcon className="size-[18px]" />
+				)}
 			</button>
 		</Hint>
 	);
 }
 
-export function DictationBar({ dictation }: { dictation: Dictation }) {
-	const { phase, error, levelRef, toggle, active, clearError } = dictation;
-	const { open: openSettings } = useSettingsDialog();
-	/** The keyless click (zero-keys wave, owner dictation trio): the errored
-	 *  idle button deep-links Settings → Keys → the Deepgram row and clears
-	 *  the error — the surface is clean when the user returns. Any other
-	 *  error keeps the old behavior (click = retry, which clears). */
-	const keyless = error === DICTATION_KEYLESS;
-	const [levels, setLevels] = useState<number[]>(() => new Array(METER_CELLS).fill(0));
-	const recording = phase === "recording" || phase === "stopping";
-	/** Adaptive cell count (owner round 2): derived from the meter's
-	 *  measured width — narrow rows show fewer bars instead of
-	 *  overflowing under neighbors. */
-	const [cellCount, setCellCount] = useState(METER_CELLS);
-	const meterRef = useRef<HTMLDivElement | null>(null);
-
-	// The meter's own heartbeat — 60ms samples of the level ref into a
-	// rolling ring. Only THIS strip re-renders; the page never does.
+/**
+ * The live level meter: a row of dots that stretch into bars as you speak.
+ * Renders nothing unless dictation is running. Only this strip re-renders
+ * on the 60ms tick — the page never does.
+ */
+export function DictationMeter({ dictation }: { dictation: Dictation }) {
+	const { active, levelRef } = dictation;
+	const [levels, setLevels] = useState<number[]>(() => new Array(DOT_COUNT).fill(0));
 	useEffect(() => {
 		if (!active) return;
-		setLevels(new Array(METER_CELLS).fill(0));
+		setLevels(new Array(DOT_COUNT).fill(0));
 		const id = setInterval(() => {
 			setLevels((ring) => {
 				const next = ring.slice(1);
@@ -593,97 +596,29 @@ export function DictationBar({ dictation }: { dictation: Dictation }) {
 		}, METER_TICK_MS);
 		return () => clearInterval(id);
 	}, [active, levelRef]);
-
-	// Fit the cell count to the available width (4px pitch per cell:
-	// 2px bar + 2px gap, clamped 8..48). The meter div's width is set by
-	// the row's free space — cells carry no minimum width — so measuring
-	// it once per activation + on resize keeps the strip honest in the
-	// draft/home rows where the slider leaves little middle.
-	useEffect(() => {
-		if (!active) return;
-		const el = meterRef.current;
-		if (!el) return;
-		const fit = () => {
-			const w = el.clientWidth;
-			setCellCount(Math.max(8, Math.min(METER_CELLS, Math.floor(w / 4))));
-		};
-		fit();
-		const ro = new ResizeObserver(fit);
-		ro.observe(el);
-		return () => ro.disconnect();
-	}, [active]);
-
-	if (!active) {
-		return (
-			<Hint
-				// Errored: the button span truncates the line — the tooltip is its
-				// full reveal (the keyless line KEEPS "Deepgram" — owner overrule:
-				// it's the Keys row label, the truth the user needs). Otherwise the
-				// quiet label + the live ⌘D binding.
-				label={error ?? "Dictate"}
-				action={error ? undefined : "toggle-dictation"}
-				side="top"
-			>
-				<button
-					type="button"
-					onClick={() => {
-						if (keyless) {
-							clearError();
-							openSettings("keys", DICTATION_KEY_ID);
-						} else {
-							toggle();
-						}
-					}}
-					aria-label={error ? `Dictation failed: ${error}` : "Start dictation"}
-					data-testid="dictation-toggle"
-				// Same blurring as the floating chrome (owner, fix wave round 3),
-			// but lower opacity — the mic stays quieter than the model pills.
-			className="flex h-7 w-full items-center justify-center gap-1.5 rounded-md border border-border/50 bg-card/50 text-xs text-muted-foreground/70 shadow-lg backdrop-blur transition-colors hover:border-border hover:text-muted-foreground"
-			>
-					<MicIcon className="size-3.5" />
-					<span className="max-w-full truncate">{error ?? "Dictate"}</span>
-				</button>
-			</Hint>
-		);
-	}
-
+	if (!active) return null;
 	return (
-		<div className="flex w-full min-w-0 items-center gap-2" data-testid="dictation-bar">
-			<Hint
-				// The owner flagged this copy good ("Stop dictation (Esc)") —
-				// kept verbatim; only the machinery moved to the styled tooltip.
-				label="Stop dictation (Esc)"
-				side="top"
-			>
-				<button
-					type="button"
-					onClick={toggle}
-					disabled={phase === "stopping"}
-					aria-label="Stop dictation"
-				data-testid="dictation-toggle"
-				className="flex h-7 shrink-0 items-center gap-1.5 rounded-md bg-destructive/10 px-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20"
-			>
-				{phase === "stopping" ? (
-					<Loader2Icon className="size-3.5 animate-spin" />
-				) : (
-					<MicIcon className="size-3.5" />
-				)}
-					Stop
-				</button>
-			</Hint>
-			<span className="size-1.5 shrink-0 animate-pulse rounded-full bg-destructive" aria-hidden />
-			{/* Fixed width while recording — nothing ever appends text beside it
-			    (no interims, owner round 1). Cells carry no minimum width; the
-			    COUNT adapts to the measured row space (owner round 2). */}
-			<div ref={meterRef} className="flex h-4 min-w-0 flex-1 items-center gap-[2px]" data-testid="dictation-meter">
-				{levels.slice(-cellCount).map((v, i) => (
-					<span
-						key={i}
-						className="min-w-0 flex-1 rounded-full bg-foreground/40"
-						style={{ height: `${2 + Math.round(v * 14)}px` }}
-					/>
-				))}
-			</div>
+		<div className="flex h-9 shrink-0 items-center gap-[5px] px-1.5" data-testid="dictation-meter" aria-hidden>
+			{levels.map((v, i) => (
+				<span
+					key={i}
+					className="w-[3px] rounded-full bg-muted-foreground/80 transition-[height] duration-75"
+					style={{ height: `${3 + Math.round(v * 15)}px` }}
+				/>
+			))}
 		</div>
+	);
+}
+
+/** Meter + mic together, read from the page's DictationProvider — the
+ *  form the thinking fields use. Nothing when no provider is mounted. */
+export function DictationControl({ show = true }: { show?: boolean }) {
+	const dictation = useDictationContext();
+	if (!dictation || !show) return null;
+	return (
+		<>
+			<DictationMeter dictation={dictation} />
+			<DictationButton dictation={dictation} />
+		</>
 	);
 }

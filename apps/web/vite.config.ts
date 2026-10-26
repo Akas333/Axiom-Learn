@@ -23,7 +23,9 @@ export default defineConfig({
 		"process.env.LH_HOMEPAGE": JSON.stringify(""),
 	},
 	server: {
-		port: 5173,
+		// PORT lets a second dev server run beside another (the app assigns it).
+		port: Number(process.env.PORT ?? 5173),
+		strictPort: true,
 		// The API runs in apps/server (npm run dev:server).
 		proxy: { "/api": { target: "http://127.0.0.1:8787", changeOrigin: false, ws: true } },
 	},
