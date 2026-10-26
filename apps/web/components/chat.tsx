@@ -26,7 +26,8 @@ import { useEnterSubmits } from "@/components/enter-submits";
 import { blurAfterPointerClick } from "@/components/focus-hygiene";
 import { dockStateKey } from "@/components/dock-state-key";
 import { QueuedSteersBody, type QueuedSteerLine } from "@/components/queued-steers";
-import { DictationProvider, finishDictation, joinDictation, useDictation } from "@/components/dictation";
+import { DictationProvider, finishDictation, joinDictation, useDictation, useDictationContext } from "@/components/dictation";
+import { useHandsFreeVoice, VoiceThinkingProvider } from "@/components/voice-thinking";
 import { useFieldCycle } from "@/components/field-cycle";
 import { JobsContext } from "@/components/jobs-context";
 import { StatsBar } from "@/components/stats-bar";
@@ -2012,6 +2013,20 @@ function DockOverlay({
 	const pendingId = pending?.toolCallId ?? null;
 	const initialPendingRef = useRef(pendingId);
 
+	// HANDS-FREE VOICE THINKING (voice-thinking.tsx): while a question
+	// waits the mic listens on its own. Speech goes to "Thinking while
+	// reading" until an answer is picked, then to the answer's thinking
+	// field. A manual dictation run owns the mic, so it pauses this.
+	const manualDictation = useDictationContext();
+	const voice = useHandsFreeVoice({ questionId: pendingId, paused: manualDictation?.active ?? false });
+	const [pickedFor, setPickedFor] = useState<string | null>(null);
+	const onPickedChange = useCallback(
+		(picked: boolean) => setPickedFor((cur) => (picked ? pendingId : cur === pendingId ? null : cur)),
+		[pendingId],
+	);
+	const picked = pendingId !== null && pickedFor === pendingId;
+	const readingOwnsVoice = requiresReveal && (revealPending || (voice.listening && !picked));
+
 	// Teach-question ARRIVAL state, applied during render — BEFORE the
 	// first paint (owner, scroll-honesty round 2026-09-25). Until now the
 	// stale expanded=true left by the previous question painted one frame
@@ -2366,6 +2381,7 @@ function DockOverlay({
 	});
 
 	return (
+		<VoiceThinkingProvider value={voice}>
 		<div className="pointer-events-none absolute inset-x-0 bottom-0" style={{ right: sbInset }}>
 			<div className="h-24 bg-gradient-to-t from-background via-background/85 to-transparent" />
 			<div ref={blockRef} className="relative bg-background pb-5" style={{ "--dock-max-h": dockMaxH ? `${dockMaxH}px` : undefined } as React.CSSProperties}>
@@ -2394,7 +2410,7 @@ function DockOverlay({
 										}
 									: undefined
 							}
-							claim={revealPending}
+							claim={readingOwnsVoice}
 						/>
 					)}
 					<div ref={shellRef} className={`pointer-events-auto overflow-hidden ${COMPOSER_SHELL}`}>
@@ -2416,7 +2432,8 @@ function DockOverlay({
 									initialDraft={initialQuestionDraft}
 									onSaveDraft={onSaveQuestionDraft}
 									onEscape={dictationCancel}
-									dictationClaim={!revealPending}
+									dictationClaim={!readingOwnsVoice}
+									onPickedChange={onPickedChange}
 									compactionRunning={compactionRunning}
 								/>
 							) : practice ? (
@@ -2488,6 +2505,7 @@ function DockOverlay({
 				)}
 			</div>
 		</div>
+		</VoiceThinkingProvider>
 	);
 }
 

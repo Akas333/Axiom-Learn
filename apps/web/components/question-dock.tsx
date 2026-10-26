@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownIcon, ChevronRightIcon, PlayIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { finishDictation, isDictationActive, joinDictation, useDictationTarget } from "@/components/dictation";
+import { finishDictation, isTranscriptPending, joinDictation, useDictationTarget } from "@/components/dictation";
 import { THINKING_TEXTAREA, ThinkingField } from "@/components/thinking-field";
 import { useEnterSubmits } from "@/components/enter-submits";
 import { ToolContentResponse } from "@/components/ai-elements/message";
@@ -90,6 +90,10 @@ export interface QuestionDockProps {
 	 *  during the reading; the dock reclaims on reveal. Default true (probe
 	 *  questions, predictions, old callers). */
 	dictationClaim?: boolean;
+	/** Reports whether an answer is picked (an option, Other, or "I don't
+	 *  know") — hands-free voice moves from the reading field to the answer
+	 *  field at the first pick. */
+	onPickedChange?: (picked: boolean) => void;
 	/** Compaction is running for this chat (owner round 14): the answer
 	 *  POST would block on the server's compaction gate — disable submit
 	 *  and say so in the hint row. The server registry is the real gate;
@@ -110,6 +114,7 @@ export function QuestionDock({
 	onEscape,
 	phase = "probe",
 	dictationClaim = true,
+	onPickedChange,
 	compactionRunning = false,
 }: QuestionDockProps) {
 	// The probe-phase names (owner, 2026-10-09) canonicalize onto their
@@ -166,6 +171,7 @@ export function QuestionDock({
 					onSaveDraft={onSaveDraft}
 					onEscape={onEscape}
 					dictationClaim={dictationClaim}
+					onPickedChange={onPickedChange}
 					compactionRunning={compactionRunning}
 				/>
 			</div>
@@ -263,6 +269,7 @@ function QuestionDockForm({
 	onSaveDraft,
 	onEscape,
 	dictationClaim = true,
+	onPickedChange,
 	compactionRunning = false,
 }: Omit<QuestionDockProps, "expanded" | "onExpand" | "reveal">) {
 	const kind = toolQuestionKind(toolName);
@@ -370,6 +377,12 @@ function QuestionDockForm({
 
 	const toggle = (idx: number) => setSel(toggleOption(selectMode, sel, idx));
 
+	// Tell the dock when an answer is first (or no longer) picked.
+	const picked = sel.dontKnow || sel.otherSelected || sel.selected.size > 0;
+	useEffect(() => {
+		onPickedChange?.(picked);
+	}, [picked, onPickedChange]);
+
 	const canSubmit =
 		qd.mode === "text"
 			? text.trim().length > 0
@@ -383,7 +396,7 @@ function QuestionDockForm({
 		 * build the answer — the spoken reasoning is never lost to a
 		 * forgotten stop. The field values below come from the REF mirrors
 		 * because the flush lands via setState after an await. */
-		if (!isDictationActive()) {
+		if (!isTranscriptPending()) {
 			doSubmit();
 			return;
 		}

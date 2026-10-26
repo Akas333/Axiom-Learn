@@ -88,13 +88,13 @@ import { Hint } from "@/components/ui/hint";
  * realtime endpoint wants: audio paced at real time, never idle.
  */
 /** Our server's dictation relay (same origin; Vite proxies it in dev). */
-function asrUrl(): string {
+export function asrUrl(): string {
 	const scheme = location.protocol === "https:" ? "wss" : "ws";
 	return `${scheme}://${location.host}/api/stt/realtime`;
 }
 
 /** Close code the relay uses when no Meta key is saved. */
-const ASR_KEYLESS_CLOSE = 4401;
+export const ASR_KEYLESS_CLOSE = 4401;
 
 /** Meter tuning — the owner's tested values, see the file header. */
 const METER_FLOOR_DB = -50;
@@ -117,7 +117,7 @@ export const DICTATION_KEYLESS = "Dictation needs a Meta key";
 let sharedCtx: AudioContext | null = null;
 let workletModule: Promise<void> | null = null;
 
-function ensureAudioGraph(): { ctx: AudioContext; module: Promise<void> } {
+export function ensureAudioGraph(): { ctx: AudioContext; module: Promise<void> } {
 	if (!sharedCtx) sharedCtx = new AudioContext({ sampleRate: 16000 });
 	if (!workletModule) {
 		workletModule = sharedCtx.audioWorklet.addModule("/worklets/pcm-capture.js").catch((e: unknown) => {
@@ -162,9 +162,43 @@ export function isDictationActive(): boolean {
  * one finisher. Empty registry (no hook mounted) → resolve immediately. */
 let dictationFinisher: (() => Promise<void>) | null = null;
 
-/** Finish any live dictation run before continuing (see Dictation.finish). */
+/* Hands-free voice thinking (voice-thinking.tsx) registers its own
+ * finisher: a sentence still being transcribed when the learner submits
+ * must land before the answer is built, exactly like a manual run. */
+let voiceFinisher: (() => Promise<void>) | null = null;
+let voicePending: () => boolean = () => false;
+
+/** Register (or clear, with null) the hands-free finisher + its
+ *  "transcript still on the way" probe. Identity-checked on clear. */
+export function registerVoiceFinisher(
+	finisher: (() => Promise<void>) | null,
+	pending: () => boolean = () => false,
+): void {
+	voiceFinisher = finisher;
+	voicePending = finisher ? pending : () => false;
+}
+
+/** Finish any live dictation run — manual or hands-free — before
+ *  continuing (see Dictation.finish). */
 export function finishDictation(): Promise<void> {
-	return dictationFinisher ? dictationFinisher() : Promise.resolve();
+	return Promise.all([
+		dictationFinisher ? dictationFinisher() : Promise.resolve(),
+		voiceFinisher ? voiceFinisher() : Promise.resolve(),
+	]).then(() => undefined);
+}
+
+/** Is any transcript still on its way into a field (a manual run, or a
+ *  hands-free sentence mid-transcription)? Submit paths check this. */
+export function isTranscriptPending(): boolean {
+	return dictationActiveFlag || voicePending();
+}
+
+/** Append dictated text to whichever field holds the claim right now
+ *  (hands-free mode writes sentence by sentence). False = no claimant. */
+export function appendToDictationTarget(text: string): boolean {
+	if (!questionTarget) return false;
+	questionTarget(text);
+	return true;
 }
 
 /** Join a dictated final onto the current text (shared separator rule). */
@@ -577,16 +611,24 @@ export function DictationButton({ dictation }: { dictation: Dictation }) {
 }
 
 /**
- * The live level meter: a row of dots that stretch into bars as you speak.
- * Renders nothing unless dictation is running. Only this strip re-renders
- * on the 60ms tick — the page never does.
+ * The live level meter: a row of dots that stretch into bars with the
+ * voice. Only this strip re-renders on its 60ms tick — never the page.
  */
-export function DictationMeter({ dictation }: { dictation: Dictation }) {
-	const { active, levelRef } = dictation;
-	const [levels, setLevels] = useState<number[]>(() => new Array(DOT_COUNT).fill(0));
+export function LevelDots({
+	levelRef,
+	active,
+	count = DOT_COUNT,
+	className = "",
+}: {
+	levelRef: { current: number };
+	active: boolean;
+	count?: number;
+	className?: string;
+}) {
+	const [levels, setLevels] = useState<number[]>(() => new Array(count).fill(0));
 	useEffect(() => {
 		if (!active) return;
-		setLevels(new Array(DOT_COUNT).fill(0));
+		setLevels(new Array(count).fill(0));
 		const id = setInterval(() => {
 			setLevels((ring) => {
 				const next = ring.slice(1);
@@ -595,19 +637,24 @@ export function DictationMeter({ dictation }: { dictation: Dictation }) {
 			});
 		}, METER_TICK_MS);
 		return () => clearInterval(id);
-	}, [active, levelRef]);
+	}, [active, levelRef, count]);
 	if (!active) return null;
 	return (
-		<div className="flex h-9 shrink-0 items-center gap-[5px] px-1.5" data-testid="dictation-meter" aria-hidden>
+		<div className={`flex h-9 shrink-0 items-center gap-[5px] px-1.5 ${className}`} data-testid="dictation-meter" aria-hidden>
 			{levels.map((v, i) => (
 				<span
 					key={i}
-					className="w-[3px] rounded-full bg-muted-foreground/80 transition-[height] duration-75"
+					className="w-[3px] rounded-full bg-current opacity-80 transition-[height] duration-75"
 					style={{ height: `${3 + Math.round(v * 15)}px` }}
 				/>
 			))}
 		</div>
 	);
+}
+
+/** The manual run's meter (nothing unless a run is live). */
+export function DictationMeter({ dictation }: { dictation: Dictation }) {
+	return <LevelDots levelRef={dictation.levelRef} active={dictation.active} className="text-muted-foreground" />;
 }
 
 /** Meter + mic together, read from the page's DictationProvider — the
