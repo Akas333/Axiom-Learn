@@ -458,8 +458,15 @@ export function KeysSection({
 				<SubscriptionConnections />
 			</SettingsGroup>
 
-			{(["Dictation", "Search"] as const).map((label) => <SettingsGroup key={label} label={label} testid={label === "Dictation" ? "group-dictation" : "group-search"}>
-				{toolRows.filter((status) => label === "Dictation" ? status.id === "DEEPGRAM_API_KEY" : status.id !== "DEEPGRAM_API_KEY").map((status) => (
+			<SettingsGroup label="Dictation" testid="group-dictation">
+				<div className="flex items-center justify-between gap-3 px-1 py-1.5" data-testid="dictation-engine">
+					<span className="text-xs text-foreground">Muse Voice Transcribe (Meta)</span>
+					<span className="text-[11px] text-muted-foreground">uses your Meta key</span>
+				</div>
+			</SettingsGroup>
+
+			{(["Search"] as const).map((label) => <SettingsGroup key={label} label={label} testid="group-search">
+				{toolRows.filter((status) => status.id !== "DEEPGRAM_API_KEY").map((status) => (
 					<KeyTableRow
 						key={status.id}
 						label={status.info?.label ?? status.id}

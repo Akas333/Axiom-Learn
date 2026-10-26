@@ -4,6 +4,36 @@ import { subscriptionLabels, subscriptionLabel, type SessionPricing, type TurnUs
 import { formatTokens, formatUsd, planCostLabel, prettyModel } from "@/components/usage-format";
 import { ModelControl, catalogLimits, useModelCatalog } from "@/components/model-picker";
 
+/** How full the context window is, as a small ring (empty when unknown). */
+function ContextRing({ tokens, limit, label }: { tokens: number | null; limit: number | null; label: string }) {
+	const share = tokens !== null && limit ? Math.min(Math.max(tokens / limit, 0), 1) : 0;
+	const r = 8;
+	const c = 2 * Math.PI * r;
+	return (
+		<span
+			role="img"
+			aria-label={`Context used: ${label}`}
+			title={`Context: ${label}`}
+			data-testid="context-ring"
+			className="flex size-6 items-center justify-center"
+		>
+			<svg viewBox="0 0 20 20" className="size-5 -rotate-90">
+				<circle cx="10" cy="10" r={r} fill="none" stroke="var(--input)" strokeWidth="2.5" />
+				<circle
+					cx="10"
+					cy="10"
+					r={r}
+					fill="none"
+					stroke={share > 0.85 ? "var(--destructive)" : "var(--primary)"}
+					strokeWidth="2.5"
+					strokeLinecap="round"
+					strokeDasharray={`${share * c} ${c}`}
+				/>
+			</svg>
+		</span>
+	);
+}
+
 export function formatContextMeasurement(tokens: number | null, limit: number | null): string {
 	const numerator = tokens === null ? "?" : formatTokens(tokens);
 	return limit === null ? numerator : `${numerator} / ${formatTokens(limit)}`;
@@ -98,7 +128,7 @@ export function StatsBar({
 			// (so its transparent gradient area never blocks scrolling) — this row
 			// must re-enable events or every control on it is dead (the model-
 			// control wave caught this live: buttons rendered, clicks never landed).
-			className="pointer-events-auto relative flex items-center justify-between gap-3 px-3 pt-2 text-xs text-muted-foreground"
+			className="pointer-events-auto relative flex items-center justify-between gap-3 px-3 pt-2.5 text-sm text-muted-foreground"
 		>
 			{/* The summary button + its popover: the popover anchors to this
 			    wrapper, CENTERED over the button itself (owner, stats round 2)
@@ -191,7 +221,10 @@ export function StatsBar({
 			{/* The model + thinking control — one controller for the conversation
 			    agents (prober/teacher); the record's `turns` above still folds
 			    the ACTUAL models billed, regardless of what the picker says. */}
-			<ModelControl chatId={chatId} onModelChange={setSelectedModel} />
+			<div className="flex items-center gap-2.5">
+				<ModelControl chatId={chatId} onModelChange={setSelectedModel} variant="combined" />
+				{(chatId || turns.length > 0) && <ContextRing tokens={contextTokens} limit={limit} label={contextLabel} />}
+			</div>
 		</div>
 	);
 }

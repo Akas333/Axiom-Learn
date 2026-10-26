@@ -53,6 +53,11 @@
 	--border: #2e3034;
 	--input: #3a3c41;
 	--ring: #0064e0;
+	/* Translucent grey pill (secondary buttons, segmented tracks). */
+	--pill: rgba(223, 226, 229, 0.2);
+	--pill-hover: rgba(223, 226, 229, 0.28);
+	/* Light blue for the active nav row's text and icon. */
+	--primary-soft: #4ca3ff;
 	/* Emphasis inks default to the REGULAR TEXT COLOR (owner ruling,
 	   appearance wave 2026-09-26 — the old #ee928c/#6fa9d6 factory
 	   emphasis colors are gone). Explicit overrides land via the
@@ -91,6 +96,11 @@
 	--border: #2e3034;
 	--input: #3a3c41;
 	--ring: #0064e0;
+	/* Translucent grey pill (secondary buttons, segmented tracks). */
+	--pill: rgba(223, 226, 229, 0.2);
+	--pill-hover: rgba(223, 226, 229, 0.28);
+	/* Light blue for the active nav row's text and icon. */
+	--primary-soft: #4ca3ff;
 	/* Same emphasis ruling as the block above: unset = text color. */
 	--lh-ink-strong: var(--foreground);
 	--lh-ink-italic: var(--foreground);

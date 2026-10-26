@@ -70,53 +70,12 @@ import { incrementalLayout, propositionSessionHref, type GraphCostSummary, type 
 import { planCostLabel } from "@/components/usage-format";
 import { GraphCanvasRenderer, type GraphRenderSettings } from "./graph-canvas.ts";
 import { GraphSphereRenderer } from "./graph-sphere.ts";
+import { SphereBackdrop } from "./sphere-backdrop.tsx";
 
 /** Which renderer draws the graph: the turning globe or the flat map. */
 type GraphViewMode = "sphere" | "flat";
 const VIEW_MODE_STORAGE_KEY = "lh:graph-view-mode";
 
-/** The empty graph's backdrop: the bare lattice globe, turning behind the
- *  heading (the reference hero). Purely decorative — no pointer input. */
-function SphereBackdrop() {
-	const ref = useRef<HTMLCanvasElement | null>(null);
-	useEffect(() => {
-		const canvas = ref.current;
-		if (!canvas) return;
-		const noop = () => {};
-		const renderer = new GraphSphereRenderer(canvas, {
-			onSelect: noop,
-			onContext: noop,
-			onStageClick: noop,
-			onCameraMove: noop,
-			onCommit: noop,
-		}, { latticePoints: 2400 });
-		renderer.setZoom(1.9);
-		renderer.setData({
-			nodes: [],
-			edges: [],
-			clusters: [],
-			colors: {
-				node: tokenHex("--foreground"),
-				edge: tokenHex("--foreground"),
-				label: tokenHex("--muted-foreground"),
-				hoverText: tokenHex("--foreground"),
-			},
-			fontFamily: getComputedStyle(document.body).fontFamily,
-		});
-		return () => renderer.destroy();
-	}, []);
-	return (
-		<canvas
-			ref={ref}
-			aria-hidden
-			className="pointer-events-none absolute inset-0 block h-full w-full"
-			style={{
-				maskImage: "radial-gradient(ellipse at center, black 35%, transparent 80%)",
-				WebkitMaskImage: "radial-gradient(ellipse at center, black 35%, transparent 80%)",
-			}}
-		/>
-	);
-}
 import { usePopoverDismiss } from "@/components/popover-dismiss";
 import { useActivity } from "@/components/activity-dock";
 import { useServerEvent, useServerResync } from "@/components/server-events";

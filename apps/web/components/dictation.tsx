@@ -7,12 +7,15 @@ import { Hint } from "@/components/ui/hint";
 /**
  * Voice dictation — the cloud engine (STT wave 1, 2026-09-17).
  *
- * Architecture (docs/research/stt.md): the renderer captures mic audio in
- * an AudioWorklet (public/worklets/pcm-capture.js → linear16 16kHz mono),
- * opens the Deepgram streaming WebSocket DIRECTLY (audio never loops
- * through our server) with a short-lived token minted by /api/stt/token
- * (the real key stays server-side), and streams frames while it listens.
- * Finals append into the PRIMARY INPUT (see below).
+ * Engine: Meta Muse Voice Transcribe (realtime, ENDPOINTING mode). The
+ * renderer captures mic audio in an AudioWorklet (public/worklets/
+ * pcm-capture.js → linear16 16kHz mono) and streams it to our server's
+ * /api/stt/realtime socket, which adds the saved Meta key in Meta's
+ * handshake and relays both ways (Meta has no browser-safe tokens, so
+ * the key stays server-side). Each `speechComplete` event is one finished
+ * utterance; they append into the PRIMARY INPUT (see below). The notes
+ * below date from the earlier Deepgram engine; the capture, meter and
+ * deferred-flush behavior carried over unchanged.
  *
  * Ported patterns from the owner's pi `dictate` extension (his words:
  * "very well tuned") — see ~/.pi/agent/extensions/dictate:
@@ -81,19 +84,17 @@ import { Hint } from "@/components/ui/hint";
  */
 
 /*
- * Deepgram streaming params (the owner's live-tuned dictate config): nova-3,
- * endpointing=300, no interims. Silence streams too (the worklet never
- * pauses), so the socket never idles — no KeepAlive needed.
+ * Silence streams too (the worklet never pauses), which is what Meta's
+ * realtime endpoint wants: audio paced at real time, never idle.
  */
-const DG_URL =
-	"wss://api.deepgram.com/v1/listen" +
-	"?model=nova-3" +
-	"&encoding=linear16" +
-	"&sample_rate=16000" +
-	"&channels=1" +
-	"&smart_format=true" +
-	"&punctuate=true" +
-	"&endpointing=300";
+/** Our server's dictation relay (same origin; Vite proxies it in dev). */
+function asrUrl(): string {
+	const scheme = location.protocol === "https:" ? "wss" : "ws";
+	return `${scheme}://${location.host}/api/stt/realtime`;
+}
+
+/** Close code the relay uses when no Meta key is saved. */
+const ASR_KEYLESS_CLOSE = 4401;
 
 /** Meter tuning — the owner's tested values, see the file header. */
 const METER_FLOOR_DB = -50;
@@ -102,70 +103,12 @@ export const METER_TICK_MS = 60;
 /** Rolling history: 48 cells × 60ms ≈ 2.9s of recent loudness. */
 export const METER_CELLS = 48;
 
-/** The Deepgram key's id in the keys store (the env-var name — the Keys
- *  section's openRow state and the PUT /api/keys/:id seam). */
-export const DEEPGRAM_KEY_ID = "DEEPGRAM_API_KEY";
+/** The key dictation uses (Meta Model API), for the Settings deep link. */
+export const DICTATION_KEY_ID = "META_API_KEY";
 
-/** The client-authored KEYLESS line (zero-keys wave, owner 2026-09-25):
- * the token route's raw 503 message is dev-speak ("add it to auth.json
- * (desktop) or .env.local (dev)") — the surface says the short truth
- * instead. Exported for pins; the errored idle button's click recognizes
- * it and deep-links Settings → Keys → the Deepgram row. */
-export const DICTATION_KEYLESS = "Dictation needs a Deepgram key";
+/** Shown when no Meta key is saved; clicking it opens Settings → Keys. */
+export const DICTATION_KEYLESS = "Dictation needs a Meta key";
 
-/** Mint a fresh short-lived token (the route holds the real key
- *  server-side). Module-level: the start path's warm cache and the
- *  reconnect path both bottom out here. The keyless 503 (no
- *  DEEPGRAM_API_KEY) is the route's ONLY 503 — the raw message is
- *  dev-speak, so the error becomes the short client-authored line
- *  (zero-keys wave, owner 2026-09-25). */
-async function mintFreshToken(): Promise<string> {
-	const res = await fetch("/api/stt/token");
-	const data = (await res.json()) as { token?: string; message?: string };
-	if (!res.ok || !data.token) {
-		if (res.status === 503) throw new Error(DICTATION_KEYLESS);
-		throw new Error(data.message ?? `token route ${res.status}`);
-	}
-	return data.token;
-}
-
-/** Warm-token cache (mitigation D, owner 2026-09-27): the click path takes
- *  the cached promise instead of a remote mint. TTL keeps a cached token
- *  from going stale (self-heal anyway: a rejected handshake rides the
- *  reconnect-once path with a FRESH mint); a failed mint resets the cache
- *  so the next call re-mints — the honest error path stays honest.
- *  refresh() re-mints in the background (page mount, run end); its
- *  failures are silently tolerated (a keyless pre-mint just doesn't warm). */
-export const WARM_TOKEN_TTL_MS = 3 * 60_000;
-
-export type WarmMinter = { mint: () => Promise<string>; refresh: () => void };
-
-export function createWarmMinter(
-	mint: () => Promise<string>,
-	now: () => number = Date.now,
-	ttlMs: number = WARM_TOKEN_TTL_MS,
-): WarmMinter {
-	let warm: { p: Promise<string>; at: number } | null = null;
-	const m: WarmMinter = {
-		mint: () => {
-			if (!warm || now() - warm.at > ttlMs) {
-				const p = mint().catch((e: unknown) => {
-					warm = null; // failed mint: next call re-mints
-					throw e;
-				});
-				warm = { p, at: now() };
-			}
-			return warm.p;
-		},
-		refresh: () => {
-			warm = null;
-			m.mint().catch(() => {}); // background best-effort
-		},
-	};
-	return m;
-}
-
-const warmTokens = createWarmMinter(mintFreshToken);
 
 /* Persistent capture graph (mitigation C, owner 2026-09-27): one
  * app-lifetime AudioContext + a module-load memo. Created under the
@@ -354,69 +297,54 @@ export function useDictation({ append }: { append: (text: string) => void }): Di
 		// a submit path resuming after `await finishDictation()` reads the
 		// target field with the dictated tail already in it.
 		for (const w of waitersRef.current.splice(0)) w();
-		// Pre-mint for the next run (mitigation D) — best-effort; a keyless
-		// page just doesn't warm.
-		warmTokens.refresh();
 	}, []);
 
-	/** Open the Deepgram socket and wire its messages. `gen` guards staleness. */
+	/** Open the dictation relay socket and wire its messages. `gen` guards staleness. */
 	const openSocket = useCallback(
-		(gen: number, token: string) => {
-			// Minted JWTs authenticate via the "bearer" subprotocol — ["token",
-			// jwt] is rejected at the handshake (verified live; "token" is for
-			// raw API keys only, as in the owner's pi dictate extension).
-			const ws = new WebSocket(DG_URL, ["bearer", token]);
+		(gen: number) => {
+			const ws = new WebSocket(asrUrl());
+			ws.binaryType = "arraybuffer";
 			wsRef.current = ws;
 
 			ws.addEventListener("open", () => {
 				if (gen !== genRef.current) return;
-				// Mitigation A: everything captured during the handshake (or a
-				// reconnect gap) goes out now, in order — Deepgram accepts
-				// faster-than-realtime sends.
+				// Everything captured while connecting goes out now, in order;
+				// the relay holds it until Meta acknowledges the handshake.
 				for (const frame of pendingRef.current) ws.send(frame);
 				pendingRef.current = [];
 				setPhase("recording");
 			});
 			ws.addEventListener("message", (ev) => {
 				if (gen !== genRef.current) return;
-				let msg: any;
+				let msg: { type?: string; transcript?: string; message?: string };
 				try {
 					msg = JSON.parse(ev.data as string);
 				} catch {
 					return;
 				}
-				if (msg.type === "Results") {
-					const text: string | undefined = msg.channel?.alternatives?.[0]?.transcript;
-					// Only finals stream (interim_results=false). DEFERRED (owner
-					// round 2): they buffer here and reach the input once, at
-					// teardown — the meter is the only live feedback.
-					if (msg.is_final && text) bufferRef.current.push(text);
-				}
+				// One finished utterance per speechComplete (partials are
+				// ignored: the transcript is deferred to the end of the run).
+				if (msg.type === "speechComplete" && msg.transcript?.trim()) bufferRef.current.push(msg.transcript.trim());
+				else if (msg.type === "error" && msg.message) setError(msg.message);
 			});
 			ws.addEventListener("close", (ev) => {
 				if (gen !== genRef.current) return;
 				if (ev.code === 1000) {
-					// Our own CloseStream landing: finalize now — the stop path's
-					// safety net stays as the no-close backstop only.
+					// Meta flushed the last turns after endStream: finalize now.
 					cleanup();
 					return;
 				}
-				// Abnormal close mid-run: ONE reconnect with a fresh token (the
-				// research pass: resume is our job, no SDK to lean on).
+				if (ev.code === ASR_KEYLESS_CLOSE) {
+					setError(DICTATION_KEYLESS);
+					cleanup();
+					return;
+				}
+				// Abnormal close mid-run: one reconnect (a new Meta session).
 				if (reconnectsRef.current < 1) {
 					reconnectsRef.current++;
-					mintFreshToken() // always FRESH — a stale warm token is the likely culprit
-						.then((t) => {
-							if (gen === genRef.current) openSocket(gen, t);
-						})
-						.catch(() => {
-							if (gen === genRef.current) {
-								setError("Deepgram reconnect failed");
-								cleanup();
-							}
-						});
+					openSocket(gen);
 				} else {
-					setError(`Deepgram connection lost (${ev.code})`);
+					setError(`Dictation connection lost (${ev.code})`);
 					cleanup();
 				}
 			});
@@ -439,8 +367,6 @@ export function useDictation({ append }: { append: (text: string) => void }): Di
 		// the token runs concurrently with it. 127.0.0.1 is a secure
 		// context, so getUserMedia works without TLS; macOS TCC prompts on
 		// first use.
-		const tokenPromise = warmTokens.mint();
-		tokenPromise.catch(() => {}); // surfaced below; no unhandled rejection
 		const micPromise = navigator.mediaDevices.getUserMedia({
 			audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
 		});
@@ -496,19 +422,8 @@ export function useDictation({ append }: { append: (text: string) => void }): Di
 			return;
 		}
 		if (gen !== genRef.current) return;
-		let token: string;
-		try {
-			token = await tokenPromise;
-		} catch (e) {
-			if (gen !== genRef.current) return;
-			setError(e instanceof Error ? e.message : "token unavailable");
-			cleanup();
-			return;
-		}
-		if (gen !== genRef.current) return;
-		// Mitigation B: the handshake fires the moment the graph is live,
-		// overlapping any remaining token wait — mic-gated, never before it.
-		openSocket(gen, token);
+		// The socket opens the moment the graph is live (mic-gated).
+		openSocket(gen);
 	}, [openSocket, cleanup]);
 
 	const stop = useCallback(() => {
@@ -528,16 +443,16 @@ export function useDictation({ append }: { append: (text: string) => void }): Di
 		const ws = wsRef.current;
 		if (ws && ws.readyState === WebSocket.OPEN) {
 			try {
-				ws.send(JSON.stringify({ type: "CloseStream" }));
+				ws.send(JSON.stringify({ type: "endStream" }));
 			} catch {
 				cleanup();
 				return;
 			}
-			// Deepgram flushes remaining finals then closes; if it never
-			// does, the safety net ends the run anyway (dictate pattern).
+			// Meta flushes the last turns then closes with 1000; if it never
+			// does, the safety net ends the run anyway.
 			safetyRef.current = setTimeout(() => {
 				if (gen === genRef.current) cleanup();
-			}, 3000);
+			}, 5000);
 		} else {
 			cleanup();
 		}
@@ -584,9 +499,6 @@ export function useDictation({ append }: { append: (text: string) => void }): Di
 	// page owns ONE hook instance, and only the mounted page's listener is
 	// attached.
 	useEffect(() => {
-		warmTokens.refresh(); // pre-mint at mount (mitigation D) — silent if keyless
-	}, []);
-	useEffect(() => {
 		window.addEventListener("lh:kbd-toggle-dictation", toggle);
 		return () => window.removeEventListener("lh:kbd-toggle-dictation", toggle);
 	}, [toggle]);
@@ -620,6 +532,37 @@ export function useDictation({ append }: { append: (text: string) => void }): Di
  *   error     the wide button again, label swapped for the failure reason
  *             (full text in the tooltip), cleared on the next click.
  */
+/** Compact idle mic for in-card toolbars. While recording it renders
+ *  nothing: the caller shows DictationBar (Stop + meter) instead. */
+export function DictationMicButton({ dictation }: { dictation: Dictation }) {
+	const { error, toggle, active, clearError } = dictation;
+	const { open: openSettings } = useSettingsDialog();
+	if (active) return null;
+	const keyless = error === DICTATION_KEYLESS;
+	return (
+		<Hint label={error ?? "Dictate"} action={error ? undefined : "toggle-dictation"} side="top">
+			<button
+				type="button"
+				onClick={() => {
+					if (keyless) {
+						clearError();
+						openSettings("keys", DICTATION_KEY_ID);
+					} else {
+						toggle();
+					}
+				}}
+				aria-label={error ? `Dictation failed: ${error}` : "Start dictation"}
+				data-testid="dictation-toggle"
+				className={`flex size-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-(--pill) ${
+					error ? "text-destructive" : "text-muted-foreground hover:text-foreground"
+				}`}
+			>
+				<MicIcon className="size-[18px]" />
+			</button>
+		</Hint>
+	);
+}
+
 export function DictationBar({ dictation }: { dictation: Dictation }) {
 	const { phase, error, levelRef, toggle, active, clearError } = dictation;
 	const { open: openSettings } = useSettingsDialog();
@@ -686,7 +629,7 @@ export function DictationBar({ dictation }: { dictation: Dictation }) {
 					onClick={() => {
 						if (keyless) {
 							clearError();
-							openSettings("keys", DEEPGRAM_KEY_ID);
+							openSettings("keys", DICTATION_KEY_ID);
 						} else {
 							toggle();
 						}

@@ -1,16 +1,19 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "@/lib/navigation";
-import { Conversation, ConversationContent, ConversationEmptyState } from "@/components/ai-elements/conversation";
 import { Composer } from "@/components/composer";
-import { DictationBar, joinDictation, useDictation } from "@/components/dictation";
+import { DictationBar, DictationMicButton, joinDictation, useDictation } from "@/components/dictation";
+import { DumbbellIcon, GraduationCapIcon, PlusIcon, XIcon } from "lucide-react";
+import { LhMark } from "@/components/lh-mark";
+import { SphereBackdrop } from "@/components/sphere-backdrop";
+import { Hint } from "@/components/ui/hint";
+import { ModelControl } from "@/components/model-picker";
 import { useFieldCycle } from "@/components/field-cycle";
 import { SidebarToggle } from "@/components/sidebar";
 import { SetupDialog } from "@/components/setup-dialog";
 import { useStrongKeyless, useZeroKeys, ZeroKeysPill } from "@/components/setup-cta";
-import { StatsBar } from "@/components/stats-bar";
 import { ChainTableOverlay } from "@/components/chain-table.tsx";
-import { ComposerActions, NodePickerControl } from "@/components/composer-actions";
+import { ComposerActions } from "@/components/composer-actions";
 import type { ChatSettings, GraphSnapshot } from "@/src/core";
 
 /** The draft's pick set (owner round 10): the SAME shape the home pick
@@ -82,6 +85,7 @@ export function DraftShell({
 	onOpenPicker,
 	onClearPicks,
 	overlay,
+	onModeChange,
 }: {
 	busy: boolean;
 	text: string;
@@ -108,6 +112,8 @@ export function DraftShell({
 	 *  the graph view (the overlay fills its column, never the sidebar).
 	 *  Passed as a node so the pick state stays in NewSession. */
 	overlay?: ReactNode;
+	/** The in-card Teach | Practice switch. */
+	onModeChange?: (mode: "teach" | "practice") => void;
 }) {
 	// Voice dictation (STT wave, 2026-09-17): finals append at the end of the
 	// draft text (via the parent's onChange — the truth lives there); the
@@ -164,52 +170,75 @@ export function DraftShell({
 			<div className="lh-drag absolute inset-x-0 top-0 h-13" aria-hidden="true" />
 			<div className="flex min-w-0 flex-1 flex-col">
 				<div className="relative flex min-h-0 flex-1">
-					{/* The pointer-events pattern (953b22b): the sticky wrapper is
-					    pointer-events-none so nothing here blocks the empty-state
-					    area; the blob and the stats row re-enable it themselves. */}
-					<div className="pointer-events-none sticky bottom-0 mt-auto w-full">
-						<Conversation className="h-full min-w-0 flex-1" initial="instant">
-							<ConversationContent className="min-h-full gap-0 p-0">
-								<ConversationEmptyState
-									title={mode === "practice" ? "New practice session" : "New session"}
-									description={
+					{/* The hero: mark, the question, one card holding the input and
+					    every control (layout after Perplexity's home). */}
+					<SphereBackdrop />
+					<div className="relative flex min-w-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[12vh] pt-16">
+						<LhMark className="size-10 text-foreground" />
+						<h1 className="mt-6 text-center text-3xl font-normal tracking-tight text-foreground sm:text-[2.1rem]">
+							{mode === "practice" ? "What do you want to practice?" : "What do you want to learn?"}
+						</h1>
+						<div className={`${DOCK} mt-9`}>
+							{setupCta && <ComposerActions setup={setupCta} />}
+							<div className="overflow-hidden rounded-3xl border border-input/70 bg-card shadow-lg">
+								<Composer
+									busy={busy}
+									value={text}
+									onChange={onChange}
+									onSend={handleSend}
+									onStop={() => {}}
+									canSend={canSend}
+									inputRef={composerInputRef}
+									autoFocus
+									onEscape={dictation.active ? dictation.cancel : undefined}
+									placeholder={
 										mode === "practice"
-											? "Pick nodes from your knowledge graph, describe what you want to practice, or bring your own problem."
-											: "The teacher will open by probing what you already know."
+											? "Describe a topic, or pick nodes from your graph…"
+											: "Ask about any topic — the teacher starts by finding what you know…"
 									}
-								/>
-							</ConversationContent>
-						</Conversation>
-						<div className="h-24 bg-gradient-to-t from-background via-background/85 to-transparent" />
-						<div className="bg-background pb-4">
-							<div className={DOCK}>
-								<ComposerActions
-									picker={(picks.length > 0 || mode === "practice") && (
-										<NodePickerControl count={picks.length} onOpen={onOpenPicker} onClear={onClearPicks} />
-									)}
-									setup={setupCta}
-								/>
-								<div className="pointer-events-auto overflow-hidden rounded-2xl border bg-card shadow-lg">
-									<Composer
-										busy={busy}
-										value={text}
-										onChange={onChange}
-										onSend={handleSend}
-										onStop={() => {}}
-										canSend={canSend}
-										inputRef={composerInputRef}
-										autoFocus
-										onEscape={dictation.active ? dictation.cancel : undefined}
-										// The opening question, same as the graph view's new-session
-										// input (owner refinement round, 2026-09-24) — no lesson has
-										// started yet, so the composer must not read like one is in
-										// flight.
-										placeholder={mode === "practice" ? "What do you want to practice?" : "What do you want to learn?"}
-									/>
-								</div>
-								<StatsBar
-									dictationSlot={<DictationBar dictation={dictation} />}
-									turns={[]}
+									aboveToolbar={
+										dictation.active ? (
+											<div className="px-1">
+												<DictationBar dictation={dictation} />
+											</div>
+										) : null
+									}
+									toolbar={
+										<>
+											{mode === "practice" && (
+												<Hint label="Pick nodes from your graph" side="bottom">
+													<button
+														type="button"
+														aria-label="Pick nodes from your graph"
+														data-testid="practice-props-chip"
+														onClick={onOpenPicker}
+														className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
+													>
+														<PlusIcon className="size-5" />
+													</button>
+												</Hint>
+											)}
+											<ModeSwitch mode={mode} onModeChange={onModeChange} />
+											{picks.length > 0 && (
+												<span className="flex items-center gap-1 rounded-full bg-(--pill) py-1 pl-3 pr-1 text-sm text-foreground">
+													{picks.length} {picks.length === 1 ? "node" : "nodes"}
+													<button
+														type="button"
+														aria-label="Clear picked nodes"
+														data-testid="practice-props-clear"
+														onClick={onClearPicks}
+														className="flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-(--pill-hover) hover:text-foreground"
+													>
+														<XIcon className="size-3.5" />
+													</button>
+												</span>
+											)}
+											<div className="ml-auto flex items-center gap-0.5">
+												<ModelControl variant="plain" />
+												<DictationMicButton dictation={dictation} />
+											</div>
+										</>
+									}
 								/>
 							</div>
 						</div>
@@ -225,6 +254,37 @@ export function DraftShell({
 					<SidebarToggle />
 				</div>
 			</header>
+		</div>
+	);
+}
+
+/** Teach | Practice: a dark track with the selected chip raised (the
+ *  reference's Search | Computer switch). */
+function ModeSwitch({ mode, onModeChange }: { mode: "teach" | "practice"; onModeChange?: (m: "teach" | "practice") => void }) {
+	return (
+		<div role="radiogroup" aria-label="Session type" className="flex items-center rounded-full bg-background/70 p-0.5" data-testid="draft-mode-switch">
+			{(["teach", "practice"] as const).map((m) => {
+				const on = mode === m;
+				const Icon = m === "teach" ? GraduationCapIcon : DumbbellIcon;
+				return (
+					<button
+						key={m}
+						type="button"
+						role="radio"
+						aria-checked={on}
+						data-testid={`draft-mode-${m}`}
+						onClick={() => onModeChange?.(m)}
+						className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-sm transition-colors ${
+							on
+								? "border border-input bg-card text-foreground shadow-sm"
+								: "border border-transparent text-muted-foreground hover:text-foreground"
+						}`}
+					>
+						<Icon className="size-4" />
+						{m === "teach" ? "Teach" : "Practice"}
+					</button>
+				);
+			})}
 		</div>
 	);
 }
@@ -317,6 +377,7 @@ export function NewSession({ initialConfigured, mode = "teach" }: { initialConfi
 				onChange={applyText}
 				onSend={send}
 				mode={mode}
+				onModeChange={(m) => router.replace(m === "practice" ? "/chat/new?mode=practice" : "/chat/new")}
 				picks={picks}
 				onOpenPicker={openPicker}
 				onClearPicks={() => applyPicks([])}

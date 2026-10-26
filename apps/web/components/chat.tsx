@@ -26,7 +26,7 @@ import { useEnterSubmits } from "@/components/enter-submits";
 import { blurAfterPointerClick } from "@/components/focus-hygiene";
 import { dockStateKey } from "@/components/dock-state-key";
 import { QueuedSteersBody, type QueuedSteerLine } from "@/components/queued-steers";
-import { DictationBar, finishDictation, joinDictation, useDictation } from "@/components/dictation";
+import { DictationBar, DictationMicButton, finishDictation, joinDictation, useDictation } from "@/components/dictation";
 import { useFieldCycle } from "@/components/field-cycle";
 import { JobsContext } from "@/components/jobs-context";
 import { StatsBar } from "@/components/stats-bar";
@@ -1613,7 +1613,9 @@ export function Chat({
 					contextTokens={contextTokens}
 					pricing={pricing}
 					onReserve={setDockReserve}
-					dictationSlot={<DictationBar dictation={dictation} />}
+					// The idle mic lives inside the composer row; the strip below
+					// shows while recording, or when a card replaces the composer.
+					dictationSlot={pending || activeProblem || dictation.active ? <DictationBar dictation={dictation} /> : undefined}
 					dictationCancel={dictation.cancel}
 					queuedSteers={visibleQueuedSteers(steerQueue, nativeMessages)}
 					setupCta={
@@ -1653,7 +1655,8 @@ export function Chat({
 							// applies.
 							nextProblem={nextReady}
 							onNext={sendNext}
-							placeholder={nextReady ? "Ask anything, or press Enter for the next one." : undefined}
+							placeholder={nextReady ? "Ask anything, or press Enter for the next one." : "↵ to send — ask, answer, or steer the lesson"}
+							trailing={<DictationMicButton dictation={dictation} />}
 						/>
 					}
 					onSubmitAnswer={(output) => {
@@ -2302,7 +2305,7 @@ function DockOverlay({
 							claim={revealPending}
 						/>
 					)}
-					<div ref={shellRef} className="pointer-events-auto overflow-hidden rounded-2xl border bg-card shadow-lg">
+					<div ref={shellRef} className="pointer-events-auto overflow-hidden rounded-3xl border border-input/70 bg-card shadow-lg">
 						<div
 						ref={contentRef}
 						key={mode}

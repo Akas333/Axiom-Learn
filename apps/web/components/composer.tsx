@@ -1,5 +1,5 @@
 
-import { ArrowRightIcon, CornerDownLeftIcon, SquareIcon } from "lucide-react";
+import { ArrowRightIcon, ArrowUpIcon, CircleStopIcon, SquareIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Hint } from "@/components/ui/hint";
 
@@ -48,6 +48,9 @@ export function Composer({
 	placeholder = "Ask, answer, or steer the lesson…",
 	nextProblem = false,
 	onNext,
+	toolbar,
+	aboveToolbar,
+	trailing,
 }: {
 	busy: boolean;
 	value: string;
@@ -73,7 +76,16 @@ export function Composer({
 	/** The signal's dispatcher (send({type:"next"})) — the chip and the
 	 *  empty-Enter share it. */
 	onNext?: () => void;
+	/** In-card controls (the new-session hero): when present the textarea
+	 *  spans the card and these sit on a row beneath it, with a round send
+	 *  button at the far right. */
+	toolbar?: React.ReactNode;
+	/** A full-width row between the textarea and the toolbar (dictation). */
+	aboveToolbar?: React.ReactNode;
+	/** Extra controls after the send button in the one-row layout (mic). */
+	trailing?: React.ReactNode;
 }) {
+	const hero = toolbar !== undefined;
 	const act = () => {
 		const action = enterAction({ busy, canSend, nextProblem });
 		if (action === "stop") onStop();
@@ -83,7 +95,7 @@ export function Composer({
 	return (
 		<form
 			data-testid="composer"
-			className="flex items-end gap-1.5 p-1.5"
+			className={hero ? "flex flex-col gap-2 p-3" : "flex items-end gap-1 py-1.5 pl-2 pr-1.5"}
 			onSubmit={(e) => {
 				e.preventDefault();
 				act();
@@ -115,8 +127,27 @@ export function Composer({
 				placeholder={placeholder}
 				autoFocus={autoFocus}
 				rows={1}
-				className="field-sizing-content lh-input max-h-48 min-h-10 flex-1 resize-none bg-transparent px-2.5 py-2 outline-none placeholder:text-muted-foreground"
+				className={
+					hero
+						? "field-sizing-content lh-input max-h-60 min-h-14 w-full resize-none bg-transparent px-2 pt-1.5 text-base outline-none placeholder:text-muted-foreground/70"
+						: "field-sizing-content lh-input max-h-48 min-h-10 flex-1 resize-none bg-transparent px-2.5 py-2 outline-none placeholder:text-muted-foreground/70"
+				}
 			/>
+			{hero && aboveToolbar}
+			{hero ? (
+				<div className="flex items-center gap-1.5">
+					{toolbar}
+					<button
+						type="submit"
+						aria-label={busy && !canSend ? "Stop" : "Send"}
+						data-testid="composer-send"
+						disabled={!busy && !canSend}
+						className="ml-1 flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-90 disabled:opacity-30"
+					>
+						{busy && !canSend ? <SquareIcon className="size-4" /> : <ArrowUpIcon className="size-5" />}
+					</button>
+				</div>
+			) : null}
 			{/* The button follows the text (owner report 2026-10-03): while
 				 a turn runs WITH text typed it stays the SEND affordance
 				 (click = steer — steering must be clickable, not Enter-only);
@@ -131,12 +162,12 @@ export function Composer({
 				 (click and Enter share one lane), and typing anything
 				 returns the regular send. The green is the app's correct-
 				 answer register (answered-card's green-500/600). */}
-				{nextProblem && !busy && !canSend ? (
+				{hero ? null : nextProblem && !busy && !canSend ? (
 					<button
 						type="submit"
 						data-testid="next-problem-button"
 						aria-label="Next problem"
-						className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-green-600 px-4 font-ui text-xs font-medium text-white transition-colors hover:bg-green-500"
+						className="mb-0.5 flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-green-600 px-4 font-ui text-xs font-medium text-white transition-colors hover:bg-green-500"
 					>
 						Next problem
 						<ArrowRightIcon className="size-4" />
@@ -147,15 +178,16 @@ export function Composer({
 						aria-label={busy && !canSend ? "Stop" : "Send"}
 						disabled={!busy && !canSend}
 						className={cn(
-							"flex size-10 shrink-0 items-center justify-center rounded-[10px] transition-colors",
+							"mb-0.5 flex size-9 shrink-0 items-center justify-center rounded-full transition-colors",
 							busy && !canSend
-								? "bg-secondary text-foreground hover:bg-accent"
-								: "bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40",
+								? "text-foreground hover:bg-(--pill)"
+								: "bg-foreground text-background hover:opacity-90 disabled:bg-transparent disabled:text-muted-foreground/50",
 						)}
 					>
-						{busy && !canSend ? <SquareIcon className="size-4" /> : <CornerDownLeftIcon className="size-5" />}
+						{busy && !canSend ? <CircleStopIcon className="size-[22px]" /> : <ArrowUpIcon className="size-[18px]" />}
 					</button>
 				)}
+				{!hero && trailing ? <div className="mb-0.5 flex shrink-0 items-center">{trailing}</div> : null}
 		</form>
 	);
 }

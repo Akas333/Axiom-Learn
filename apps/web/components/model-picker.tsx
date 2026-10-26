@@ -80,7 +80,30 @@ export function catalogLimits(catalog: Pick<ModelCatalogResponse, "models">): Ma
  * changing the new-session default. Unpicked reads "—" (the
  * no-factory-fallback language: the UI never presents a default model).
  */
-export function ModelControl({ chatId, onModelChange }: { chatId?: string; onModelChange?: (model: string | undefined) => void }) {
+export function ModelControl({
+	chatId,
+	onModelChange,
+	variant = "pill",
+}: {
+	chatId?: string;
+	onModelChange?: (model: string | undefined) => void;
+	/** "plain": borderless text buttons for use inside a composer card.
+	 *  "combined": one bordered box reading "<model>  <level>", each half
+	 *  opening its own menu (the chat page's bottom row). */
+	variant?: "pill" | "plain" | "combined";
+}) {
+	const pillClass =
+		variant === "plain"
+			? "flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground [&>span:first-child]:text-inherit"
+			: "flex items-center gap-1.5 rounded-full border bg-card/85 px-2.5 py-1 shadow-lg backdrop-blur transition-colors hover:border-border hover:bg-muted";
+	const modelClass =
+		variant === "combined"
+			? "flex items-center py-1 pl-3 pr-1.5 text-sm transition-colors hover:text-foreground [&>span[aria-hidden]]:hidden [&>span:first-child]:text-foreground"
+			: pillClass;
+	const levelClass =
+		variant === "combined"
+			? "flex items-center py-1 pl-1.5 pr-3 text-sm text-muted-foreground transition-colors hover:text-foreground [&>span[aria-hidden]]:hidden [&>span:first-child]:text-inherit"
+			: pillClass;
 	const { catalog, refresh } = useModelCatalog();
 	const [models, setModels] = useState<ModelsSettings | undefined>();
 	const [session, setSession] = useState<ChatSettings | undefined>();
@@ -313,6 +336,13 @@ export function ModelControl({ chatId, onModelChange }: { chatId?: string; onMod
 
 	return (
 		<div ref={containerRef} className="relative flex items-center gap-1.5" data-testid="model-control">
+			<div
+				className={
+					variant === "combined"
+						? "flex items-center rounded-lg border border-input transition-colors focus-within:border-primary hover:border-muted-foreground/60"
+						: "contents"
+				}
+			>
 			<Hint
 				// Trimmed (owner, subtlety round 2026-09-25): "Model selector"
 				// — the long sentence was way too much. ⌘K opens this same
@@ -330,7 +360,7 @@ export function ModelControl({ chatId, onModelChange }: { chatId?: string; onMod
 				// view's floating top-right buttons (import notes, gear,
 				// coverage) — blurred, fuller opacity, shadowed — so the
 				// graph no longer bleeds through these pills.
-				className="flex items-center gap-1.5 rounded-full border bg-card/85 px-2.5 py-1 shadow-lg backdrop-blur transition-colors hover:border-border hover:bg-muted"
+				className={modelClass}
 			>
 				<span className="text-card-foreground">{effectiveId ? prettyModel(effectiveId) : "—"}</span>
 				<span aria-hidden className="text-xs text-muted-foreground">▾</span>
@@ -358,7 +388,7 @@ export function ModelControl({ chatId, onModelChange }: { chatId?: string; onMod
 				// view's floating top-right buttons (import notes, gear,
 				// coverage) — blurred, fuller opacity, shadowed — so the
 				// graph no longer bleeds through these pills.
-				className="flex items-center gap-1.5 rounded-full border bg-card/85 px-2.5 py-1 shadow-lg backdrop-blur transition-colors hover:border-border hover:bg-muted"
+				className={levelClass}
 			>
 				{/* Just the level — the button reads like the model button reads
 				   the model name (owner, stats-control round 1). */}
@@ -369,6 +399,7 @@ export function ModelControl({ chatId, onModelChange }: { chatId?: string; onMod
 			</button>
 			</Hint>
 
+			</div>
 			{/* The shared dropdown body (extracted 2026-09-20): the agent
 			    settings' slot selects and the setup dialog use the exact same
 			    one. */}

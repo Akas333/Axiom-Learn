@@ -2,10 +2,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@/lib/navigation";
 import { usePathname, useRouter } from "@/lib/navigation";
+import { useSearchParams } from "react-router";
 import { MenuShell } from "@/components/menu-shell";
 import { DeleteSessionDialog } from "@/components/delete-session-dialog";
 import type { ChatDeleteMode } from "@/src/core";
-import { DumbbellIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
+import { DumbbellIcon, NetworkIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
+
+/** Sidebar navigation rows (after the Meta Model API console): icon +
+ *  label, grey hover, blue-tinted when active. */
+const NAV_ROW =
+	"flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-[15px] font-medium text-foreground transition-colors hover:bg-(--pill) focus-visible:outline-2 focus-visible:outline-primary";
+const NAV_ROW_ACTIVE = "bg-primary/20 text-(--primary-soft) hover:bg-primary/25";
 import { ActivitySection } from "@/components/activity-dock";
 import { CoverageMenuBlock } from "@/components/extraction-coverage";
 import { LhMark } from "@/components/lh-mark";
@@ -304,8 +311,8 @@ export function SessionRow({
 			onContextMenu={onContextMenu}
 			data-testid={kbdSelected ? "session-row-kbd" : "session-row"}
 			className={cn(
-				"relative mb-0.5 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent",
-				active && "bg-accent",
+				"relative mb-0.5 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-(--pill)",
+				active && "bg-primary/20 hover:bg-primary/25",
 				kbdSelected && !active && "bg-accent/60 ring-1 ring-border",
 			)}
 		>
@@ -316,7 +323,7 @@ export function SessionRow({
 				    the meta line below stays JetBrains Mono (machine data). One
 				    rule, finally applied to the picker too (owner, typography
 				    round): mono = chrome, Source Sans = human words. */}
-				<span className="block truncate font-prose text-(length:--lh-prose-size)">{chat.title}</span>
+				<span className={cn("block truncate font-prose text-(length:--lh-prose-size)", active && "text-(--primary-soft)")}>{chat.title}</span>
 				<span className="block text-xs text-muted-foreground">{sessionMeta(chat)}</span>
 			</span>
 			{/* The dumbbell rides the FAR RIGHT (owner round 6, 2026-10-05) —
@@ -399,6 +406,8 @@ function SessionsSidebar() {
 		window.localStorage.setItem(KIND_FILTER_KEY, f);
 	}, []);
 	const pathname = usePathname();
+	const [searchParams] = useSearchParams();
+	const draftPractice = searchParams.get("mode") === "practice";
 	const router = useRouter();
 	const { open: openSettings } = useSettingsDialog();
 
@@ -670,18 +679,21 @@ function SessionsSidebar() {
 						<Link
 							href="/"
 							aria-label="Home"
-							className="lh-no-drag flex size-9 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50"
+							className="lh-no-drag flex size-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-(--pill)"
 						>
 							<LhMark className="size-6" />
 						</Link>
 					</Hint>
+					<span className="mr-auto ml-2 select-none text-lg font-semibold tracking-tight text-foreground">
+						Axiom Learn
+					</span>
 					<Hint label="Close sidebar" action="toggle-sidebar">
 						<Button
 							variant="ghost"
 							size="icon"
 							aria-label="Close sidebar"
 							onClick={toggle}
-							className="lh-no-drag"
+							className="lh-no-drag rounded-full hover:bg-(--pill) dark:hover:bg-(--pill)"
 						>
 							<PanelLeftCloseIcon className="size-4" />
 						</Button>
@@ -692,31 +704,42 @@ function SessionsSidebar() {
 				    half/half row): full-width rows read cleaner and give the
 				    labels room; teaching keeps the original draft route,
 				    practice carries its mode. */}
-				<div className="mx-3 mb-2 flex flex-col gap-1.5">
+				<nav className="mx-2 flex flex-col gap-0.5" aria-label="Main">
+					<Link
+						href="/"
+						data-testid="nav-graph"
+						aria-current={pathname === "/" ? "page" : undefined}
+						className={cn(NAV_ROW, pathname === "/" && NAV_ROW_ACTIVE)}
+					>
+						<NetworkIcon className="size-5 shrink-0" />
+						Knowledge graph
+					</Link>
 					<button
 						type="button"
 						data-testid="new-session"
 						onClick={() => void newSession()}
-						className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						className={cn(NAV_ROW, pathname === "/chat/new" && !draftPractice && NAV_ROW_ACTIVE)}
 					>
-						<PlusIcon className="size-3" />
-						Teaching
+						<PlusIcon className="size-5 shrink-0" />
+						New teaching
 						<span className="sr-only">create a new teaching session</span>
 					</button>
 					<button
 						type="button"
 						data-testid="new-session-practice"
 						onClick={() => router.push("/chat/new?mode=practice")}
-						className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						className={cn(NAV_ROW, pathname === "/chat/new" && draftPractice && NAV_ROW_ACTIVE)}
 					>
-						<DumbbellIcon className="size-3" />
-						Practice
+						<DumbbellIcon className="size-5 shrink-0" />
+						New practice
 						<span className="sr-only">create a new practice session</span>
 					</button>
-				</div>
+				</nav>
+
+				<div className="mx-2 my-3 border-t border-input" aria-hidden="true" />
 
 				<div className="mx-3 mb-2 flex items-center gap-2">
-					<span className="text-xs text-muted-foreground/70">Sessions</span>
+					<span className="text-sm font-medium text-muted-foreground">Sessions</span>
 					<Hint label="Search sessions" action="sessions-search" side="bottom">
 					<span className="relative flex-1">
 						<Input
@@ -769,9 +792,9 @@ function SessionsSidebar() {
 							}}
 							placeholder="Search…"
 							aria-label="Search sessions"
-							className="h-6 rounded-sm border-border bg-background pl-6 text-xs placeholder:text-muted-foreground/60"
+							className="h-8 rounded-full border-transparent bg-(--pill) pl-8 text-sm placeholder:text-muted-foreground focus-visible:border-primary"
 						/>
-						<SearchIcon className="pointer-events-none absolute left-1.5 top-1/2 size-3 -translate-y-1/2 text-muted-foreground/70" />
+						<SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
 					</span>
 					</Hint>
 				</div>
@@ -783,7 +806,7 @@ function SessionsSidebar() {
 				    Practice / All — the real modes first, "All" as the escape
 				    hatch on the right, mirroring the create-buttons above.
 				    Persisted client-side. */}
-				<div className="mx-3 flex items-center gap-0.5 rounded-md border border-border/60 bg-background p-0.5" data-testid="session-kind-filter">
+				<div className="mx-3 flex items-center gap-0.5 rounded-lg bg-(--pill) p-0.5" data-testid="session-kind-filter">
 					{(["teach", "practice", "all"] as const).map((f) => (
 						<button
 							key={f}
@@ -791,10 +814,10 @@ function SessionsSidebar() {
 							data-testid={`kind-filter-${f}`}
 							onClick={() => setFilter(f)}
 							className={cn(
-								"flex-1 rounded-sm px-2 py-1 text-[11px] transition-colors",
+								"h-7 flex-1 rounded-md px-3 text-[13px] transition-colors",
 								kindFilter === f
-									? "bg-accent text-foreground"
-									: "text-muted-foreground hover:text-foreground",
+									? "bg-card font-semibold text-foreground"
+									: "font-medium text-muted-foreground hover:text-foreground",
 							)}
 						>
 							{f === "teach" ? "Teaching" : f === "all" ? "All" : "Practice"}
@@ -845,15 +868,15 @@ function SessionsSidebar() {
 					{/* Settings entry (settings-app wave): same row language as
 					    New session — quiet, bottom-pinned, opens the centered
 					    dialog (also mod+, in the keyboard registry). */}
-					<div className="px-3 pb-3 pt-1">
+					<div className="px-2 pb-3 pt-0.5">
 						<Hint label="Settings" action="open-settings" side="right">
 							<button
 								type="button"
 								onClick={() => openSettings()}
 								data-testid="settings-entry"
-								className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+								className={NAV_ROW}
 							>
-								<SettingsIcon className="size-3" />
+								<SettingsIcon className="size-5 shrink-0" />
 								Settings
 							</button>
 						</Hint>
