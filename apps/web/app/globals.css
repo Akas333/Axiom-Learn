@@ -190,6 +190,18 @@
 
 * {
 	border-color: var(--color-border);
+	/* No rubber-band bounce and no scroll chaining: a scroll area stops
+	   dead at its end instead of stretching or dragging the page. */
+	overscroll-behavior: none;
+}
+
+/* The app shell fills the window and owns all scrolling, so the page
+   itself never moves. */
+html,
+body {
+	height: 100%;
+	overflow: hidden;
+	overscroll-behavior: none;
 }
 
 body {
