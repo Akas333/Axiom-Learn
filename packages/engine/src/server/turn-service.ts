@@ -25,6 +25,7 @@ import { coverageOf } from "../core/coverage.ts";
 import type { ChatStore, GraphStore } from "../core/ports.ts";
 import type { ExtractionPipeline } from "../agent/subagents/extraction.ts";
 import { ModelsNotConfiguredError, ProviderKeyMissingError } from "../core/settings.ts";
+import { isTurnRunning } from "./turn-liveness.ts";
 
 /** Distinguish a failed canonical save from later bookkeeping failures. */
 export class TurnPersistenceError extends Error {
@@ -117,23 +118,73 @@ export function triggerExtraction(
 		const record = deps.chatStore.getChat(chatId);
 		if (!record) return;
 		const covered = coverageOf(record.messages, deps.graphStore.readCoverage(), chatId);
-		if (covered.uncoveredTokens < chunkTokens) return;
-		void extraction.runExtraction(chatId).catch((err) => {
-			// BYOK (owner, 2026-09-22) + key presence (provider-key interlude,
-			// 2026-09-25): an unconfigured OR keyless write channel SKIPS (the
-			// coverage ledger keeps the messages uncovered — the next trigger
-			// retries once slots/keys are set); only real failures log.
-			if (err instanceof ModelsNotConfiguredError) {
-				console.info(`[chat ${chatId}] extraction skipped — ${err.envelope.error} (missing: ${err.envelope.missing.join(", ")})`);
-				return;
-			}
-			if (err instanceof ProviderKeyMissingError) {
-				console.info(`[chat ${chatId}] extraction skipped — ${err.envelope.error} (provider: ${err.envelope.provider})`);
-				return;
-			}
-			console.error(`[chat ${chatId}] extraction pipeline failed:`, err);
-		});
+		if (covered.uncoveredTokens < chunkTokens) {
+			// Below the chunk budget: flush once the session goes quiet, so short
+			// sessions still reach the graph (a lesson rarely piles up a full
+			// chunk of teacher prose before the learner pauses).
+			if (covered.uncoveredTokens > 0) scheduleIdleExtraction(deps, extraction, chatId);
+			return;
+		}
+		cancelIdleExtraction(chatId);
+		runAndLog(extraction, chatId);
 	} catch (err) {
 		console.error(`[chat ${chatId}] extraction trigger failed:`, err);
 	}
+}
+
+/** How long a session must stay quiet before its leftover prose is extracted. */
+export const IDLE_EXTRACTION_MS = 90_000;
+/** Below this much new teacher prose, an idle flush isn't worth a model call. */
+export const IDLE_EXTRACTION_MIN_TOKENS = 150;
+
+const idleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** (Re)start the chat's quiet timer: every finished turn pushes it back. */
+export function scheduleIdleExtraction(
+	deps: { chatStore: ChatStore; graphStore: GraphStore },
+	extraction: ExtractionPipeline,
+	chatId: string,
+	delayMs: number = IDLE_EXTRACTION_MS,
+): void {
+	cancelIdleExtraction(chatId);
+	const timer = setTimeout(() => {
+		idleTimers.delete(chatId);
+		try {
+			// A turn started meanwhile: its own end re-arms the timer.
+			if (isTurnRunning(chatId)) return;
+			const record = deps.chatStore.getChat(chatId);
+			if (!record) return;
+			const covered = coverageOf(record.messages, deps.graphStore.readCoverage(), chatId);
+			if (covered.uncoveredTokens < IDLE_EXTRACTION_MIN_TOKENS) return;
+			runAndLog(extraction, chatId);
+		} catch (err) {
+			console.error(`[chat ${chatId}] idle extraction failed:`, err);
+		}
+	}, delayMs);
+	timer.unref?.();
+	idleTimers.set(chatId, timer);
+}
+
+export function cancelIdleExtraction(chatId: string): void {
+	const timer = idleTimers.get(chatId);
+	if (timer) clearTimeout(timer);
+	idleTimers.delete(chatId);
+}
+
+function runAndLog(extraction: ExtractionPipeline, chatId: string): void {
+	void extraction.runExtraction(chatId).catch((err) => {
+		// BYOK (owner, 2026-09-22) + key presence (provider-key interlude,
+		// 2026-09-25): an unconfigured OR keyless write channel SKIPS (the
+		// coverage ledger keeps the messages uncovered — the next trigger
+		// retries once slots/keys are set); only real failures log.
+		if (err instanceof ModelsNotConfiguredError) {
+			console.info(`[chat ${chatId}] extraction skipped — ${err.envelope.error} (missing: ${err.envelope.missing.join(", ")})`);
+			return;
+		}
+		if (err instanceof ProviderKeyMissingError) {
+			console.info(`[chat ${chatId}] extraction skipped — ${err.envelope.error} (provider: ${err.envelope.provider})`);
+			return;
+		}
+		console.error(`[chat ${chatId}] extraction pipeline failed:`, err);
+	});
 }

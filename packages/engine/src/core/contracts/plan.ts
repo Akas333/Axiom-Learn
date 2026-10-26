@@ -66,10 +66,52 @@ interface PartsCarrier {
 }
 
 export interface DerivedPlanStatuses {
-	/** The node the most recent tagged quiz call is about; null before any. */
+	/** The node the most recent tagged quiz call is about; null before any.
+	 *  Right after a concept_done it is the node that call named next (the
+	 *  learner is about to start it). */
 	current: string | null;
 	/** Nodes referenced by earlier tagged calls — been there, monotonic. */
 	visited: ReadonlySet<string>;
+	/** Nodes the teacher closed with concept_done. */
+	done: ReadonlySet<string>;
+}
+
+/** A node's place in the learner's progress (the plan sidebar's view). */
+export type PlanNodeProgress = "done" | "current" | "upcoming";
+
+/** Done = closed with concept_done, or taught and left behind (the teacher
+ *  moved on without closing it — older sessions never close nodes). */
+export function nodeProgress(statuses: DerivedPlanStatuses, nodeId: string): PlanNodeProgress {
+	if (statuses.current === nodeId) return "current";
+	if (statuses.done.has(nodeId) || statuses.visited.has(nodeId)) return "done";
+	return "upcoming";
+}
+
+/** One timeline fold shared by both message shapes: tagged checks move
+ *  `current`; a concept_done closes its node and hands `current` to the
+ *  node it names next. */
+function foldPlanEvents(
+	ids: ReadonlySet<string>,
+	events: Iterable<{ kind: "tag"; nodeId: string } | { kind: "done"; nodeId: string; nextNodeId?: string }>,
+): DerivedPlanStatuses {
+	const runs: string[] = []; // distinct tagged nodes, consecutive duplicates collapsed
+	const done = new Set<string>();
+	let current: string | null = null;
+	for (const e of events) {
+		if (!ids.has(e.nodeId)) continue; // untagged/unknown — moves nothing
+		if (e.kind === "tag") {
+			if (runs.at(-1) !== e.nodeId) runs.push(e.nodeId);
+			current = e.nodeId;
+		} else {
+			done.add(e.nodeId);
+			if (runs.at(-1) !== e.nodeId) runs.push(e.nodeId);
+			current = e.nextNodeId && ids.has(e.nextNodeId) ? e.nextNodeId : null;
+		}
+	}
+	// Visited = been there in an EARLIER stay (a revisit puts a node in both;
+	// current wins at render).
+	const visited = new Set(current === runs.at(-1) ? runs.slice(0, -1) : runs);
+	return { current, visited, done };
 }
 
 /** Statuses of a node: the derived view the plan panel should render. */
@@ -81,24 +123,20 @@ export function derivedNodeStatus(statuses: DerivedPlanStatuses, nodeId: string)
 
 export function derivePlanStatuses(tree: PlanTree, messages: readonly PartsCarrier[]): DerivedPlanStatuses {
 	const ids = new Set(tree.nodes.map((n) => n.id));
-	const runs: string[] = []; // distinct tagged nodes in call order, CONSECUTIVE
-	// duplicates collapsed (several checks on one node = one stay on it)
-	for (const m of messages) {
-		for (const part of m.parts) {
-			// Either quizzing tool (quiz/explain) tags position — the mechanic
-			// is a settings switch; the fold recognizes both (owner 2026-09-27).
-			if (part.type !== "tool-quiz" && part.type !== "tool-explain") continue;
-			const nodeId = (part.input as { nodeId?: unknown } | undefined)?.nodeId;
-			if (typeof nodeId !== "string" || !ids.has(nodeId)) continue; // untagged/unknown — moves nothing
-			if (runs.at(-1) !== nodeId) runs.push(nodeId);
+	function* events() {
+		for (const m of messages) {
+			for (const part of m.parts) {
+				const input = part.input as { nodeId?: unknown; nextNodeId?: unknown } | undefined;
+				if (typeof input?.nodeId !== "string") continue;
+				// Either quizzing tool (quiz/explain) tags position — the mechanic
+				// is a settings switch; the fold recognizes both (owner 2026-09-27).
+				if (part.type === "tool-quiz" || part.type === "tool-explain") yield { kind: "tag" as const, nodeId: input.nodeId };
+				else if (part.type === "tool-concept_done" && part.state !== "output-error")
+					yield { kind: "done" as const, nodeId: input.nodeId, nextNodeId: typeof input.nextNodeId === "string" ? input.nextNodeId : undefined };
+			}
 		}
 	}
-	const current = runs.at(-1) ?? null;
-	// Visited = been there in an EARLIER stay: everything before the current
-	// run. A revisit (a→b→a) puts a in visited AND current — current wins at
-	// render (derivedNodeStatus), visited records it has been left before.
-	const visited = new Set(runs.slice(0, -1));
-	return { current, visited };
+	return foldPlanEvents(ids, events());
 }
 
 /**
@@ -131,19 +169,20 @@ import type { LhMessage } from "../native-messages.ts";
  *  a dangling call still moves position; results feed nothing). */
 export function derivePlanStatusesLh(tree: PlanTree, messages: readonly LhMessage[]): DerivedPlanStatuses {
 	const ids = new Set(tree.nodes.map((n) => n.id));
-	const runs: string[] = [];
-	for (const m of messages) {
-		if ((m as { role?: string }).role !== "assistant") continue;
-		const content = (m as { content?: unknown }).content;
-		if (!Array.isArray(content)) continue;
-		for (const block of content as Array<{ type?: string; name?: string; arguments?: unknown }>) {
-			if (block.type !== "toolCall" || (block.name !== "quiz" && block.name !== "explain")) continue;
-			const nodeId = (block.arguments as { nodeId?: unknown } | undefined)?.nodeId;
-			if (typeof nodeId !== "string" || !ids.has(nodeId)) continue;
-			if (runs.at(-1) !== nodeId) runs.push(nodeId);
+	function* events() {
+		for (const m of messages) {
+			if ((m as { role?: string }).role !== "assistant") continue;
+			const content = (m as { content?: unknown }).content;
+			if (!Array.isArray(content)) continue;
+			for (const block of content as Array<{ type?: string; name?: string; arguments?: unknown }>) {
+				if (block.type !== "toolCall") continue;
+				const args = block.arguments as { nodeId?: unknown; nextNodeId?: unknown } | undefined;
+				if (typeof args?.nodeId !== "string") continue;
+				if (block.name === "quiz" || block.name === "explain") yield { kind: "tag" as const, nodeId: args.nodeId };
+				else if (block.name === "concept_done")
+					yield { kind: "done" as const, nodeId: args.nodeId, nextNodeId: typeof args.nextNodeId === "string" ? args.nextNodeId : undefined };
+			}
 		}
 	}
-	const current = runs.at(-1) ?? null;
-	const visited = new Set(runs.slice(0, -1));
-	return { current, visited };
+	return foldPlanEvents(ids, events());
 }

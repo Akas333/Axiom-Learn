@@ -1,5 +1,5 @@
 
-import { createContext, Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useChatSession } from "@/components/session";
 import { visibleQueuedSteers } from "@/components/session-core";
 import { SetupDialog } from "@/components/setup-dialog";
@@ -44,6 +44,10 @@ import {
 } from "@/src/core";
 import { PlanBlock, PlanPopup, latestTree } from "@/components/plan-block";
 import { PlanMarginalia, planExists } from "@/components/plan-window";
+import { PlanSidebar } from "@/components/plan-sidebar";
+import { conceptNumbers, planLayout } from "@/components/plan-map";
+import { ConceptOpener, conceptAnchorId, conceptOpenings, openingKey } from "@/components/concept-markers";
+import { ConceptDoneCard, continueMessage, type ConceptDoneInputView, type ConceptDoneOutputView } from "@/components/concept-done-card";
 import { MermaidOverlay, SessionMermaidContext } from "@/components/session-overlay";
 import { AbortTurnDialog, type AbortMode } from "@/components/abort-turn-dialog";
 import { ArrowRightIcon, DumbbellIcon, WaypointsIcon } from "lucide-react";
@@ -55,6 +59,7 @@ import { PracticeDock } from "@/components/practice-dock";
 import { ThinkingCard, type PracticeThinkingData } from "@/components/practice-cards";
 import { GraphContextCard, type GraphContextData } from "@/components/graph-context-card";
 import { TopBar } from "@/components/top-bar";
+import { LhMark } from "@/components/lh-mark";
 import type { ArtifactPartProps, JobRecord, Phase3, QuestionAnswerData, QuestionFormDraft, TurnUsage, SessionPricing } from "@/src/core";
 import type { LhViewMessage } from "@/src/core";
 import { PhaseChip, PhaseDivider } from "@/components/phase-divider";
@@ -810,6 +815,15 @@ export function Chat({
 	// The live plan popup (wave 4): opened by any transcript plan block, the
 	// top-bar plan chip, and the dock band's marginalia.
 	const [planOpen, setPlanOpen] = useState(false);
+	// The plan sidebar (right edge): remembered across sessions; open by
+	// default on wide screens.
+	const [planSidebar, setPlanSidebarState] = useState<boolean>(readPlanSidebarPref);
+	const setPlanSidebar = useCallback((open: boolean) => {
+		setPlanSidebarState(open);
+		try {
+			localStorage.setItem(PLAN_SIDEBAR_KEY, open ? "open" : "closed");
+		} catch {}
+	}, []);
 	// Real plan presence — gates the marginalia's clickable flank. A JSX
 	// element is always truthy; gating on the node alone mounted a phantom
 	// (invisible, clickable) button in the bottom-right whenever a question
@@ -845,6 +859,52 @@ export function Chat({
 	// The session's live plan (drives the top-bar chip; the marginalia
 	// derives its own from the same transcript).
 	const planTree = useMemo(() => latestTree(messages), [messages]);
+	// Concept boundaries in the transcript: where each concept opens (the
+	// close is its concept_done card), numbered like the plan sidebar.
+	const planNumbers = useMemo(() => {
+		if (!planTree) return null;
+		const current = derivePlanStatuses(planTree, messages as Parameters<typeof derivePlanStatuses>[1]).current;
+		return conceptNumbers(planTree, planLayout(planTree), messages as Parameters<typeof conceptNumbers>[2], current).number;
+	}, [planTree, messages]);
+	const openings = useMemo(() => conceptOpenings(messages, planTree), [messages, planTree]);
+	// Scroll sync: the concept whose divider was last scrolled past (above
+	// 45% of the viewport) is the one being viewed — the sidebar highlights it.
+	const [viewingConcept, setViewingConcept] = useState<string | null>(null);
+	useEffect(() => {
+		let frame = 0;
+		const measure = () => {
+			frame = 0;
+			const line = window.innerHeight * 0.45;
+			let seen: string | null = null;
+			for (const el of document.querySelectorAll<HTMLElement>("[data-concept-id]")) {
+				if (el.getBoundingClientRect().top <= line) seen = el.dataset.conceptId ?? null;
+				else break;
+			}
+			setViewingConcept(seen);
+		};
+		const onScroll = () => {
+			if (!frame) frame = requestAnimationFrame(measure);
+		};
+		measure();
+		document.addEventListener("scroll", onScroll, true);
+		window.addEventListener("resize", onScroll);
+		return () => {
+			document.removeEventListener("scroll", onScroll, true);
+			window.removeEventListener("resize", onScroll);
+			if (frame) cancelAnimationFrame(frame);
+		};
+	}, [openings]);
+	const jumpToConcept = useCallback((nodeId: string) => {
+		document.getElementById(conceptAnchorId(nodeId))?.scrollIntoView({ behavior: "smooth", block: "start" });
+	}, []);
+	const openerAt = (key: string) => {
+		const o = openings.get(key);
+		const node = o && planTree?.nodes.find((n) => n.id === o.nodeId);
+		if (!o || !node || !planNumbers) return null;
+		return <ConceptOpener key={`concept-opener-${key}`} nodeId={node.id} title={node.title} number={planNumbers.get(node.id) ?? 0} />;
+	};
+	const openerFor = (mi: number) => openerAt(openingKey(mi, "u"));
+	const partOpenerFor = (mi: number, pi: number) => openerAt(openingKey(mi, pi));
 
 	// ── Session usage (wave-4 stats bar) ──
 	// The money channel: the record's turns log and read-time server Pi
@@ -1274,13 +1334,14 @@ export function Chat({
 					    structure beside the phase chip — access to the full-DAG popup
 					    at every width; the marginalia is the wide-screen glance view. */}
 					{planTree && (
-						<Hint label="Open the full plan" side="bottom">
+						<Hint label={planSidebar ? "Hide the plan" : "Show the plan"} side="bottom">
 <button
 							type="button"
 							data-testid="plan-chip"
+							aria-pressed={planSidebar}
 							onClick={(e) => {
 								blurAfterPointerClick(e);
-								setPlanOpen(true);
+								setPlanSidebar(!planSidebar);
 							}}
 							className="lh-no-drag flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-border/80 px-2 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
 						>
@@ -1327,7 +1388,10 @@ export function Chat({
 								/>
 							)}
 
-							{messages.map((m, mi) =>
+							{messages.map((m, mi) => [
+								openerFor(mi),
+								// The learner's Continue message IS the concept divider — no bubble.
+								openings.get(openingKey(mi, "u"))?.viaContinue ? null :
 								m.role === "user" && isSubagentSteer(m) ? (
 									// Sub-agent delivery (wake-pipeline steer): NO message bubble — the
 									// artifact card sits in the transcript column directly, full width
@@ -1410,38 +1474,31 @@ export function Chat({
 										<PhaseDivider key={`teach-${m.id || `m-${mi}`}`} phase="teach" />
 									) : null}
 									{m.role === "user" ? (
-										/* THE DOCUMENT ROW (owner round, 2026-10-05): no right-aligned
-										    bubble — the transcript reads as a document. User text is a
-										    full-width quote block: muted "You" label, muted rail,
-										    FULL-opacity text (learner words are content, not whisper).
-										    Distinguished from user thinking at a glance: thinking is
-										    collapsed + 50% italic; this is upright and present.
-										    User text renders plain — the model's LaTeX pipeline is not
-										    applied to learner-authored text ($ stays $, no surprises).
-										    Rendered WITHOUT the Message wrapper — that is the bubble. */
-											<div
-										data-testid="user-message"
-										/* THE DOCUMENT, ALL-IN (owner rounds two+three, 2026-10-07):
-										    no chat side — the user message is a full-width card-color
-										    BAND, the IDENTICAL geometry as the thinking rows: 5px band
-										    padding, the left gap matches it, the rail fills the 3ch
-										    inset (the band is the authorship mark against the agent's
-										    transparent prose). The "You" label stays — one register
-										    with the thinking labels. */
-										className="my-2 w-full border-l-[calc(3ch-14px)] border-muted-foreground/30 bg-card py-1 pl-[14px] pr-4 font-ui text-xs"
-									>
-												{/* The rail GROUPS (owner round 4, 2026-10-05): the YOU heading
-												    sits INSIDE the rail, same mono-xs register and same 1ch
-												    rail as the thinking rows — one quote geometry. */}
-												<div className="font-medium text-muted-foreground">You</div>
-												<div className="lh-prose whitespace-pre-wrap text-foreground">
-													{m.parts.filter((p) => p.type === "text").map((p) => p.text).join("\n")}
-												</div>
+										/* Chat layout: the learner's words sit in a right-aligned
+										    bubble. Rendered plain — the model's LaTeX pipeline is not
+										    applied to learner-authored text ($ stays $). */
+										<div data-testid="user-message" className="my-4 flex w-full justify-end">
+											<div className="lh-prose max-w-[80%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-(--pill) px-4 py-2.5 text-[15px] text-foreground">
+												{m.parts.filter((p) => p.type === "text").map((p) => p.text).join("\n")}
 											</div>
+										</div>
 									) : (
-									<Message from="assistant" className="max-w-full">
+									<div data-testid="assistant-message" className="flex w-full gap-3">
+										{/* The teacher's avatar opens each run of assistant
+										    messages; follow-on messages keep the indent only. */}
+										<div className="w-7 shrink-0 pt-0.5">
+											{messages[mi - 1]?.role !== "assistant" && (
+												<span className="flex size-7 items-center justify-center rounded-full border border-input bg-card">
+													<LhMark className="size-4" />
+												</span>
+											)}
+										</div>
+									<Message from="assistant" className="min-w-0 max-w-full flex-1">
+									{messages[mi - 1]?.role !== "assistant" && (
+										<div className="flex h-7 items-center text-sm font-semibold text-foreground">Axiom</div>
+									)}
 									<MessageContent className="w-full">
-											{m.parts.map((part, pi) => {
+											{m.parts.map((part, pi) => [partOpenerFor(mi, pi), ((): ReactNode => {
 												const isLastPart = mi === messages.length - 1 && pi === m.parts.length - 1;
 												// The step boundary where teaching begins (round 8): when
 												// the teach flip happens in a LATER step, its PhaseDivider
@@ -1501,6 +1558,22 @@ export function Chat({
 																onOpen={() => setPlanOpen(true)}
 															/>
 														);
+													case "tool-concept_done": {
+														// End of a concept: recap + up next + Continue. Failed
+														// calls stay hidden (the teacher retries); only the latest
+														// card is live, and only while nothing else is in flight.
+														if (part.state !== "output-available") return null;
+														return (
+															<ConceptDoneCard
+																key={pi}
+																input={(part.input ?? {}) as ConceptDoneInputView}
+																output={part.output as ConceptDoneOutputView | undefined}
+																number={planNumbers?.get(String((part.input as { nodeId?: unknown } | undefined)?.nodeId ?? ""))}
+																live={isLastPart && !busy && !pending && !compacting}
+																onContinue={(nextTitle) => void send({ type: "text", text: continueMessage(nextTitle) })}
+															/>
+														);
+													}
 													case "tool-quiz":
 													case "tool-probe":
 													case "tool-ask_user_question":
@@ -1534,12 +1607,13 @@ export function Chat({
 														return null;
 													}
 												}
-											})}
+											})()])}
 										</MessageContent>
 									</Message>
+									</div>
 									)}
 								</Fragment>
-							))}
+							)])}
 
 							{/* THE placeholder, ACTION-gated (owner, optimistic round
 							    3, 2026-10-02): spinner + shimmered Thinking… from the
@@ -1603,7 +1677,7 @@ export function Chat({
 					compactionRunning={compacting}
 					onSubmitThinking={submitThinking}
 					chatId={chatId}
-					plan={hasPlan ? <PlanMarginalia messages={messages} /> : undefined}
+					plan={hasPlan && !planSidebar ? <PlanMarginalia messages={messages} /> : undefined}
 					onOpenPlan={() => setPlanOpen(true)}
 					requiresReveal={requiresReveal}
 					readingThinking={readingThinking}
@@ -1696,6 +1770,15 @@ export function Chat({
 				<AbortTurnDialog mode={abortAsk} onClose={() => setAbortAsk(null)} onConfirm={confirmAbort} busy={busy} />
 				</div>
 			</div>
+			{hasPlan && planSidebar && (
+				<PlanSidebar
+					messages={messages}
+					viewingId={viewingConcept}
+					onJump={jumpToConcept}
+					onClose={() => setPlanSidebar(false)}
+					onExpand={() => setPlanOpen(true)}
+				/>
+			)}
 		</div>
 		</JobsContext.Provider>
 		</SessionMermaidContext.Provider>
@@ -2398,4 +2481,16 @@ function DockOverlay({
 			</div>
 		</div>
 	);
+}
+
+const PLAN_SIDEBAR_KEY = "lh:plan-sidebar";
+
+/** The saved sidebar choice; without one, open when the window is wide. */
+function readPlanSidebarPref(): boolean {
+	try {
+		const saved = localStorage.getItem(PLAN_SIDEBAR_KEY);
+		if (saved === "open") return true;
+		if (saved === "closed") return false;
+	} catch {}
+	return typeof window !== "undefined" && window.innerWidth >= 1200;
 }

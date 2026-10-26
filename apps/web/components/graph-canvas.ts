@@ -418,6 +418,13 @@ export function labelAlpha(
 	return clamp01(1 - (ratio - labelZoom) / span);
 }
 
+/** World span framed when the graph has no extent at all (a single node, or
+ *  nodes stacked on one point): about four link distances, so a lone node
+ *  sits centered at an ordinary zoom. Without it the fit asks for an
+ *  astronomical zoom, d3 clamps k but keeps the translate computed for the
+ *  unclamped k, and the node lands off-screen. */
+export const MIN_FIT_SPAN = 160;
+
 /** The camera transform that frames `bbox` in a w×h viewport with padding. */
 export function fitTransform(
 	bbox: { minX: number; maxX: number; minY: number; maxY: number },
@@ -425,9 +432,12 @@ export function fitTransform(
 	h: number,
 	padding: number,
 ): { x: number; y: number; k: number } {
-	const bw = Math.max(bbox.maxX - bbox.minX, 1e-6);
-	const bh = Math.max(bbox.maxY - bbox.minY, 1e-6);
-	const k = Math.min((w - 2 * padding) / bw, (h - 2 * padding) / bh);
+	// An axis without extent doesn't constrain the zoom (nodes on a line
+	// fit by their length); with neither axis spread, frame MIN_FIT_SPAN.
+	let bw: number | null = bbox.maxX - bbox.minX >= 1 ? bbox.maxX - bbox.minX : null;
+	let bh: number | null = bbox.maxY - bbox.minY >= 1 ? bbox.maxY - bbox.minY : null;
+	if (bw === null && bh === null) bw = bh = MIN_FIT_SPAN;
+	const k = Math.min(bw === null ? Infinity : (w - 2 * padding) / bw, bh === null ? Infinity : (h - 2 * padding) / bh);
 	const cx = (bbox.minX + bbox.maxX) / 2;
 	const cy = (bbox.minY + bbox.maxY) / 2;
 	return { x: w / 2 - cx * k, y: h / 2 - cy * k, k };
@@ -567,6 +577,11 @@ export class GraphCanvasRenderer {
 	private transform: ZoomTransform = zoomIdentity;
 	/** Set once the first fit happens; the camera then survives setData. */
 	private hasFit = false;
+	/** A saved camera was restored and not yet checked against the graph:
+	 *  the first time data and size are both known, a camera that shows none
+	 *  of the graph (saved in a wider window, or before the graph moved) is
+	 *  replaced by a fit. One-shot, so a deliberate pan is never undone. */
+	private checkRestoredCamera = false;
 	/** Last-synced CSS size — the resize anchor computes the world point
 	 *  under the PRE-resize viewport center from these (ResizeObserver
 	 *  callbacks already see the NEW size in clientWidth/Height). */
@@ -707,6 +722,7 @@ export class GraphCanvasRenderer {
 			typeof initialCamera.y === "number" && Number.isFinite(initialCamera.y)
 		) {
 			this.hasFit = true;
+			this.checkRestoredCamera = true;
 			select(canvas).call(
 				this.zoomBehavior.transform,
 				zoomIdentity.translate(initialCamera.x, initialCamera.y).scale(initialCamera.k),
@@ -723,6 +739,7 @@ export class GraphCanvasRenderer {
 			const wx = (prevW / 2 - tx) / k;
 			const wy = (prevH / 2 - ty) / k;
 			this.syncSize();
+			if (this.refitIfRestoredCameraMissesGraph()) return;
 			if (!this.hasFit) this.fit(); // first real size → fit once
 			else {
 				this.refreshFitZoom(); // the gate's "1×" is viewport-bound
@@ -763,9 +780,10 @@ export class GraphCanvasRenderer {
 		}
 		this.worldBBox = { minX, maxX, minY, maxY };
 		if (!this.hasFit && data.nodes.length > 0) this.fit();
-		// The camera may be user-restored (constructor initialCamera) — the
-		// gate's "1×" reference still needs the fresh bbox's fit zoom.
-		else this.refreshFitZoom();
+		// The camera may be user-restored (constructor initialCamera): refit
+		// if it shows none of the graph; otherwise the gate's "1×" reference
+		// still needs the fresh bbox's fit zoom.
+		else if (!this.refitIfRestoredCameraMissesGraph()) this.refreshFitZoom();
 		// Rebuild the live sim around the fresh nodes. New data means the
 		// server spoke (merge or refetch); any pending commit is moot and
 		// the graph is at rest until the next drag.
@@ -868,6 +886,22 @@ export class GraphCanvasRenderer {
 	/** Frame the whole graph (padding included). Keeps the camera on later
 	 *  setData calls — call fit() only for an explicit re-frame (the
 	 *  first-ever open; afterwards the caller-persisted camera wins). */
+	/** The restored-camera check (see checkRestoredCamera). Returns true
+	 *  when it replaced the camera with a fit. */
+	private refitIfRestoredCameraMissesGraph(): boolean {
+		if (!this.checkRestoredCamera || !this.data || this.data.nodes.length === 0 || !this.worldBBox) return false;
+		const w = this.canvas.clientWidth;
+		const h = this.canvas.clientHeight;
+		if (w < 10 || h < 10) return false; // size not known yet: check on the next resize
+		this.checkRestoredCamera = false;
+		const { x, y, k } = this.transform;
+		const b = this.worldBBox;
+		const onScreen = x + b.maxX * k >= 0 && x + b.minX * k <= w && y + b.maxY * k >= 0 && y + b.minY * k <= h;
+		if (onScreen) return false;
+		this.fit();
+		return true;
+	}
+
 	fit(): void {
 		if (!this.data || this.data.nodes.length === 0 || !this.worldBBox) return;
 		const w = this.canvas.clientWidth;

@@ -137,7 +137,7 @@ const defaultGetThinkingMessage = (isStreaming: boolean) => {
   if (isStreaming) {
     return <Shimmer duration={1}>Thinking...</Shimmer>;
   }
-  return <p>AGENT’S THINKING</p>;
+  return <p>Agent’s thinking</p>;
 };
 
 export const ReasoningTrigger = memo(
@@ -155,7 +155,7 @@ export const ReasoningTrigger = memo(
           /* The heading register (owner round 4, 2026-10-05): the small
              mono caps of the card eyebrows — matching YOUR THINKING, whose
              rail offsets it by exactly the one-character difference. */
-          "flex w-full items-center gap-2 text-muted-foreground text-xs font-medium transition-colors hover:text-foreground",
+          "inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-(--pill) px-3 text-muted-foreground text-xs font-medium transition-colors hover:bg-(--pill-hover) hover:text-foreground",
           className
         )}
         {...props}
@@ -178,7 +178,7 @@ export const ReasoningTrigger = memo(
             {getThinkingMessage(isStreaming)}
             <ChevronDownIcon
               className={cn(
-                "size-4 transition-transform",
+                "size-3.5 transition-transform",
                 isOpen ? "rotate-180" : "rotate-0"
               )}
             />

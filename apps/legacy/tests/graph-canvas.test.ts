@@ -17,6 +17,7 @@ import {
 	isImpNodeId,
 	boxBlurRound,
 	fitTransform,
+	MIN_FIT_SPAN,
 	labelAlpha,
 	pickNearest,
 	wrapRegionLabel,
@@ -114,6 +115,20 @@ describe("fitTransform", () => {
 	test("never returns a non-positive scale for degenerate bboxes", () => {
 		const t = fitTransform({ minX: 5, maxX: 5, minY: 5, maxY: 5 }, 100, 100, 10);
 		assert.ok(t.k > 0 && Number.isFinite(t.k));
+	});
+
+	test("a single node is centered at an ordinary zoom, not an extreme one", () => {
+		// One node near the origin (what the layout writes for a 1-node graph).
+		const n = { x: 0.0000023, y: 0.0000053 };
+		const t = fitTransform({ minX: n.x, maxX: n.x, minY: n.y, maxY: n.y }, 412, 868, 40);
+		assert.ok(Math.abs(t.k - (412 - 80) / MIN_FIT_SPAN) < 1e-9, `k=${t.k}`);
+		assert.ok(Math.abs(n.x * t.k + t.x - 206) < 1e-6, "centered horizontally");
+		assert.ok(Math.abs(n.y * t.k + t.y - 434) < 1e-6, "centered vertically");
+	});
+
+	test("nodes on a horizontal line fit by their length", () => {
+		const t = fitTransform({ minX: 0, maxX: 200, minY: 7, maxY: 7 }, 500, 300, 50);
+		assert.ok(Math.abs(t.k - 2) < 1e-9, `k=${t.k}`);
 	});
 });
 

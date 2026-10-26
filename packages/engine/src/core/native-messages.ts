@@ -774,6 +774,9 @@ export function reconstructRequestCause(messages: readonly LhMessage[]): Reconst
 	return resolve();
 }
 
+/** The teacher's end-of-concept tool (agent/tools/concept.ts). */
+export const CONCEPT_DONE_TOOL = "concept_done";
+
 export function needsContinuation(messages: readonly LhMessage[]): boolean {
 	const last = messages[messages.length - 1];
 	if (!last || (last as { role?: string }).role !== "toolResult") return false;
@@ -812,6 +815,10 @@ export function needsContinuation(messages: readonly LhMessage[]): boolean {
 		(m) => m.toolName === PRACTICE_PROBLEM_TOOL && !m.isError && m.details == null,
 	);
 	if (posedProblem) return false;
+	// A closed concept owes nothing either: concept_done ends the turn so the
+	// learner reads the recap and presses Continue (that message is the next
+	// turn). Its ack persists, so without this a reload would wake a turn.
+	if (results.some((m) => m.toolName === CONCEPT_DONE_TOOL && !m.isError)) return false;
 	const answered = new Set(results.map((m) => m.toolCallId));
 	const calls = (content as Array<{ type?: string; id?: string }>).filter(
 		(b) => b.type === "toolCall" && typeof b.id === "string",

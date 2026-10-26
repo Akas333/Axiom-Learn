@@ -65,7 +65,7 @@ function subscribeUserThinking(fn: (open: boolean) => void): () => void {
 }
 
 export function ThinkingBlock({
-	label = "YOUR THINKING",
+	label = "Your thinking",
 	text,
 	testId,
 	dataCommit,
@@ -108,8 +108,11 @@ export function ThinkingBlock({
 				// chevron law); the rail narrows (14px gap), padding 4px, pr-4
 				// keeps the text off the band's right edge. In-card rows take
 				// NO band — the accent lift read too light; rail only.
-				"lh-card-enter my-2 w-full border-l-[calc(3ch-14px)] border-muted-foreground/30 py-1 pl-[14px] pr-4 font-ui text-xs",
-				inCard ? "" : "bg-card",
+				// Chat layout: the learner's thinking is theirs, so outside a
+				// card it sits on the right like their messages; a pill toggle
+				// and a rounded bubble when open.
+				"lh-card-enter my-2 flex w-full flex-col gap-1.5 font-ui text-xs",
+				inCard ? "items-start" : "items-end",
 			)}
 		>
 			<button
@@ -120,13 +123,13 @@ export function ThinkingBlock({
 					blurAfterPointerClick(e);
 				}}
 				aria-expanded={open}
-				className="flex w-full items-center gap-2 font-medium text-muted-foreground transition-colors hover:text-foreground"
+				className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-(--pill) px-3 font-medium text-muted-foreground transition-colors hover:bg-(--pill-hover) hover:text-foreground"
 			>
 				{label}
-				<ChevronDownIcon className={cn("size-4 shrink-0 transition-transform", open ? "rotate-180" : "rotate-0")} />
+				<ChevronDownIcon className={cn("size-3.5 shrink-0 transition-transform", open ? "rotate-180" : "rotate-0")} />
 			</button>
 			{open && (
-				<span className="lh-prose mt-1.5 block whitespace-pre-wrap text-[15px] italic text-foreground/50">{text}</span>
+				<span className={cn("lh-prose block max-w-[80%] whitespace-pre-wrap rounded-2xl border border-input/70 px-4 py-2.5 text-[15px] italic text-foreground/60", inCard && "max-w-full")}>{text}</span>
 			)}
 		</div>
 	);

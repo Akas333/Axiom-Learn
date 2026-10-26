@@ -1,6 +1,7 @@
 import { Type } from "typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { invalidInputResult, questionResult, serverExecute } from "./tool-execute.ts";
+import { conceptDoneTool } from "./tools/concept.ts";
 import {
 	askInputSchema,
 	askOptionProblems,
@@ -458,6 +459,7 @@ export function createTeacherTools(
 			find: findTool,
 			grep: grepTool,
 			...planTools(ctx),
+			concept_done: conceptDoneTool(ctx),
 			...jobTools({ chatId: ctx.chatId, jobStore: ctx.jobStore, spawn: ctx.spawn, searchAvailable: ctx.searchAvailable }),
 		},
 		withoutMechanics(enabled),
