@@ -20,12 +20,18 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FACTORY_SETTINGS, type AppearanceSettings } from "@/src/core";
+import { themeById, themeVars } from "./themes.ts";
+
+/** Last-applied appearance, read by the inline boot script in index.html
+ *  so a reload paints the chosen theme before React mounts (no flash). */
+const BOOT_CACHE_KEY = "lh:appearance-boot";
 
 /** The resolved, fully-concrete appearance view (delta + factory merged). */
 export function resolveAppearance(delta: AppearanceSettings | undefined) {
 	const f = FACTORY_SETTINGS.appearance;
 	return {
 		mode: delta?.mode ?? f.mode,
+		theme: delta?.theme ?? f.theme,
 		background: delta?.background ?? f.background,
 		fontFamily: delta?.fontFamily ?? f.fontFamily,
 		proseFontSize: delta?.proseFontSize ?? f.proseFontSize,
@@ -46,17 +52,19 @@ function raise(hex: string, add: number): string {
 	const n = hex.length === 4
 		? hex.slice(1).split("").map((c) => parseInt(c + c, 16))
 		: [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
-	return `#${n.map((c) => Math.min(255, c + add).toString(16).padStart(2, "0")).join("")}`;
+	return `#${n.map((c) => Math.max(0, Math.min(255, c + add)).toString(16).padStart(2, "0")).join("")}`;
 }
 
 /** The derived palette a chosen background implies (dark curve): background
  *  itself, the raised surfaces (card/popover/secondary/muted, +8), the
  *  accent (+22), the edges (border/input, +47), and primary-foreground
  *  (the inverted text on primary = the background's own color, as today). */
-export function derivedPalette(background: string): Record<string, string> {
-	const card = raise(background, 8);
-	const accent = raise(background, 22);
-	const border = raise(background, 47);
+export function derivedPalette(background: string, mode: "dark" | "light" = "dark"): Record<string, string> {
+	// Light themes step surfaces DARKER than the background, dark ones lighter.
+	const dir = mode === "light" ? -1 : 1;
+	const card = raise(background, 8 * dir);
+	const accent = raise(background, 22 * dir);
+	const border = raise(background, 47 * dir);
 	return {
 		"--background": background,
 		"--card": card,
@@ -74,8 +82,14 @@ export function derivedPalette(background: string): Record<string, string> {
  *  Absent entries = leave the factory stylesheet value in place. Pure —
  *  exported for tests. */
 export function appearanceVars(a: ReturnType<typeof resolveAppearance>): Record<string, string> {
-	const vars: Record<string, string> = {};
-	if (a.background !== null) Object.assign(vars, derivedPalette(a.background));
+	const theme = themeById(a.theme);
+	const vars: Record<string, string> = { ...themeVars(theme) };
+	if (a.background !== null) {
+		const derived = derivedPalette(a.background, theme.mode);
+		// A theme brings its own text-on-primary color; keep it.
+		if (theme.id !== "kapany-dark") delete derived["--primary-foreground"];
+		Object.assign(vars, derived);
+	}
 	if (a.fontFamily !== null) {
 		vars["--font-prose"] = `"${a.fontFamily}", var(--font-sans3), ui-sans-serif, system-ui, sans-serif`;
 	}
@@ -104,6 +118,25 @@ export function staleVarNames(
 	nextVars: Record<string, string>,
 ): string[] {
 	return prevNames.filter((n) => !(n in nextVars));
+}
+
+function bootVarNames(): string[] {
+	try {
+		const cached = JSON.parse(localStorage.getItem(BOOT_CACHE_KEY) ?? "null") as { vars?: Record<string, string> } | null;
+		return Object.keys(cached?.vars ?? {});
+	} catch {
+		return [];
+	}
+}
+
+/** Dark/light switch on <html>: the class, the native color scheme
+ *  (scrollbars, form controls) and the browser's theme color. */
+function applyMode(dark: boolean) {
+	const root = document.documentElement;
+	root.classList.toggle("dark", dark);
+	root.style.colorScheme = dark ? "dark" : "light";
+	const bg = getComputedStyle(root).getPropertyValue("--background").trim();
+	document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg || (dark ? "#141414" : "#ffffff"));
 }
 
 interface AppearanceContextValue {
@@ -135,8 +168,13 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 	// backgrounds never reset, toggles looked dead. Every name this effect
 	// has ever set is tracked; names absent from the new set are removed so
 	// the factory stylesheet value returns.
-	const appliedNamesRef = useRef<Set<string>>(new Set());
+	// Seeded with what the boot script already set, so those clear too.
+	const appliedNamesRef = useRef<Set<string>>(new Set(bootVarNames()));
+	// Hold the factory pass until the record arrives: applying it first
+	// would undo the boot script's theme for a moment (a flash).
+	const [loaded, setLoaded] = useState(false);
 	useEffect(() => {
+		if (!loaded) return;
 		if (appliedRef.current === key) return;
 		appliedRef.current = key;
 		const root = document.documentElement;
@@ -148,7 +186,13 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 			root.style.setProperty(name, value);
 			appliedNamesRef.current.add(name);
 		}
-	}, [key, vars]);
+		// Light themes switch Tailwind's dark: variants off too.
+		const dark = themeById(resolveAppearance(delta).theme).mode === "dark";
+		applyMode(dark);
+		try {
+			localStorage.setItem(BOOT_CACHE_KEY, JSON.stringify({ vars, dark }));
+		} catch {}
+	}, [key, vars, delta, loaded]);
 
 	// One fetch per app load: the record (sanitized server-side) carries the
 	// delta; resolution happens here against the compiled factory.
@@ -165,8 +209,9 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 				setDelta(
 					appearance && typeof appearance === "object" ? (appearance as AppearanceSettings) : undefined,
 				);
+				setLoaded(true);
 			})
-			.catch(() => {/* settings stay factory — not worth a crash */});
+			.catch(() => setLoaded(true)); // settings stay factory — not worth a crash
 		return () => {
 			alive = false;
 		};
@@ -174,6 +219,7 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 
 	const onAppearanceChange = useCallback((next: AppearanceSettings | undefined) => {
 		setDelta(next);
+		setLoaded(true);
 	}, []);
 
 	const value = useMemo(

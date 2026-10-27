@@ -29,6 +29,9 @@
  * as text".
  */
 
+import { CheckIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { DEFAULT_THEME_ID, THEMES, themeById } from "./themes.ts";
 import { useEffect, useRef, useState } from "react";
 import {
 	EXTRACTION_CHUNK_TOKENS_FLOOR,
@@ -185,19 +188,71 @@ export function AppearanceSection({
 
 	return (
 		<>
-			<SettingsRow label="Mode" hint="Coming soon" testid="row-mode" dimmed>
-				<ThinSelect value="dark" ariaLabel="mode" onChange={() => {}} testid="select-mode" disabled>
-					<option value="dark">Dark</option>
-				</ThinSelect>
-			</SettingsRow>
+			{/* Theme: preview cards for the standard palettes. Picking one
+			    clears a custom background so the theme shows as designed. */}
+			<div className="border-b border-border/60 py-4" data-testid="row-theme">
+				<div className="text-[15px] text-foreground">Theme</div>
+				<div className="mt-1 text-sm text-muted-foreground">Colors for the whole app. Light themes switch the app to light mode.</div>
+				<div role="radiogroup" aria-label="Theme" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+					{THEMES.map((t) => {
+						const selected = themeById(appearance?.theme).id === t.id;
+						const p = t.palette;
+						return (
+							<button
+								key={t.id}
+								type="button"
+								role="radio"
+								aria-checked={selected}
+								data-testid={`theme-${t.id}`}
+								onClick={() =>
+									onSectionChange({
+										...appearance,
+										theme: t.id === DEFAULT_THEME_ID ? null : t.id,
+										mode: t.mode,
+										background: null,
+									})
+								}
+								className={cn(
+									"group flex flex-col gap-2 rounded-xl p-1.5 text-left transition-colors hover:bg-(--pill)",
+									selected && "bg-(--pill)",
+								)}
+							>
+								{/* Mini window in the theme's own colors. */}
+								<span
+									aria-hidden
+									className={cn(
+										"relative block h-20 overflow-hidden rounded-lg border",
+										selected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : "",
+									)}
+									style={{ background: p.background, borderColor: p.border }}
+								>
+									<span className="absolute inset-y-0 left-0 w-1/4" style={{ background: p.card, borderRight: `1px solid ${p.border}` }} />
+									<span className="absolute left-[32%] top-3 h-1.5 w-1/2 rounded-full" style={{ background: p.foreground, opacity: 0.85 }} />
+									<span className="absolute left-[32%] top-6 h-1.5 w-2/5 rounded-full" style={{ background: p.mutedForeground }} />
+									<span className="absolute left-[32%] top-9 h-1.5 w-1/3 rounded-full" style={{ background: p.mutedForeground, opacity: 0.7 }} />
+									<span
+										className="absolute bottom-2.5 left-[32%] right-3 h-4 rounded-md"
+										style={{ background: p.card, border: `1px solid ${p.border}` }}
+									/>
+									<span className="absolute bottom-3.5 right-4 size-2 rounded-full" style={{ background: p.primary }} />
+								</span>
+								<span className="flex items-center justify-between gap-1 px-1 text-sm text-foreground">
+									<span className="truncate">{t.label}</span>
+									{selected && <CheckIcon className="size-3.5 shrink-0 text-primary" />}
+								</span>
+							</button>
+						);
+					})}
+				</div>
+			</div>
 			<SettingsRow
 				label="Background"
-				hint={`Empty = ${resolved.background ?? "#141414"}`}
+				hint={`Empty = the theme's own (${themeById(appearance?.theme).palette.background})`}
 				testid="row-background"
 			>
 				<CommitInput
 					value={appearance?.background ?? ""}
-					placeholder="#141414"
+					placeholder={themeById(appearance?.theme).palette.background}
 					ariaLabel="background hex"
 					testid="input-background"
 					onCommit={(v) => onSectionChange({ ...appearance, background: v === "" ? null : v })}

@@ -37,6 +37,9 @@ const plugin = createMermaidPlugin();
  *  returns the stale svg (the bug streamdown's own id minting avoids). */
 export async function renderMermaid(chart: string): Promise<string> {
 	const id = `lh-mermaid-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
-	const { svg } = await plugin.getMermaid(mermaidTheme).render(id, chart);
+	// Light themes drop html.dark (components/settings/themes.ts): match it.
+	const dark = typeof document === "undefined" || document.documentElement.classList.contains("dark");
+	const config: MermaidConfig = { ...mermaidTheme, theme: dark ? "dark" : "default" };
+	const { svg } = await plugin.getMermaid(config).render(id, chart);
 	return svg;
 }

@@ -668,7 +668,7 @@ export function AgentSection({
 									testid={`slot-thinking-${slot}`}
 									open={thisMenuOpen === "thinking"}
 									onClick={() => setOpenMenu(thisMenuOpen === "thinking" ? null : { target: slot, kind: "thinking" })}
-									widthClass="w-20"
+									widthClass="w-28"
 								/>
 								{thisMenuOpen === "model" && (
 									<MenuShell

@@ -78,15 +78,15 @@ export function SettingsRow({
 		<div
 			data-testid={testid}
 			className={cn(
-				"flex items-center justify-between gap-6 border-b border-border/60 py-4 last:border-b-0",
+				"flex items-center justify-between gap-6 border-b border-border/60 py-4 last:border-b-0 max-sm:flex-wrap max-sm:gap-x-4 max-sm:gap-y-2",
 				dimmed && "opacity-40",
 			)}
 		>
-			<span className="min-w-0">
+			<span className="min-w-0 max-sm:flex-1 max-sm:basis-40">
 				<span className="block text-[15px] text-foreground">{label}</span>
 				{hint && <span className="mt-1 block max-w-[62ch] text-sm leading-relaxed text-muted-foreground">{hint}</span>}
 			</span>
-			<span className="flex shrink-0 items-center">{children}</span>
+			<span className="flex shrink-0 items-center max-sm:ml-auto max-sm:max-w-full max-sm:shrink max-sm:flex-wrap max-sm:justify-end max-sm:gap-2">{children}</span>
 		</div>
 	);
 }

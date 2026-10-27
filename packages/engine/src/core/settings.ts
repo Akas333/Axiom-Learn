@@ -276,9 +276,28 @@ export interface MdRenderingSettings {
 }
 
 /** Appearance settings — mode, colors, type, markdown emphasis. */
+/** The standard color themes (ids). The palettes themselves live in the
+ *  web app (components/settings/themes.ts); the ids are here so the server
+ *  can validate what it stores. "kapany-dark" is the factory look. */
+export const THEME_IDS = [
+	"kapany-dark",
+	"kapany-light",
+	"midnight",
+	"nord",
+	"dracula",
+	"catppuccin-mocha",
+	"gruvbox-dark",
+	"solarized-dark",
+	"solarized-light",
+	"sepia",
+] as const;
+export type ThemeId = (typeof THEME_IDS)[number];
+
 export interface AppearanceSettings {
 	/** "dark" | "light" (default dark). */
 	mode?: "dark" | "light";
+	/** A standard color theme; null = the factory theme (kapany-dark). */
+	theme?: ThemeId | null;
 	/** The one user-chosen color; everything else derives per-mode in code.
 	 *  null = the mode's default background. */
 	background?: string | null;
@@ -380,6 +399,7 @@ export interface FactorySettings {
 	general: Required<GeneralSettings>;
 	appearance: {
 		mode: "dark" | "light";
+		theme: ThemeId | null;
 		background: string | null;
 		fontFamily: string | null;
 		proseFontSize: number;
@@ -399,6 +419,7 @@ export const FACTORY_SETTINGS: FactorySettings = {
 	general: { autoUpdate: true },
 	appearance: {
 		mode: "dark",
+		theme: null, // kapany-dark
 		background: null, // the dark default (#141414) lives in the mode's derivation curve
 		fontFamily: null, // Source Sans 3
 		proseFontSize: 16,
@@ -546,6 +567,9 @@ function sanitizeMdRendering(raw: unknown): MdRenderingSettings {
 function sanitizeAppearance(raw: Record<string, unknown>): AppearanceSettings {
 	const out: AppearanceSettings = {};
 	if (raw.mode === "dark" || raw.mode === "light") out.mode = raw.mode;
+	if (raw.theme === null || (THEME_IDS as readonly unknown[]).includes(raw.theme)) {
+		out.theme = raw.theme as AppearanceSettings["theme"];
+	}
 	if (raw.background !== undefined) out.background = sanitizeHexOrNull(raw.background);
 	if (raw.fontFamily !== undefined) {
 		out.fontFamily = typeof raw.fontFamily === "string" && raw.fontFamily.trim() ? raw.fontFamily : null;

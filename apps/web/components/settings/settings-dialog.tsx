@@ -52,19 +52,23 @@ import { AppearanceSection, GraphSection } from "./appearance-section.tsx";
 import { KeyboardSection } from "./keyboard-section.tsx";
 import { ChatGPTUIProvider } from "./chatgpt-connection.tsx";
 import { NativeSubscriptionUIProvider } from "./subscription-connections.tsx";
+import { SettingsSkinContext } from "./controls.tsx";
+import { BotIcon, KeyboardIcon, KeyRoundIcon, NetworkIcon, PaletteIcon, SearchIcon, SettingsIcon, XIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /** Owner (2026-09-20): hints earn their place — mechanics-explaining
  *  prose is out; only the keyboard note stays (storage location is a
  *  real question users ask). */
 const SECTIONS = [
-	{ id: "keys", label: "Providers" },
-	{ id: "agent", label: "Agent" },
-	{ id: "appearance", label: "Appearance" },
-	{ id: "graph", label: "Graph" },
-	{ id: "keyboard", label: "Keyboard", hint: "Stored on this device" },
-	{ id: "general", label: "General" },
+	{ id: "general", label: "General", group: "Preferences", Icon: SettingsIcon, keywords: "updates automatic voice hands-free dictation" },
+	{ id: "appearance", label: "Appearance", group: "Preferences", Icon: PaletteIcon, keywords: "theme mode dark light background font reading size bold italic heading serif colors" },
+	{ id: "keyboard", label: "Keyboard", hint: "Stored on this device", group: "Preferences", Icon: KeyboardIcon, keywords: "shortcuts keys bindings hotkeys" },
+	{ id: "agent", label: "Agent", group: "Learning", Icon: BotIcon, keywords: "models tools prompts instructions quizzing quiz compaction context search engine" },
+	{ id: "graph", label: "Graph", group: "Learning", Icon: NetworkIcon, keywords: "knowledge graph rendering extraction chunk" },
+	{ id: "keys", label: "Providers", group: "Connections", Icon: KeyRoundIcon, keywords: "api keys model provider local ollama meta subscriptions chatgpt dictation tavily brave" },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]["id"];
+const SECTION_GROUPS = ["Preferences", "Learning", "Connections"] as const;
 
 /** `open(section?, row?)` — the optional ROW deep-links into the Keys
  *  section with that row unfolded (zero-keys wave: the dictation error's
@@ -180,6 +184,11 @@ export function SettingsDialogBody({
 		};
 	}, []);
 	const [active, setActive] = useState<SectionId>(initialSection);
+	const [search, setSearch] = useState("");
+	const q = search.trim().toLowerCase();
+	const matches = q
+		? SECTIONS.filter((s) => `${s.label} ${s.keywords}`.toLowerCase().includes(q))
+		: SECTIONS;
 	// A deep-link fired while the dialog is ALREADY open (first exercised by
 	// the wave-6 embedding picker's "Add a provider key first…" link — the
 	// picker itself died with wave 7, the mechanism is general) changes
@@ -267,63 +276,76 @@ export function SettingsDialogBody({
 			aria-modal="true"
 			aria-label="Settings"
 			data-testid="settings-dialog"
-			className="settings-dialog-pop flex h-full max-h-full w-full flex-col sm:h-[620px] sm:max-h-[85dvh] sm:w-[920px] sm:max-w-[90vw] overflow-hidden rounded-md border border-border bg-card shadow-xl"
+			className="settings-dialog-pop flex h-full max-h-full w-full flex-col sm:h-[min(780px,90dvh)] sm:w-[1040px] sm:max-w-[94vw] overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
 			onClick={(e) => e.stopPropagation()}
 		>
 			{/* Header — the app's quiet CMU title language. */}
 			<header className="flex h-15 shrink-0 items-center gap-3 border-b border-border px-5">
-				<h2 className="font-title text-2xl tracking-tight">Settings</h2>
-				<Hint
-						// Esc closes the dialog (its own listener) — surface it.
-						label="Close"
-						binding="escape"
-						side="left"
+				<h2 className="text-lg font-medium text-foreground">Settings</h2>
+				<Hint label="Close" binding="escape" side="left">
+					<button
+						type="button"
+						aria-label="Close settings"
+						data-testid="settings-close"
+						className="ml-auto flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
+						onClick={onClose}
 					>
-						<button
-					type="button"
-					aria-label="Close settings"
-					data-testid="settings-close"
-					className="ml-auto size-7 rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-					onClick={onClose}
-				>
-					<svg
-						viewBox="0 0 16 16"
-						className="mx-auto size-3.5"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="1.5"
-					>
-						<path d="M4 4l8 8M12 4l-8 8" />
-					</svg>
-				</button>
-					</Hint>
+						<XIcon className="size-5" />
+					</button>
+				</Hint>
 			</header>
 
+			<SettingsSkinContext.Provider value={true}>
 			<div className="flex min-h-0 flex-1 max-sm:flex-col">
 				{/* Left nav — text-only, the session-list mono language,
 					    active = bg-accent. */}
 				<nav
 					aria-label="Settings sections"
 					data-testid="settings-nav"
-					// Phones: a horizontal, scrollable tab row above the content.
-					className="flex w-44 shrink-0 flex-col gap-1 border-r border-border p-2 max-sm:w-full max-sm:flex-row max-sm:overflow-x-auto max-sm:border-r-0 max-sm:border-b"
+					className="flex w-64 shrink-0 flex-col overflow-y-auto border-r border-border p-4 max-sm:w-full max-sm:flex-row max-sm:items-center max-sm:gap-1 max-sm:overflow-x-auto max-sm:border-r-0 max-sm:border-b max-sm:p-2"
 				>
-					{SECTIONS.map((s) => (
-						<button
-							key={s.id}
-							type="button"
-							data-testid={`settings-nav-${s.id}`}
-							aria-current={active === s.id}
-							className={`shrink-0 whitespace-nowrap rounded-sm px-3 py-1.5 text-left font-ui text-sm transition-colors ${
-								active === s.id
-									? "bg-accent text-foreground"
-									: "text-muted-foreground hover:bg-accent hover:text-foreground"
-							}`}
-							onClick={() => setActive(s.id)}
-						>
-							{s.label}
-						</button>
-					))}
+					{/* Search: narrows the list to sections whose settings match;
+					    Enter opens the first match. */}
+					<div className="relative mb-4 max-sm:mb-0 max-sm:w-40 max-sm:shrink-0">
+						<SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+						<input
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" && matches[0]) setActive(matches[0].id);
+							}}
+							placeholder="Search"
+							aria-label="Search settings"
+							data-testid="settings-search"
+							className="h-10 w-full rounded-lg border border-border bg-(--pill) pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
+						/>
+					</div>
+					{matches.length === 0 && <p className="px-2 text-sm text-muted-foreground">No settings match.</p>}
+					{SECTION_GROUPS.map((group) => {
+						const items = matches.filter((m) => m.group === group);
+						if (items.length === 0) return null;
+						return (
+							<div key={group} className="mb-4 max-sm:contents">
+								<div className="mb-1.5 px-2 text-[13px] text-muted-foreground max-sm:hidden">{group}</div>
+								{items.map((s) => (
+									<button
+										key={s.id}
+										type="button"
+										data-testid={`settings-nav-${s.id}`}
+										aria-current={active === s.id}
+										className={cn(
+											"flex h-10 w-full shrink-0 items-center gap-3 whitespace-nowrap rounded-lg px-3 text-left text-[15px] transition-colors max-sm:w-auto",
+											active === s.id ? "bg-(--pill) text-foreground" : "text-foreground/85 hover:bg-(--pill)/60 hover:text-foreground",
+										)}
+										onClick={() => setActive(s.id)}
+									>
+										<s.Icon className="size-[18px] shrink-0 text-muted-foreground" aria-hidden />
+										{s.label}
+									</button>
+								))}
+							</div>
+						);
+					})}
 				</nav>
 
 				{/* Content column — one section at a time, this scrolls — and
@@ -436,6 +458,7 @@ export function SettingsDialogBody({
 					)}
 				</div>
 			</div>
+			</SettingsSkinContext.Provider>
 		</div>
 	);
 }
