@@ -1,4 +1,4 @@
-# Axiom Learn × Meta — hackathon plan
+# Kapany × Meta — hackathon plan
 
 Meta Global AI Developer Hackathon, Oct 26 – Nov 4, 2026 (submissions close Nov 4, 9:00 PM ET).
 Track: **Indie developer**. Theme: **Build for Your World** (learning). Audience: anyone who wants to understand
@@ -6,7 +6,7 @@ something deeply.
 
 ## The headline: adaptive teaching
 
-> Most AI tutors explain. Axiom Learn first finds where *your* understanding ends, plans a path from there to your
+> Most AI tutors explain. Kapany first finds where *your* understanding ends, plans a path from there to your
 > goal, and teaches one reasoning step at a time, changing the plan as soon as your answers show it was wrong
 > about you.
 

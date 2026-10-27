@@ -1,5 +1,5 @@
 /**
- * Axiom Learn — the Electron shell (wrapper milestone, 2026-09-17).
+ * Kapany — the Electron shell (wrapper milestone, 2026-09-17).
  *
  * What this process is and is not:
  *   IS:  a thin launcher + security guard around the app's real server —
@@ -58,15 +58,22 @@ const path = require("node:path");
 // renderer owns the number; this is the IPC widen target).
 const SIDEBAR_AUTOCLOSE = 928;
 
-const PRODUCT_NAME = "Axiom Learn";
+const PRODUCT_NAME = "Kapany";
+// The app was called "Axiom Learn" before the Kapany rename (2026-10-27).
+// Its data folder keeps that name so existing sessions, keys and the
+// knowledge graph stay where they are (the data skill reads it there too).
+const DATA_FOLDER_NAME = "Axiom Learn";
 
-// APP NAME → userData (owner, 2026-10-10): the Application Support dir is
-// exactly "Axiom Learn" in dev AND packaged. Packaged Electron would
-// otherwise derive it from package.json "name" (now lowercase
-// "axiom-learn"), and productName metadata alone doesn't reach app.name.
-// Must run before the LH_DEV_URL suffix below — dev becomes
-// "Axiom Learn-dev".
+// APP NAME → userData (owner, 2026-10-10): app.name is "Kapany" in dev AND
+// packaged. Packaged Electron would otherwise derive it from package.json
+// "name" (lowercase "axiom-learn"), and productName metadata alone doesn't
+// reach app.name. The default userData moves to DATA_FOLDER_NAME; a custom
+// one (--user-data-dir) is left alone. Must run before the LH_DEV_URL
+// suffix below — dev becomes "Axiom Learn-dev".
 app.setName(PRODUCT_NAME);
+if (app.getPath("userData") === path.join(app.getPath("appData"), PRODUCT_NAME)) {
+	app.setPath("userData", path.join(app.getPath("appData"), DATA_FOLDER_NAME));
+}
 const AUTH_FILE = () => path.join(app.getPath("userData"), "auth.json");
 const DATA_DIR = () => path.join(app.getPath("userData"), "data");
 

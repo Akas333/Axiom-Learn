@@ -29,7 +29,7 @@ export function chatGPTPayload(raw: unknown, selectedModelId: string): Record<st
 	out.input = payload.input.map((item) => item?.role === "system" ? { ...item, role: "developer" } : item);
 	if (Array.isArray(payload.tools) && payload.tools.length) {
 		if (payload.tools.some((tool) => tool.type !== "function" && tool.type !== "custom")) throw new Error("Unsupported ChatGPT tool capability");
-		out.tools = [{ type: "namespace", name: "axiomlearn", description: "Axiom Learn local learning tools", tools: payload.tools }];
+		out.tools = [{ type: "namespace", name: "axiomlearn", description: "Kapany local learning tools", tools: payload.tools }];
 	}
 	return out;
 }

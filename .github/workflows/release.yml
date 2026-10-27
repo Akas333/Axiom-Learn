@@ -183,13 +183,13 @@ jobs:
         run: |
           case "$RUNNER_OS" in
             macOS)
-              app="dist/mac-arm64/Axiom Learn.app/Contents"
+              app="dist/mac-arm64/Kapany.app/Contents"
               payload="$app/Resources/server/standalone"
-              runtime="$app/MacOS/Axiom Learn"
+              runtime="$app/MacOS/Kapany"
               ;;
             Windows)
               payload="dist/win-unpacked/resources/server/standalone"
-              runtime="dist/win-unpacked/Axiom Learn.exe"
+              runtime="dist/win-unpacked/Kapany.exe"
               ;;
             Linux)
               payload="dist/linux-unpacked/resources/server/standalone"
@@ -202,11 +202,11 @@ jobs:
         run: |
           case "$RUNNER_OS" in
             macOS)
-              app="dist/mac-arm64/Axiom Learn.app/Contents"
-              node scripts/smoke-demo-runtime.mjs --standalone "$app/Resources/server/standalone" --runtime "$app/MacOS/Axiom Learn" --browser
+              app="dist/mac-arm64/Kapany.app/Contents"
+              node scripts/smoke-demo-runtime.mjs --standalone "$app/Resources/server/standalone" --runtime "$app/MacOS/Kapany" --browser
               ;;
             Windows)
-              node scripts/smoke-demo-runtime.mjs --standalone dist/win-unpacked/resources/server/standalone --runtime "dist/win-unpacked/Axiom Learn.exe" --browser
+              node scripts/smoke-demo-runtime.mjs --standalone dist/win-unpacked/resources/server/standalone --runtime "dist/win-unpacked/Kapany.exe" --browser
               ;;
             Linux)
               xvfb-run -a node scripts/smoke-demo-runtime.mjs --standalone dist/linux-unpacked/resources/server/standalone --runtime dist/linux-unpacked/axiom-learn --browser

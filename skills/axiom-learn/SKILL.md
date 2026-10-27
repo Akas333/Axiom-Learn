@@ -1,19 +1,19 @@
 ---
 name: axiom-learn
-description: Read and understand a person's local Axiom Learn learning data—teaching and practice sessions, answers, confidence, learner thinking, propositions, and reasoning chains. Use when a request benefits from their learning history or asks to explore, connect, or analyze that history.
+description: Read and understand a person's local Kapany learning data—teaching and practice sessions, answers, confidence, learner thinking, propositions, and reasoning chains. Use when a request benefits from their learning history or asks to explore, connect, or analyze that history.
 license: AGPL-3.0-only
-compatibility: Python 3.10+ and access to the user's local Axiom Learn data folder. Standard library only; no network, running app, or repository checkout required.
+compatibility: Python 3.10+ and access to the user's local Kapany data folder. Standard library only; no network, running app, or repository checkout required.
 ---
 
-# Axiom Learn learning data
+# Kapany learning data
 
 This skill is a field guide and a few convenient readers for the user's learning
 record. Use that record in service of the user's request. It can inform many kinds
 of work; it does not require a particular study, assessment, or reporting workflow.
 
-## What Axiom Learn is
+## What Kapany is
 
-Axiom Learn is an agent harness for learning. Its teaching agents first probe the
+Kapany is an agent harness for learning. Its teaching agents first probe the
 learner's current understanding and clarify the goal, then plan a dependency path
 between them. Teaching builds understanding one reasoning step at a time, checking
 and repairing gaps along the way. The aim is for the goal to feel obviously true,
@@ -51,7 +51,7 @@ JSON/JSONL; use your own read-only analysis when the bundled readers aren't enou
 
 ## Read-only boundary
 
-**Never modify Axiom Learn's data.** This applies to the bundled scripts and any
+**Never modify Kapany's data.** This applies to the bundled scripts and any
 ad hoc analysis you perform. Do not migrate, repair, reformat, delete, import into,
 regenerate, or write back to the record. Do not create indexes, caches, reports, or
 analysis scripts inside the data folder. If the user requests a report file, use a

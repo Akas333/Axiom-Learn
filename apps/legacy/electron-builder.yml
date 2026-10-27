@@ -1,4 +1,4 @@
-# electron-builder config — Axiom Learn desktop (macOS arm64; Windows/Linux x64).
+# electron-builder config — Kapany desktop (macOS arm64; Windows/Linux x64).
 #
 # Shape (fact-checked 2026-09-17):
 #   - the app's real server (.next/standalone, curated by
@@ -10,7 +10,7 @@
 #     the login keychain; notary credentials in the LH_NOTARY keychain
 #     profile; the profile + team env vars are baked into desktop:dist).
 appId: com.axiomlearn.app
-productName: Axiom Learn
+productName: Kapany
 directories:
   output: dist
 # Icons (owner ruling, 2026-10-13) — per-platform sources in build/:
@@ -137,7 +137,7 @@ mac:
   # Laid for the STT milestone (researcher-verified): the TCC mic prompt
   # reads this string; macOS asks regardless of Electron's own handlers.
   extendInfo:
-    NSMicrophoneUsageDescription: "Axiom Learn uses the microphone only for speech-to-text input into your sessions."
+    NSMicrophoneUsageDescription: "Kapany uses the microphone only for speech-to-text input into your sessions."
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   # Signing + notarization (flipped 2026-10-08): identity auto-detects the

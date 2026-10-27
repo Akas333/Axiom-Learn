@@ -685,7 +685,7 @@ function SessionsSidebar() {
 						</Link>
 					</Hint>
 					<span className="mr-auto ml-2 select-none text-lg font-semibold tracking-tight text-foreground">
-						Axiom Learn
+						Kapany
 					</span>
 					<Hint label="Close sidebar" action="toggle-sidebar">
 						<Button

@@ -1,7 +1,7 @@
 {
 	"name": "@axiom/server",
 	"version": "0.1.0",
-	"description": "Axiom Learn API server: the engine's HTTP surface on Hono (hosted web + desktop).",
+	"description": "Kapany API server: the engine's HTTP surface on Hono (hosted web + desktop).",
 	"license": "AGPL-3.0-only",
 	"private": true,
 	"type": "module",

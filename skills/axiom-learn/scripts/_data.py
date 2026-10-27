@@ -1,4 +1,4 @@
-"""Small read-only filesystem helpers for the Axiom Learn skill.
+"""Small read-only filesystem helpers for the Kapany skill.
 
 No application imports, discovery scans, migrations, caches, or writes. Paths
 inside the selected data folder may not resolve outside it. Imported-note paths
@@ -116,7 +116,7 @@ def read_chat(root: Path, session_id: str) -> dict[str, Any]:
 
 def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     """Common CLI options precede the subcommand, as shown in SKILL.md."""
-    parser.add_argument("--data-dir", metavar="PATH", help="Axiom Learn data root (contains chats/ and/or graph/); default: normal desktop location")
+    parser.add_argument("--data-dir", metavar="PATH", help="Kapany data root (contains chats/ and/or graph/); default: normal desktop location")
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown", help="Output format (default: markdown)")
 
 

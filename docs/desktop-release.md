@@ -60,11 +60,11 @@ The three jobs upload distinct updater feeds: `latest-mac.yml`, `latest.yml`, `l
 
 | Asset | Role |
 |---|---|
-| `Axiom Learn-<v>-arm64.dmg` + `.blockmap` | macOS installer |
-| `Axiom Learn-<v>-arm64-mac.zip` + `.blockmap` | macOS updater payload (Squirrel.Mac installs from the ZIP) |
-| `Axiom Learn-<v>-x64-setup.exe` + `.blockmap` | Windows NSIS installer |
-| `Axiom Learn-<v>-x86_64.AppImage` | Linux AppImage (no sidecar blockmap) |
-| `Axiom Learn-<v>-amd64.deb` | Linux deb (no sidecar blockmap) |
+| `Kapany-<v>-arm64.dmg` + `.blockmap` | macOS installer |
+| `Kapany-<v>-arm64-mac.zip` + `.blockmap` | macOS updater payload (Squirrel.Mac installs from the ZIP) |
+| `Kapany-<v>-x64-setup.exe` + `.blockmap` | Windows NSIS installer |
+| `Kapany-<v>-x86_64.AppImage` | Linux AppImage (no sidecar blockmap) |
+| `Kapany-<v>-amd64.deb` | Linux deb (no sidecar blockmap) |
 | `latest-mac.yml` / `latest.yml` / `latest-linux.yml` | updater feeds |
 
   (The Linux names are deliberate: the user-set `linux.artifactName` applies to both Linux targets, and `${arch}` expands per target — `x86_64` inside the AppImage, `amd64` in the deb — exactly what the installed app-builder-lib 26.15.3 emits. The script's expectations fail closed if `electron-builder.yml` drifts from these shapes.);

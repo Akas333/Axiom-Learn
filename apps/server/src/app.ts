@@ -15,7 +15,7 @@ export function createApp(routes: readonly ApiRoute[] = API_ROUTES): Hono {
 	app.use("/api/*", async (c, next) => {
 		if (!desktopAPIAuthorized(c.req.raw.headers)) {
 			return c.json(
-				{ error: "Desktop API access requires the trusted Axiom Learn window." },
+				{ error: "Desktop API access requires the trusted Kapany window." },
 				403,
 				{ "Cache-Control": "no-store" },
 			);

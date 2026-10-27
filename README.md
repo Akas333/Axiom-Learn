@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/lh_banner_dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/lh_banner_light.png">
-    <img src="docs/assets/lh_banner_light.png" alt="Axiom Learn" width="640">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/kapany_banner_dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/kapany_banner_light.png">
+    <img src="docs/assets/kapany_banner_light.png" alt="Kapany" width="640">
   </picture>
 </p>
 
@@ -15,7 +15,7 @@
   <a href="#architecture">Architecture</a>
 </p>
 
-Most AI tutors explain. Axiom Learn first measures what *you* already understand, plans a path from there to your goal, and teaches one reasoning step at a time, changing the plan as soon as your answers show it was wrong about you. Two people asking the same question get two different lessons, and the app shows why.
+Most AI tutors explain. Kapany first measures what *you* already understand, plans a path from there to your goal, and teaches one reasoning step at a time, changing the plan as soon as your answers show it was wrong about you. Two people asking the same question get two different lessons, and the app shows why.
 
 Built on Meta's Muse models for the **Meta Global AI Developer Hackathon**.
 
@@ -40,7 +40,7 @@ Everything you learn is stored as claims and the reasoning chains that connect t
 
 Each Meta model does a separate job in the teaching loop. All of them go through one Meta Model API key.
 
-| Model | Role in Axiom Learn | Status |
+| Model | Role in Kapany | Status |
 |---|---|---|
 | **Muse Spark 1.3** | The tutor: measures understanding, plans, teaches, runs practice | Working |
 | **Muse Spark 1.3 Contributor** | Low-cost background agents: building the knowledge graph, grading, research | Working (pick it for the background model slot) |
@@ -50,7 +50,7 @@ Each Meta model does a separate job in the teaching loop. All of them go through
 | **Muse Image** | Pictures drawn for the learner's specific confusion, checked by Muse Spark before they're shown | In progress |
 | **Meta open-weights models** | The same tutor running fully offline on your laptop | In progress |
 
-Other providers still work. Axiom Learn supports 30+ model providers (OpenAI, Anthropic, Google, DeepSeek, OpenRouter and more) through your own keys.
+Other providers still work. Kapany supports 30+ model providers (OpenAI, Anthropic, Google, DeepSeek, OpenRouter and more) through your own keys.
 
 ## Run it locally
 

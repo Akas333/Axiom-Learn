@@ -1,4 +1,4 @@
-# Axiom Learn data skill tests
+# Kapany data skill tests
 
 Run independently of the application, with Python 3.10+ and no dependencies:
 

@@ -1,7 +1,7 @@
 {
 	"name": "@axiom/engine",
 	"version": "0.3.8",
-	"description": "Axiom Learn backend: domain core, teaching agents, stores, and the transport-neutral HTTP surface.",
+	"description": "Kapany backend: domain core, teaching agents, stores, and the transport-neutral HTTP surface.",
 	"license": "AGPL-3.0-only",
 	"private": true,
 	"type": "module",

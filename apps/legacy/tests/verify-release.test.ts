@@ -66,14 +66,14 @@ function healthyFeeds(version: string, release: ReleaseRecord): Record<string, s
 describe("release gate — expected asset inventory", () => {
 	it("is exactly the 11 verified builder outputs for the version", () => {
 		assert.deepEqual(expectedAssets(VERSION).files, [
-			"Axiom Learn-0.2.0-arm64.dmg",
-			"Axiom Learn-0.2.0-arm64-mac.zip",
-			"Axiom Learn-0.2.0-x64-setup.exe",
-			"Axiom Learn-0.2.0-x86_64.AppImage",
-			"Axiom Learn-0.2.0-amd64.deb",
-			"Axiom Learn-0.2.0-arm64.dmg.blockmap",
-			"Axiom Learn-0.2.0-arm64-mac.zip.blockmap",
-			"Axiom Learn-0.2.0-x64-setup.exe.blockmap",
+			"Kapany-0.2.0-arm64.dmg",
+			"Kapany-0.2.0-arm64-mac.zip",
+			"Kapany-0.2.0-x64-setup.exe",
+			"Kapany-0.2.0-x86_64.AppImage",
+			"Kapany-0.2.0-amd64.deb",
+			"Kapany-0.2.0-arm64.dmg.blockmap",
+			"Kapany-0.2.0-arm64-mac.zip.blockmap",
+			"Kapany-0.2.0-x64-setup.exe.blockmap",
 			"latest-mac.yml",
 			"latest.yml",
 			"latest-linux.yml",
@@ -185,11 +185,11 @@ describe("release gate — asset inventory", () => {
 	it("passes a complete draft and names every deviation", () => {
 		assert.ok(verifyAssets(healthyRelease(VERSION), expectedAssets(VERSION)).ok);
 		const release = healthyRelease(VERSION);
-		release.assets = release.assets.filter((entry) => entry.name !== "Axiom Learn-0.2.0-x64-setup.exe.blockmap");
-		release.assets.push(asset(9999, "Axiom Learn-0.2.0-x64.AppImage"));
-		release.assets.push(asset(9998, "Axiom Learn-0.1.0-x64-setup.exe"));
-		release.assets.push(asset(9997, "Axiom Learn-0.2.0-arm64.dmg", { size: 0 }));
-		release.assets.push(asset(9996, "Axiom Learn-0.2.0-arm64.dmg", { state: "starter" }));
+		release.assets = release.assets.filter((entry) => entry.name !== "Kapany-0.2.0-x64-setup.exe.blockmap");
+		release.assets.push(asset(9999, "Kapany-0.2.0-x64.AppImage"));
+		release.assets.push(asset(9998, "Kapany-0.1.0-x64-setup.exe"));
+		release.assets.push(asset(9997, "Kapany-0.2.0-arm64.dmg", { size: 0 }));
+		release.assets.push(asset(9996, "Kapany-0.2.0-arm64.dmg", { state: "starter" }));
 		const verdict = verifyAssets(release, expectedAssets(VERSION));
 		assert.ok(!verdict.ok);
 		const joined = verdict.errors.join("\n");
@@ -204,8 +204,8 @@ describe("release gate — asset inventory", () => {
 
 describe("release gate — updater reference hygiene", () => {
 	it("accepts bare asset names only", () => {
-		assert.ok(isPlainAssetName("Axiom Learn-0.2.0-arm64.dmg"));
-		for (const bad of ["", ".", "..", "../Axiom Learn.zip", "dist/Axiom Learn.zip", "https://evil.example/app.zip",
+		assert.ok(isPlainAssetName("Kapany-0.2.0-arm64.dmg"));
+		for (const bad of ["", ".", "..", "../Kapany.zip", "dist/Kapany.zip", "https://evil.example/app.zip",
 			"http://evil.example/app.zip", "file:///etc/passwd", "C:\\app.zip", "~x/app.zip", "app.zip?q=1", "app.zip#x"]) {
 			assert.equal(isPlainAssetName(bad), false, bad);
 		}
@@ -256,8 +256,8 @@ describe("release gate — update feeds", () => {
 		}, /is not a bare asset name/],
 		["reference to an asset the release does not hold", (feeds) => {
 			const e = expectedAssets(VERSION);
-			feeds["latest.yml"] = feeds["latest.yml"]!.replace(`url: ${e.win.exe}`, "url: Axiom Learn-0.1.0-x64-setup.exe");
-		}, /references "Axiom Learn-0\.1\.0-x64-setup\.exe" which is not an asset/],
+			feeds["latest.yml"] = feeds["latest.yml"]!.replace(`url: ${e.win.exe}`, "url: Kapany-0.1.0-x64-setup.exe");
+		}, /references "Kapany-0\.1\.0-x64-setup\.exe" which is not an asset/],
 		["size disagreeing with the uploaded asset", (feeds) => {
 			const e = expectedAssets(VERSION);
 			feeds["latest.yml"] = feeds["latest.yml"]!.replace("size: 5000", "size: 4999");
@@ -275,7 +275,7 @@ describe("release gate — update feeds", () => {
 			feeds["latest-mac.yml"] = feeds["latest-mac.yml"]!.replace(`path: ${e.mac.zip}`, `path: ${e.mac.dmg}`);
 		}, /top-level path is/],
 		["mac legacy sha512 not matching files[0]", (feeds) => {
-			feeds["latest-mac.yml"] = feeds["latest-mac.yml"]!.replace(`sha512: ${sha512("Axiom Learn-0.2.0-arm64-mac.zip")}\nreleaseDate`, `sha512: ${sha512("tampered")}\nreleaseDate`);
+			feeds["latest-mac.yml"] = feeds["latest-mac.yml"]!.replace(`sha512: ${sha512("Kapany-0.2.0-arm64-mac.zip")}\nreleaseDate`, `sha512: ${sha512("tampered")}\nreleaseDate`);
 		}, /top-level sha512 does not match/],
 		["missing deb entry in latest-linux.yml", (feeds) => {
 			const e = expectedAssets(VERSION);
@@ -419,8 +419,8 @@ describe("release gate — CLI (offline, repo config)", () => {
 		const { root } = workspace();
 		try {
 			const release = healthyRelease(VERSION);
-			release.assets = release.assets.filter((entry) => entry.name !== `Axiom Learn-${VERSION}-arm64.dmg.blockmap`);
-			release.assets.push(asset(9999, "Axiom Learn-0.1.0-x64-setup.exe"));
+			release.assets = release.assets.filter((entry) => entry.name !== `Kapany-${VERSION}-arm64.dmg.blockmap`);
+			release.assets.push(asset(9999, "Kapany-0.1.0-x64-setup.exe"));
 			fs.writeFileSync(path.join(root, "releases.json"), JSON.stringify([release]));
 			const result = run(["verify", path.join(root, "releases.json"), path.join(root, "metadata"), "--tag", TAG]);
 			assert.equal(result.status, 1);
