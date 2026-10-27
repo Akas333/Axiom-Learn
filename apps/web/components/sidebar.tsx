@@ -459,7 +459,6 @@ function SessionsSidebar() {
 	}, []);
 	const pathname = usePathname();
 	const [searchParams] = useSearchParams();
-	const draftPractice = searchParams.get("mode") === "practice";
 	// Phones: leaving the page closes the drawer, so the destination shows.
 	const searchKey = searchParams.toString();
 	useEffect(() => {
@@ -774,21 +773,11 @@ function SessionsSidebar() {
 						type="button"
 						data-testid="new-session"
 						onClick={() => void newSession()}
-						className={cn(NAV_ROW, pathname === "/chat/new" && !draftPractice && NAV_ROW_ACTIVE)}
+						className={cn(NAV_ROW, pathname === "/chat/new" && NAV_ROW_ACTIVE)}
 					>
 						<PlusIcon className="size-[18px] shrink-0" />
-						New teaching
-						<span className="sr-only">create a new teaching session</span>
-					</button>
-					<button
-						type="button"
-						data-testid="new-session-practice"
-						onClick={() => router.push("/chat/new?mode=practice")}
-						className={cn(NAV_ROW, pathname === "/chat/new" && draftPractice && NAV_ROW_ACTIVE)}
-					>
-						<DumbbellIcon className="size-[18px] shrink-0" />
-						New practice
-						<span className="sr-only">create a new practice session</span>
+						New session
+						<span className="sr-only">start a new teaching or practice session</span>
 					</button>
 					<Hint label="Search" action="sessions-search" side="right">
 						<button

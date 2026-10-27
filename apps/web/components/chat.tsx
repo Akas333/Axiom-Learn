@@ -44,7 +44,6 @@ import {
 	type ModelSlotName,
 } from "@/src/core";
 import { PlanBlock, PlanPopup, latestTree } from "@/components/plan-block";
-import { PlanMarginalia, planExists } from "@/components/plan-window";
 import { PlanSidebar } from "@/components/plan-sidebar";
 import { conceptNumbers, planLayout } from "@/components/plan-map";
 import { ConceptOpener, conceptAnchorId, conceptOpenings, openingKey } from "@/components/concept-markers";
@@ -837,11 +836,6 @@ export function Chat({
 			localStorage.setItem(PLAN_SIDEBAR_KEY, open ? "open" : "closed");
 		} catch {}
 	}, []);
-	// Real plan presence — gates the marginalia's clickable flank. A JSX
-	// element is always truthy; gating on the node alone mounted a phantom
-	// (invisible, clickable) button in the bottom-right whenever a question
-	// was pending with no plan yet (owner report, UI round 2026-10-01).
-	const hasPlan = useMemo(() => planExists(messages), [messages]);
 	// The coverage ring's refresh chain (extraction-UX redesign): bumped at
 	// turn settle — the moment this session's uncovered mass changes.
 	const [coverageTick, setCoverageTick] = useState(0);
@@ -1783,7 +1777,6 @@ export function Chat({
 					compactionRunning={compacting}
 					onSubmitThinking={submitThinking}
 					chatId={chatId}
-					plan={hasPlan && !planSidebar ? <PlanMarginalia messages={messages} /> : undefined}
 					onOpenPlan={() => setPlanOpen(true)}
 					requiresReveal={requiresReveal}
 					readingThinking={readingThinking}
