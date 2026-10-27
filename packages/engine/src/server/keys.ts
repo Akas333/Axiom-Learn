@@ -39,6 +39,7 @@
  * today's behavior, byte-for-byte.
  */
 
+import { providerVisible } from "../core/provider-visibility.ts";
 import {
 	AUTH_KEYS,
 	AUTH_PROVIDER_KEYS,
@@ -83,7 +84,8 @@ export function isWritableAuthKey(id: string): boolean {
  *  in core/auth-keys.ts and tests/auth-provider-keys.test.ts). Sorted by
  *  id for a stable payload. */
 export function providerKeyList() {
-	return [...AUTH_PROVIDER_KEYS].sort((a, b) => a.id.localeCompare(b.id));
+	// Meta only unless AXIOM_ALL_PROVIDERS=1 (Ollama needs no key, so it has no row here).
+	return [...AUTH_PROVIDER_KEYS].filter((p) => providerVisible(p.id)).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /** The fresh-user switch (owner, interlude 2026-09-22): env keys are

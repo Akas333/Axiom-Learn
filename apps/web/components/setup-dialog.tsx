@@ -41,7 +41,7 @@ import { ModelMenuList } from "@/components/settings/model-menu";
 import { MenuShell } from "@/components/menu-shell";
 import { notifySettingsSaved, useSettingsSaved } from "@/components/settings-signal";
 import { Hint } from "@/components/ui/hint";
-import { type ProviderKeyInfo } from "@/components/settings/keys-section";
+import { OllamaRow, type OllamaInfo, type ProviderKeyInfo } from "@/components/settings/keys-section";
 import { ProviderMenuList } from "@/components/settings/model-menu";
 import { ChatGPTBackgroundAccess } from "@/components/settings/chatgpt-connection";
 import { NativeSubscriptionBackgroundAccess, SubscriptionConnections } from "@/components/settings/subscription-connections";
@@ -128,6 +128,9 @@ export function SetupKeysBody({
 	onValue,
 	onSave,
 	menuAnchor,
+	ollama,
+	onRecheckOllama,
+	allProviders,
 }: {
 	/** The full provider roster (GET /api/keys providers) — undefined
 	 *  while it loads; the picker renders an honest empty state then. */
@@ -145,11 +148,16 @@ export function SetupKeysBody({
 	onSave: () => void;
 	/** The MenuShell anchor — wired by the wrapper (its triggerRef). */
 	menuAnchor: React.RefObject<HTMLDivElement | null>;
+	/** Local Ollama status (GET /api/keys) — the no-key way in. */
+	ollama?: OllamaInfo;
+	onRecheckOllama?: () => void;
+	/** AXIOM_ALL_PROVIDERS=1: also offer the subscriptions. */
+	allProviders?: boolean;
 }) {
 	return (
 		<div className="flex flex-col gap-3 px-6 py-5" data-testid="setup-stage-keys">
 			<p className="text-xs text-muted-foreground">
-				Choose your AI provider and paste its API key. You’ll pick your models next.
+				Paste your Meta Model API key to use the Muse models, or run Ollama for local models with no key. You’ll pick your models next.
 			</p>
 			<div className="flex flex-col gap-2">
 				<div ref={menuAnchor} className="relative max-w-96">
@@ -211,7 +219,11 @@ export function SetupKeysBody({
 					</p>
 				)}
 			</div>
-			<div className="mt-2 border-t border-border/60 pt-4"><h3 className="mb-3 font-ui text-xs text-muted-foreground">Subscriptions</h3><SubscriptionConnections setup /></div>
+			<div className="mt-2 max-w-[28rem] border-t border-border/60 pt-4">
+				<h3 className="mb-2 font-ui text-xs text-muted-foreground">Local models</h3>
+				<OllamaRow ollama={ollama} onRecheck={onRecheckOllama ?? (() => undefined)} />
+			</div>
+			{allProviders && <div className="mt-2 border-t border-border/60 pt-4"><h3 className="mb-3 font-ui text-xs text-muted-foreground">Subscriptions</h3><SubscriptionConnections setup /></div>}
 		</div>
 	);
 }
@@ -247,6 +259,8 @@ export function SetupDialog({
 	const [keySaving, setKeySaving] = useState(false);
 	const [keyError, setKeyError] = useState<string | null>(null);
 	const [keyMenuOpen, setKeyMenuOpen] = useState(false);
+	const [ollama, setOllama] = useState<OllamaInfo | undefined>(undefined);
+	const [allProviders, setAllProviders] = useState(false);
 	// Stage 1's provider-picker trigger wrapper — the shared shell's anchor.
 	// Declared with the other hooks: the early `if (!open) return null` sits
 	// below them all. (Stage 2's slot menus anchor by anchorTestid instead —
@@ -273,7 +287,12 @@ export function SetupDialog({
 		setError(null);
 		fetch("/api/keys")
 			.then((r) => r.json())
-			.then((b: { providers?: ProviderKeyInfo[] }) => { if (!cancelled) setKeyProviders(b.providers ?? []); })
+			.then((b: { providers?: ProviderKeyInfo[]; ollama?: OllamaInfo; allProviders?: boolean }) => {
+				if (cancelled) return;
+				setKeyProviders(b.providers ?? []);
+				setOllama(b.ollama);
+				setAllProviders(b.allProviders === true);
+			})
 			.catch(() => { if (!cancelled) setKeyProviders([]); });
 		fetch("/api/models")
 			.then((r) => { if (!r.ok) throw new Error("Catalog unavailable"); return r.json(); })
@@ -399,7 +418,7 @@ export function SetupDialog({
 
 	return createPortal(
 		<div
-			className="fixed inset-0 z-50 flex items-center justify-center bg-background/80"
+			className="lh-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-background/80"
 			data-testid="setup-backdrop"
 			{...backdropDismiss}
 		>
@@ -449,6 +468,13 @@ export function SetupDialog({
 								}}
 								onValue={setKeyValue}
 								onSave={() => void saveKey()}
+								ollama={ollama}
+								allProviders={allProviders}
+								onRecheckOllama={() => {
+									// Re-runs both fetches: a running Ollama moves setup on to the pickers.
+									setOllama(undefined);
+									setKeysTick((t) => t + 1);
+								}}
 							/>
 						)}
 					</div>

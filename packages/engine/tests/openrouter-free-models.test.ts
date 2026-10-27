@@ -18,7 +18,7 @@ describe("native 1.4 OpenRouter free catalog (offline, no live discovery)", { co
 		it(`${id}: shared listing, validation, tool-capable engine, native modality, and zero cost`, async () => {
 			const before = process.env;
 			const originalFetch = globalThis.fetch;
-			process.env = { NODE_ENV: "test", HOME: "/nonexistent/free-catalog", OPENROUTER_API_KEY: "dummy-free-catalog" };
+			process.env = { NODE_ENV: "test", HOME: "/nonexistent/free-catalog", OPENROUTER_API_KEY: "dummy-free-catalog", AXIOM_ALL_PROVIDERS: "1" };
 			try {
 				const catalog = modelCatalog();
 				const listed = catalog.models.find((m) => m.provider === "openrouter" && m.id === id);

@@ -23,11 +23,21 @@ import { piModels } from "../agent/models.ts";
 import { chatGPTConnected, chatGPTModel, chatGPTModels, refreshChatGPTModels } from "../agent/chatgpt-bridge.ts";
 import { NATIVE_SUBSCRIPTIONS } from "../core/contracts/subscriptions.ts";
 import { nativeSubscriptionId, nativeSubscriptionConnected, nativeSubscriptionModel, nativeSubscriptionModels, refreshSubscriptionModels } from "../agent/subscription-bridge.ts";
+import { OLLAMA_PROVIDER_ID, ollamaAvailable, refreshOllamaModels } from "../agent/ollama.ts";
+import { providerVisible } from "../core/provider-visibility.ts";
+import type { OllamaStatus } from "../agent/ollama.ts";
+export { allProvidersEnabled } from "../core/provider-visibility.ts";
+
+/** Re-check the local Ollama server and report what it has. */
+export function ollamaCatalogStatus(): Promise<OllamaStatus> {
+	return refreshOllamaModels(piModels());
+}
 
 export async function refreshConnectionCatalog(provider?: string): Promise<void> {
 	await Promise.all([
 		!provider || provider === "chatgpt" ? refreshChatGPTModels(piModels().getModels("openai").filter((m): m is Model<"openai-responses"> => m.api === "openai-responses")) : Promise.resolve(),
 		!provider || nativeSubscriptionId(provider) ? refreshSubscriptionModels() : Promise.resolve(),
+		!provider || provider === OLLAMA_PROVIDER_ID ? refreshOllamaModels(piModels()) : Promise.resolve(),
 	]);
 }
 function connectionModel(provider: string, id: string): Model<Api> | undefined {
@@ -134,7 +144,7 @@ export function catalogSlots(): SlotPins {
  *  plain-key model provider (core/auth-keys.ts's pi-ai-derived table),
  *  with keyPresent read env-wins through the keys seam, fresh per call —
  *  saving a key immediately federates the provider into the picker. */
-export function catalogProviders(): CatalogProvider[] {
+export function catalogProviders(includeHidden = false): CatalogProvider[] {
 	return AUTH_PROVIDER_KEYS.map((p) => ({
 		id: p.id,
 		envVar: p.envVar,
@@ -142,14 +152,19 @@ export function catalogProviders(): CatalogProvider[] {
 	})).concat([
 		{ id: "chatgpt", envVar: "", keyPresent: chatGPTConnected() },
 		...NATIVE_SUBSCRIPTIONS.map((p) => ({ id: p.logicalId, envVar: "", keyPresent: nativeSubscriptionConnected(p.providerId) })),
-	]).sort((a, b) => a.id.localeCompare(b.id));
+		// Keyless: "present" means a local Ollama server is up with a usable model.
+		{ id: OLLAMA_PROVIDER_ID, envVar: "", keyPresent: ollamaAvailable() },
+	])
+		// Meta + Ollama only unless AXIOM_ALL_PROVIDERS=1 (core/provider-visibility.ts).
+		.filter((p) => includeHidden || providerVisible(p.id))
+		.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /** The providers whose key is present — the picker federates exactly
  *  these (a keyless provider's models are unreachable by design; the
  *  Keys page is the discovery surface, same discipline as search). */
-function keyedProviderIds(): Set<string> {
-	return new Set(catalogProviders().filter((p) => p.keyPresent).map((p) => p.id));
+function keyedProviderIds(includeHidden = false): Set<string> {
+	return new Set(catalogProviders(includeHidden).filter((p) => p.keyPresent).map((p) => p.id));
 }
 
 /** Project one catalog model to the client DTO. */
@@ -180,7 +195,8 @@ export function toModelDto(model: Model<Api>): ModelDto {
  *  server-side through this. No hardcoded fallback exists anywhere:
  *  a model missing here reads limit-null (usage-only, honest render). */
 export function catalogContextLimits(): Map<string, number> {
-	const keyed = keyedProviderIds();
+	// Hidden providers included: sessions that already ran on one keep their meter.
+	const keyed = keyedProviderIds(true);
 	const index = new Map<string, number>();
 	for (const provider of piModels().getProviders()) {
 		if (!keyed.has(provider.id)) continue;
@@ -204,7 +220,7 @@ export function modelCatalog(): ModelCatalogResponse {
 		.flatMap((p) => piModels().getModels(p.id))
 		.map(toModelDto)
 		.sort((a, b) => (a.provider === b.provider ? a.id.localeCompare(b.id) : a.provider.localeCompare(b.provider)))
-		.concat([...chatGPTModels(), ...nativeSubscriptionModels()].map(toModelDto));
+		.concat([...chatGPTModels(), ...nativeSubscriptionModels()].filter((m) => providerVisible(m.provider)).map(toModelDto));
 	return {
 		models,
 		defaults: catalogDefaults(),

@@ -16,9 +16,10 @@
  * file, and `shadowedByEnv` explains why a saved key is not the live one
  * (env always wins).
  */
-import { keyStatuses, providerKeyList } from "../../server/index.ts";
-
+import { allProvidersEnabled, keyStatuses, ollamaCatalogStatus, providerKeyList } from "../../server/index.ts";
 
 export async function GET() {
-	return Response.json({ keys: keyStatuses(), providers: providerKeyList() });
+	// The Keys page shows whether local Ollama is running and which models it has.
+	const ollama = await ollamaCatalogStatus();
+	return Response.json({ keys: keyStatuses(), providers: providerKeyList(), ollama, allProviders: allProvidersEnabled() });
 }

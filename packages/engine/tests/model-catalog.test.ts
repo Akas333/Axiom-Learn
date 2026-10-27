@@ -33,6 +33,9 @@ import { effectiveSettings } from "../src/server/stores.ts";
 // wave, 2026-09-20): pin openrouter's env key so its full catalog
 // federates in tests regardless of the developer shell's exports.
 process.env.OPENROUTER_API_KEY ??= "test-key-openrouter-catalog";
+// These tests cover the full provider table, so show every provider
+// (the app shows only Meta + Ollama by default — see provider-visibility.test.ts).
+process.env.AXIOM_ALL_PROVIDERS = "1";
 
 /** The catalog's glm entry — the old factory pin's model, still the
  *  best-known thinking-truth specimen (low|high|max). */

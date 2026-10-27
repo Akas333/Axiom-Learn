@@ -48,9 +48,9 @@ Each Meta model does a separate job in the teaching loop. All of them go through
 | **Muse Voice Transcribe** | Dictation: speak your answers and thinking. Streamed in real time, sentence by sentence | Working |
 | **SAM 3.1** | "Tap the part that…" questions on diagrams, graded against the real outline | In progress |
 | **Muse Image** | Pictures drawn for the learner's specific confusion, checked by Muse Spark before they're shown | In progress |
-| **Meta open-weights models** | The same tutor running fully offline on your laptop | In progress |
+| **Meta open-weights models** (Llama, via Ollama) | The same tutor running fully offline on your laptop, no key needed | Working (pick a model that supports tools) |
 
-Other providers still work. Kapany supports 30+ model providers (OpenAI, Anthropic, Google, DeepSeek, OpenRouter and more) through your own keys.
+The app offers two ways in: the Meta Model API and local models through [Ollama](https://ollama.com). Other providers are still supported underneath but hidden by default; start the server with `AXIOM_ALL_PROVIDERS=1` to show them in Settings.
 
 ## Run it locally
 
@@ -77,6 +77,8 @@ Open http://localhost:5173, then:
 1. Open **Settings → Providers → Add provider key**, choose **Meta**, and paste your key.
 2. Open **Settings → Agent** and pick models for the three slots, for example `muse-spark-1.3` for the main tutor.
 3. Type what you want to learn and press Enter.
+
+**Running offline instead:** install [Ollama](https://ollama.com), run `ollama pull llama3.1`, and pick the local model in **Settings → Agent**. No key is needed. Set `OLLAMA_HOST` if Ollama isn't at `http://127.0.0.1:11434`. Small local models handle the agent's tool calls less reliably than Muse Spark.
 
 Keys are saved on your machine only, in `packages/engine/auth.json`, which git ignores. You can also set `META_API_KEY` as an environment variable instead.
 

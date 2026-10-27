@@ -8,6 +8,7 @@ process.env.LH_DATA_DIR = scratch;
 process.env.LH_AUTH_FILE = path.join(scratch, "auth.json");
 fs.writeFileSync(process.env.LH_AUTH_FILE, "{}", { mode: 0o600 });
 process.env.OPENAI_API_KEY = "sk-fixture-not-used-for-generation";
+process.env.AXIOM_ALL_PROVIDERS = "1"; // this test checks the OpenAI and ChatGPT rows
 const { GET } = await import("../app/api/models/route.ts");
 const { chatGPTRequest, chatGPTConnected, chatGPTModels } = await import("@/src/agent/chatgpt-bridge.ts");
 after(() => fs.rmSync(scratch, { recursive: true, force: true }));

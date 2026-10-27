@@ -38,9 +38,65 @@ export interface ProviderKeyInfo {
 	label: string;
 }
 
+/** The local Ollama server as GET /api/keys reports it. */
+export interface OllamaInfo {
+	host: string;
+	running: boolean;
+	/** Tool-capable models Axiom can use. */
+	models: string[];
+	/** Pulled models that can't call tools, so they aren't offered. */
+	skipped: string[];
+}
+
 interface KeysResponse {
 	keys: AuthKeyStatus[];
 	providers?: ProviderKeyInfo[];
+	ollama?: OllamaInfo;
+	/** AXIOM_ALL_PROVIDERS=1: show every provider and the subscriptions. */
+	allProviders?: boolean;
+}
+
+/** Local models through Ollama: no key, just a running server. */
+export function OllamaRow({ ollama, onRecheck }: { ollama: OllamaInfo | undefined; onRecheck: () => void }) {
+	const usable = ollama?.running && ollama.models.length > 0;
+	const status = !ollama
+		? "Checking…"
+		: usable
+			? `Running · ${ollama.models.length} model${ollama.models.length === 1 ? "" : "s"}`
+			: ollama.running
+				? "Running · no models that support tools"
+				: "Not running";
+	return (
+		<div className="flex flex-col gap-1 px-1 py-1.5" data-testid="ollama-row">
+			<div className="flex items-center justify-between gap-3">
+				<span className="font-ui text-xs text-foreground">Ollama (local, no key)</span>
+				<span className="flex items-center gap-2">
+					<span className={`text-[11px] ${usable ? "text-foreground" : "text-muted-foreground"}`} data-testid="ollama-status">
+						{status}
+					</span>
+					<button
+						type="button"
+						onClick={onRecheck}
+						data-testid="ollama-recheck"
+						className="rounded-sm border border-border bg-background px-2 py-0.5 font-ui text-[11px] text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground"
+					>
+						Check again
+					</button>
+				</span>
+			</div>
+			{ollama && !usable && (
+				<p className="text-[11px] text-muted-foreground" data-testid="ollama-help">
+					Install Ollama from ollama.com, then run <code className="font-mono">ollama pull llama3.1</code>. Axiom looks for it at{" "}
+					<code className="font-mono">{ollama.host}</code>.
+				</p>
+			)}
+			{usable && ollama.skipped.length > 0 && (
+				<p className="text-[11px] text-muted-foreground/70" data-testid="ollama-skipped">
+					Not shown (no tool support): {ollama.skipped.join(", ")}
+				</p>
+			)}
+		</div>
+	);
 }
 
 /** The curated tools group, pinned by id (the catalog owns the copy;
@@ -325,6 +381,8 @@ export function KeysSection({
 }) {
 	const [statuses, setStatuses] = useState<AuthKeyStatus[] | null>(null);
 	const [providers, setProviders] = useState<ProviderKeyInfo[] | undefined>(undefined);
+	const [ollama, setOllama] = useState<OllamaInfo | undefined>(undefined);
+	const [allProviders, setAllProviders] = useState(false);
 	const [loading, setLoading] = useState(true);
 	/** The unfolded row (its id), null = all folded. Seeded by the
 	 *  deep-link (initialRow) and re-followed when it retargets. */
@@ -356,6 +414,8 @@ export function KeysSection({
 			.then((body: KeysResponse) => {
 				setStatuses(body.keys ?? []);
 				if (body.providers) setProviders(body.providers);
+				setOllama(body.ollama);
+				setAllProviders(body.allProviders === true);
 			})
 			.catch(() => setStatuses([]))
 			.finally(() => setLoading(false));
@@ -431,7 +491,8 @@ export function KeysSection({
 						testid={`key-${status.id.toLowerCase()}`}
 					/>
 				))}
-				{providers !== undefined && (
+				{/* Hidden once every offered provider has a key (by default just Meta). */}
+				{providers !== undefined && addable.length > 0 && (
 					<AddProviderRow
 						addable={addable}
 						onPick={(p) => {
@@ -454,9 +515,22 @@ export function KeysSection({
 				</div>}
 			</SettingsGroup>
 
-			<SettingsGroup label="Subscriptions" testid="group-subscriptions">
-				<SubscriptionConnections />
+			<SettingsGroup label="Local models" testid="group-local-models">
+				<OllamaRow
+					ollama={ollama}
+					onRecheck={() => {
+						setOllama(undefined);
+						// Re-fetch, then tell the model pickers the catalog may have changed.
+						void reload().then(() => notifySettingsSaved("keys"));
+					}}
+				/>
 			</SettingsGroup>
+
+			{allProviders && (
+				<SettingsGroup label="Subscriptions" testid="group-subscriptions">
+					<SubscriptionConnections />
+				</SettingsGroup>
+			)}
 
 			<SettingsGroup label="Dictation" testid="group-dictation">
 				<div className="flex items-center justify-between gap-3 px-1 py-1.5" data-testid="dictation-engine">
