@@ -242,12 +242,12 @@ function IconButton({ label, onClick, testid, children }: { label: string; onCli
 	);
 }
 
-/** Same marker language as the map: green check when done, filled blue
+/** Same marker language as the map: solid white check when done, filled blue
  *  number when current, outlined number otherwise. */
 function StepMarker({ progress, number }: { progress: PlanNodeProgress; number: number }) {
 	if (progress === "done") {
 		return (
-			<span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-400">
+			<span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
 				<CheckIcon className="size-3" strokeWidth={3} aria-label={`${number}, done`} />
 			</span>
 		);

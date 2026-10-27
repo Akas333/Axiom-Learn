@@ -151,7 +151,7 @@ export function PlanMap({
 						fill="none"
 						strokeWidth={1.5}
 						strokeLinecap="round"
-						className={cn("transition-colors duration-500", lit ? "stroke-emerald-400/50" : "stroke-border")}
+						className={cn("transition-colors duration-500", lit ? "stroke-foreground/45" : "stroke-border")}
 					/>
 				);
 			})}
@@ -182,13 +182,13 @@ export function PlanMap({
 							strokeWidth={1.5}
 							className={cn(
 								"transition-colors duration-500",
-								progress === "done" && "fill-emerald-500/20 stroke-emerald-400",
+								progress === "done" && "fill-foreground stroke-foreground",
 								progress === "current" && "fill-primary stroke-primary",
 								progress === "upcoming" && "fill-card stroke-border",
 							)}
 						/>
 						{progress === "done" ? (
-							<path d="M -4.5 0.5 L -1.5 3.5 L 4.5 -3" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="stroke-emerald-400" />
+							<path d="M -4.5 0.5 L -1.5 3.5 L 4.5 -3" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="stroke-background" />
 						) : (
 							<text
 								textAnchor="middle"

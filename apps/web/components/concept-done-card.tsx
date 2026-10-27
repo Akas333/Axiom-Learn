@@ -69,7 +69,7 @@ export function ConceptDoneCard({
 			aria-label={`Concept complete: ${title}`}
 		>
 			<div className="flex items-center gap-3 px-5 pt-4">
-				<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+				<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
 					<CheckIcon className="size-4" strokeWidth={2.5} aria-hidden />
 				</span>
 				<div className="min-w-0">
