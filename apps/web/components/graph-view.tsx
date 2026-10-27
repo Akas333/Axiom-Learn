@@ -62,6 +62,7 @@
  * camera never moves.
  */
 
+import { onGraphSearch, takePendingGraphSearch } from "@/lib/graph-search";
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NotesImportErrors, useNotesImport } from "@/components/notes-import.tsx";
 import { Link } from "@/lib/navigation";
@@ -889,7 +890,9 @@ export function GraphView({
 	snapshotRef.current = snapshot;
 
 	// Search panel state: the query text + the settings section toggle.
-	const [query, setQuery] = useState("");
+	// The search palette can pre-fill it (a concept picked there).
+	const [query, setQuery] = useState(() => takePendingGraphSearch() ?? "");
+	useEffect(() => onGraphSearch(setQuery), []);
 	// ⌘F (shortcut wave C): the find event focuses the node search —
 	// surface-scoped, dispatched as lh:kbd-find (only this page listens).
 	const searchInputRef = useRef<HTMLInputElement>(null);

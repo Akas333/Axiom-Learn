@@ -27,6 +27,7 @@ export function ThinkingField({
 	hint,
 	mic = true,
 	action,
+	listeningPrompt = "Talk through your thinking — just start speaking",
 	className,
 	children,
 }: {
@@ -39,6 +40,8 @@ export function ThinkingField({
 	mic?: boolean;
 	/** The footer's primary action (Submit). */
 	action?: ReactNode;
+	/** What the footer asks for while listening hands-free. */
+	listeningPrompt?: string;
 	className?: string;
 	/** The textarea (style it with THINKING_TEXTAREA). */
 	children: ReactNode;
@@ -93,7 +96,7 @@ export function ThinkingField({
 								className={speaking ? "text-(--primary-soft)" : "text-muted-foreground/60"}
 							/>
 							<span className="min-w-0 truncate text-sm text-foreground/80">
-								Talk through your thinking — just start speaking
+								{listeningPrompt}
 							</span>
 						</div>
 					) : (

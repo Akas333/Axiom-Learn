@@ -2471,6 +2471,26 @@ function DockOverlay({
 		prevRef.current = { key: stateKey, height: h };
 	});
 
+	const readingField =
+		pending && requiresReveal ? (
+			<ReadingThinkingField
+				value={readingThinking}
+				onChange={onReadingThinking}
+				onEscape={dictationCancel}
+				onOpen={
+					!expanded
+						? () => {
+								void finishDictation().then(() => {
+									expandAndRevealRef.current();
+								});
+							}
+						: undefined
+				}
+				claim={readingOwnsVoice}
+				below={revealPending}
+			/>
+		) : null;
+
 	return (
 		<VoiceThinkingProvider value={voice}>
 		<div className="pointer-events-none absolute inset-x-0 bottom-0" style={{ right: sbInset }}>
@@ -2487,23 +2507,10 @@ function DockOverlay({
 					    teach-phase check waits — the same cue that collapses it. It
 					    claims dictated speech until the learner reveals the check
 					    (the dock reclaims then). Rides the check answer on submit. */}
-					{pending && requiresReveal && (
-						<ReadingThinkingField
-							value={readingThinking}
-							onChange={onReadingThinking}
-							onEscape={dictationCancel}
-							onOpen={
-								!expanded
-									? () => {
-											void finishDictation().then(() => {
-												expandAndRevealRef.current();
-											});
-										}
-									: undefined
-							}
-							claim={readingOwnsVoice}
-						/>
-					)}
+					{/* The reading field: ABOVE the card once the options are
+					    open, BELOW the question while the check is still closed
+					    (read the question first, then talk it through). */}
+					{!revealPending && readingField}
 					<div ref={shellRef} className={`pointer-events-auto overflow-hidden ${COMPOSER_SHELL}`}>
 						<div
 						ref={contentRef}
@@ -2545,6 +2552,7 @@ function DockOverlay({
 							)}
 						</div>
 					</div>
+					{revealPending && readingField}
 					{/* The stats row: beneath the composer/question shell, not
 					    flush to the screen bottom — static height, outside the
 					    morphing shell so it never joins a height animation. */}

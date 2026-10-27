@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { fuzzyScore } from "@/src/core";
 import { useServerEvent, useServerResync } from "@/components/server-events";
+import { openSearchPalette, SearchPalette } from "@/components/search-palette";
 import type { ChatListItem } from "@/src/core";
 import { kbdEventForAction } from "@/src/core";
 import { notifySettingsSaved } from "@/components/settings-signal";
@@ -683,17 +684,8 @@ function SessionsSidebar() {
 		[pathname, router],
 	);
 
-	useEffect(() => {
-		const onFocusSearch = () => {
-			if (!open) toggle();
-			// A clipped (overflow-hidden) input still focuses — the sidebar's
-			// slide-in doesn't gate the keystroke.
-			setSearchOpen(true);
-			requestAnimationFrame(() => searchRef.current?.focus());
-		};
-		window.addEventListener("lh:kbd-sessions-search", onFocusSearch);
-		return () => window.removeEventListener("lh:kbd-sessions-search", onFocusSearch);
-	}, [open, toggle]);
+	// The sessions-search shortcut now opens the search palette
+	// (components/search-palette.tsx listens for it directly).
 
 	// Keep the kbd-selected row in view (the rows are the container's only
 	// buttons, so the index matches).
@@ -798,16 +790,13 @@ function SessionsSidebar() {
 						New practice
 						<span className="sr-only">create a new practice session</span>
 					</button>
-					<Hint label="Search sessions" action="sessions-search" side="right">
+					<Hint label="Search" action="sessions-search" side="right">
 						<button
 							type="button"
 							data-testid="nav-search"
-							aria-expanded={searchOpen}
-							onClick={() => {
-								setSearchOpen(true);
-								requestAnimationFrame(() => searchRef.current?.focus());
-							}}
-							className={cn(NAV_ROW, searchOpen && "bg-(--pill)")}
+							aria-haspopup="dialog"
+							onClick={openSearchPalette}
+							className={NAV_ROW}
 						>
 							<SearchIcon className="size-[18px] shrink-0" />
 							Search
@@ -1090,6 +1079,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 			    after the content in the tree, but it's window-level so order only
 			    matters for the events it dispatches, never for DOM priority. */}
 			<KeyboardShortcuts />
+			<SearchPalette />
 		</SettingsDialogProvider>
 	);
 }

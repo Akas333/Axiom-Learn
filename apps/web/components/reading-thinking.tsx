@@ -24,6 +24,7 @@ export function ReadingThinkingField({
 	onEscape,
 	onOpen,
 	claim,
+	below = false,
 }: {
 	value: string;
 	onChange: (v: string) => void;
@@ -36,6 +37,8 @@ export function ReadingThinkingField({
 	onOpen?: () => void;
 	/** Primary dictation claim — true while the check is behind its reveal. */
 	claim: boolean;
+	/** Sits under the question card (the check is still closed). */
+	below?: boolean;
 }) {
 	useDictationTarget(
 		useCallback(
@@ -50,8 +53,13 @@ export function ReadingThinkingField({
 		<ThinkingField
 			label="Thinking while reading"
 			testId="reading-thinking-field"
-			className="pointer-events-auto mb-2"
-			hint={onOpen ? "↵ opens the check · ⇧↵ newline" : undefined}
+			className={below ? "pointer-events-auto mt-2" : "pointer-events-auto mb-2"}
+			listeningPrompt={
+				onOpen
+					? "What stands out from the reading? Talk it through before you see the options"
+					: "Anything else from the reading? Just keep talking"
+			}
+			hint={onOpen ? "↵ shows the options · ⇧↵ newline" : undefined}
 			mic={claim}
 		>
 			<textarea
@@ -94,7 +102,11 @@ export function ReadingThinkingField({
 						e.currentTarget.blur();
 					}
 				}}
-				placeholder="What's on your mind as you read?"
+				placeholder={
+					onOpen
+						? "What stands out from the reading? What do you expect the answer to be?"
+						: "What's on your mind from the reading?"
+				}
 				rows={1}
 				className={`${THINKING_TEXTAREA} min-h-10`}
 			/>

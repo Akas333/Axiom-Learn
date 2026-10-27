@@ -4,6 +4,8 @@ import { ArrowDownIcon, ChevronRightIcon, PlayIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { finishDictation, isTranscriptPending, joinDictation, useDictationTarget } from "@/components/dictation";
 import { THINKING_TEXTAREA, ThinkingField } from "@/components/thinking-field";
+import { nearestStop, parseSpokenConfidence } from "@/components/spoken-confidence";
+import { useVoiceThinking } from "@/components/voice-thinking";
 import { useEnterSubmits } from "@/components/enter-submits";
 import { ToolContentResponse } from "@/components/ai-elements/message";
 import { cn } from "@/lib/utils";
@@ -217,24 +219,32 @@ export function QuestionDockBar({
 	toolLabel?: string;
 }) {
 	if (variant === "reveal") {
+		// The closed check (teach phase): the QUESTION is shown in full so
+		// the learner can think about it while reading; only the answer
+		// options wait behind "Show answer options".
 		return (
-			<button
-				type="button"
-				data-testid="teach-check-reveal"
-				onClick={onExpand}
-				className="dock-variant flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/40"
-			>
-				<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-					<PlayIcon className="size-3.5" />
-				</span>
-				<span className="min-w-0 flex-1">
-					<span className="block text-sm font-medium">Check your understanding</span>
-					<span className="block truncate text-xs text-muted-foreground">{teaserText(question)}</span>
-				</span>
-				<span className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
-					Open <ChevronRightIcon className="size-3.5" />
-				</span>
-			</button>
+			<div data-testid="teach-check-card" className="dock-variant px-4 pt-3 pb-3">
+				<div className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+					<span>{label ?? toolLabel ?? "Check"}</span>
+					<span aria-hidden>·</span>
+					<span>Think it through, then see the options</span>
+				</div>
+				<div className="max-h-[40dvh] overflow-y-auto font-medium" data-session-find-root="">
+					<ToolContentResponse>{question}</ToolContentResponse>
+				</div>
+				<div className="mt-2.5 flex justify-end">
+					<button
+						type="button"
+						data-testid="teach-check-reveal"
+						onClick={onExpand}
+						className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+					>
+						<PlayIcon className="size-3.5" />
+						Show answer options
+						<ChevronRightIcon className="size-3.5" />
+					</button>
+				</div>
+			</div>
 		);
 	}
 	return (
@@ -340,11 +350,15 @@ function QuestionDockForm({
 	 * in time — submit reads these, kept current at every write site. */
 	const thinkingTextRef = useRef(initialDraft?.thinking ?? "");
 	const answerTextRef = useRef(initialDraft?.text ?? "");
-	// Confidence (owner, 2026-10-01): an index into CONFIDENCE_STOPS,
-	// resting at 50 — a real coin flip by definition, untouched or
-	// deliberate (the same number, the same meaning). The dock unmounts
-	// between questions, so each question starts fresh at 50.
+	// Confidence: an index into CONFIDENCE_STOPS. It is REQUIRED — the
+	// thumb rests at 50 but counts only once the learner actually sets it
+	// (drag, click, or ←/→); Submit waits for that. "I don't know" needs none.
 	const [confIdx, setConfIdx] = useState<number>(initialDraft?.confidenceIndex ?? DEFAULT_CONFIDENCE_INDEX);
+	const [confSet, setConfSet] = useState<boolean>(initialDraft?.confidenceSet ?? false);
+	const chooseConf = (idx: number) => {
+		setConfIdx(idx);
+		setConfSet(true);
+	};
 	const selectMode: SelectMode = qd.mode === "multi-select" ? "multi-select" : "single-select";
 
 	// The PRIMARY dictation input (owner, STT round 1): while a question
@@ -366,9 +380,18 @@ function QuestionDockForm({
 					const v = joinDictation(thinkingTextRef.current, t);
 					thinkingTextRef.current = v;
 					setThinking(v);
+					// Talked-out confidence: "about 70 percent", "pretty sure"…
+					// sets the slider (the words stay in the thinking too).
+					if (kind === "quiz") {
+						const said = parseSpokenConfidence(t);
+						if (said !== null) {
+							setConfIdx(nearestStop(CONFIDENCE_STOPS, said));
+							setConfSet(true);
+						}
+					}
 				}
 			},
-			[qd.mode],
+			[qd.mode, kind],
 		),
 		// Released while a teach check sits unrevealed (owner 2026-10-03):
 		// the reading-thinking field owns dictated speech during the reading.
@@ -383,10 +406,17 @@ function QuestionDockForm({
 		onPickedChange?.(picked);
 	}, [picked, onPickedChange]);
 
+	/** A picked answer that still needs its confidence before Submit. */
+	const needsConfidence = kind === "quiz" && !sel.dontKnow && !confSet;
+	// Hands-free is listening into THIS card: ask for confidence out loud.
+	const voice = useVoiceThinking();
+	const listeningHere = voice?.listening === true && dictationClaim;
+	const askToSayConfidence = listeningHere && needsConfidence && picked;
 	const canSubmit =
-		qd.mode === "text"
+		(qd.mode === "text"
 			? text.trim().length > 0
-			: sel.dontKnow || (sel.otherSelected && other.trim().length > 0) || sel.selected.size > 0;
+			: sel.dontKnow || (sel.otherSelected && other.trim().length > 0) || sel.selected.size > 0) &&
+		!needsConfidence;
 
 	const submit = () => {
 		if (!canSubmit || compactionRunning) return;
@@ -422,6 +452,7 @@ function QuestionDockForm({
 			other,
 			text: answerTextRef.current,
 			confidenceIndex: confIdx,
+			confidenceSet: confSet,
 		});
 		onSubmit(buildAnswer(qd, req, toolName));
 	};
@@ -544,6 +575,7 @@ function QuestionDockForm({
 				// (the slider grays out and nothing is sent).
 				if (kind !== "quiz" || sel.dontKnow) return;
 				e.preventDefault();
+				setConfSet(true);
 				setConfIdx((i) =>
 					Math.min(
 						CONFIDENCE_STOPS.length - 1,
@@ -772,10 +804,14 @@ function QuestionDockForm({
 						<span
 							className={cn(
 								"shrink-0 text-xs font-medium",
-								sel.dontKnow ? "text-muted-foreground/50" : "text-muted-foreground",
+								sel.dontKnow
+									? "text-muted-foreground/50"
+									: needsConfidence
+										? "text-(--primary-soft)"
+										: "text-muted-foreground",
 							)}
 						>
-							Confidence
+							{needsConfidence ? "How sure are you?" : "Confidence"}
 						</span>
 						<div
 							className={cn("relative h-4 min-w-0 flex-1", sel.dontKnow && "opacity-40")}
@@ -795,7 +831,7 @@ function QuestionDockForm({
 								aria-hidden
 								data-testid="confidence-rail"
 								className="pointer-events-none absolute top-1/2 left-2 right-2 h-1.5 -translate-y-1/2 rounded-full border border-border"
-								style={confidenceRailStyle(CONFIDENCE_STOPS[confIdx]!)}
+								style={confidenceRailStyle(confSet ? CONFIDENCE_STOPS[confIdx]! : 0)}
 							/>
 							<input
 								type="range"
@@ -805,7 +841,7 @@ function QuestionDockForm({
 								value={CONFIDENCE_STOPS[confIdx]}
 								disabled={sel.dontKnow}
 								aria-label="Confidence — the probability your selected answer is correct"
-								aria-valuetext={`${CONFIDENCE_STOPS[confIdx]} percent`}
+								aria-valuetext={confSet ? `${CONFIDENCE_STOPS[confIdx]} percent` : "not set"}
 								title="The probability your selected answer is correct — 50% is a coin flip. Adjust with ←/→."
 								data-testid="confidence-slider"
 								onChange={(e) => {
@@ -819,11 +855,16 @@ function QuestionDockForm({
 									for (let i = 1; i < CONFIDENCE_STOPS.length; i++) {
 										if (Math.abs(CONFIDENCE_STOPS[i]! - v) < Math.abs(CONFIDENCE_STOPS[best]! - v)) best = i;
 									}
-									setConfIdx(best);
+									chooseConf(best);
 								}}
-								style={{ color: CONFIDENCE_COLORS[confIdx] }}
+								// A click on the resting thumb (50) changes nothing, so
+								// onChange never fires — count the click as choosing it.
+								onClick={() => setConfSet(true)}
+								style={{ color: confSet ? CONFIDENCE_COLORS[confIdx] : "var(--muted-foreground)" }}
 								className={cn(
 									"absolute inset-0 h-4 w-full cursor-pointer appearance-none bg-transparent outline-none",
+									// Unset: a hollow, pulsing thumb asks to be moved.
+									needsConfidence && "animate-pulse [&::-webkit-slider-thumb]:opacity-60 [&::-moz-range-thumb]:opacity-60",
 									"[&::-webkit-slider-runnable-track]:h-4 [&::-webkit-slider-runnable-track]:bg-transparent",
 									"[&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-current",
 									"[&::-moz-range-track]:h-4 [&::-moz-range-track]:bg-transparent",
@@ -838,9 +879,14 @@ function QuestionDockForm({
 								sel.dontKnow && "text-muted-foreground/50",
 							)}
 						>
-							{sel.dontKnow ? "—" : `${CONFIDENCE_STOPS[confIdx]}%`}
+							{sel.dontKnow || !confSet ? "—" : `${CONFIDENCE_STOPS[confIdx]}%`}
 						</span>
 					</div>
+					{askToSayConfidence && (
+						<p className="mt-1.5 text-xs text-(--primary-soft)" data-testid="say-confidence">
+							Say it out loud — “about 70 percent”, “pretty sure”, “fifty-fifty”
+						</p>
+					)}
 				</div>
 			)}
 
@@ -858,8 +904,19 @@ function QuestionDockForm({
 				<ThinkingField
 					testId={qd.mode === "text" ? "answer-field" : "thinking-field"}
 					label={qd.mode === "text" ? "Your answer" : "Thinking about your answer"}
-					hint={compactionRunning ? "compacting session…" : "↵ submits · ⇧↵ newline"}
+					hint={
+						compactionRunning
+							? "compacting session…"
+							: needsConfidence && picked
+								? "Set how sure you are to submit"
+								: "↵ submits · ⇧↵ newline"
+					}
 					mic={dictationClaim}
+					listeningPrompt={
+						askToSayConfidence
+							? "Why this answer — and how sure are you?"
+							: undefined
+					}
 					action={
 						<Button
 							type="submit"

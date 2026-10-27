@@ -519,6 +519,8 @@ export interface QuestionFormDraft {
 	other: string;
 	text: string;
 	confidenceIndex: number;
+	/** The learner actually chose a confidence (it is required to submit). */
+	confidenceSet?: boolean;
 }
 
 export interface QuestionDraft {
