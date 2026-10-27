@@ -50,10 +50,11 @@ import { KeysSection } from "./keys-section.tsx";
 import { Hint } from "@/components/ui/hint";
 import { AppearanceSection, GraphSection } from "./appearance-section.tsx";
 import { KeyboardSection } from "./keyboard-section.tsx";
+import { LearnerSection } from "./learner-section.tsx";
 import { ChatGPTUIProvider } from "./chatgpt-connection.tsx";
 import { NativeSubscriptionUIProvider } from "./subscription-connections.tsx";
 import { SettingsSkinContext } from "./controls.tsx";
-import { BotIcon, KeyboardIcon, KeyRoundIcon, NetworkIcon, PaletteIcon, SearchIcon, SettingsIcon, XIcon } from "lucide-react";
+import { BotIcon, GraduationCapIcon, KeyboardIcon, KeyRoundIcon, NetworkIcon, PaletteIcon, SearchIcon, SettingsIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Owner (2026-09-20): hints earn their place — mechanics-explaining
@@ -63,6 +64,7 @@ const SECTIONS = [
 	{ id: "general", label: "General", group: "Preferences", Icon: SettingsIcon, keywords: "updates automatic voice hands-free dictation" },
 	{ id: "appearance", label: "Appearance", group: "Preferences", Icon: PaletteIcon, keywords: "theme mode dark light background font reading size bold italic heading serif colors" },
 	{ id: "keyboard", label: "Keyboard", hint: "Stored on this device", group: "Preferences", Icon: KeyboardIcon, keywords: "shortcuts keys bindings hotkeys" },
+	{ id: "learner", label: "About you", group: "Learning", Icon: GraduationCapIcon, keywords: "learner profile level grade school math style intuitive formal notes onboarding intro context" },
 	{ id: "agent", label: "Agent", group: "Learning", Icon: BotIcon, keywords: "models tools prompts instructions quizzing quiz compaction context search engine" },
 	{ id: "graph", label: "Graph", group: "Learning", Icon: NetworkIcon, keywords: "knowledge graph rendering extraction chunk" },
 	{ id: "keys", label: "Providers", group: "Connections", Icon: KeyRoundIcon, keywords: "api keys model provider local ollama meta subscriptions chatgpt dictation tavily brave" },
@@ -390,6 +392,18 @@ export function SettingsDialogBody({
 										}
 									/>
 									<VoiceSettings />
+								</SettingsSection>
+							)}
+							{active === "learner" && (
+								<SettingsSection
+									title="About you"
+									hint="Your tutor reads this before every lesson."
+									testid="section-learner"
+								>
+									<LearnerSection
+										learner={record.learner}
+										onSave={(next) => setRecord((prev) => ({ ...(prev ?? { version: CURRENT_SETTINGS_VERSION }), learner: next }))}
+									/>
 								</SettingsSection>
 							)}
 							{active === "keys" && (

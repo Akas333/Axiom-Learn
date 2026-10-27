@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@/lib/navigation";
 import { usePathname, useRouter } from "@/lib/navigation";
+import { OnboardingGate } from "@/components/onboarding";
 import { useSearchParams } from "react-router";
 import { MenuShell } from "@/components/menu-shell";
 import { DeleteSessionDialog } from "@/components/delete-session-dialog";
@@ -1069,6 +1070,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 			    matters for the events it dispatches, never for DOM priority. */}
 			<KeyboardShortcuts />
 			<SearchPalette />
+			<OnboardingGate />
 		</SettingsDialogProvider>
 	);
 }
