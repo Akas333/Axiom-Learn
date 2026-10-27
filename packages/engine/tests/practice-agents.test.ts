@@ -195,6 +195,39 @@ describe("target validation — names normalize to ids, unknowns reject", () => 
 
 // ── the registry + the agent ────────────────────────────────────────────────
 
+describe("conclude missedTargets — only the active problem's targets", () => {
+	const two = { ...PROBLEM_INPUT, target: ["parity-sum", "pairing"] };
+
+	it("accepts a subset of the active problem's targets (gate seeded from the record)", async () => {
+		const record = activeProblemRecord();
+		const call = (record[0] as AssistantMessage).content[0] as { arguments: Record<string, unknown> };
+		call.arguments = { ...call.arguments, target: ["parity-sum"] };
+		const gate = createPracticeGate(ctxOf(record));
+		assert.deepEqual(gate.activeTargets, ["parity-sum"]);
+		const result = await concludeTool(gate).execute("c", { ...CONCLUDE_INPUT, missedTargets: ["parity-sum"] } as never);
+		assert.equal(result.isError, undefined);
+		assert.deepEqual(gate.activeTargets, [], "concluding clears the targets");
+	});
+
+	it("rejects ids that the active problem did not target, and keeps it active", async () => {
+		const gate = createPracticeGate(ctxOf([]));
+		await problemTool(gate).execute("p", two as never);
+		const result = await concludeTool(gate).execute("c", { ...CONCLUDE_INPUT, missedTargets: ["other"] } as never);
+		assert.equal(result.isError, true);
+		assert.match((result.details as { problems: string[] }).problems[0]!, /not targets of the active problem/);
+		assert.equal(gate.problemActive, true);
+	});
+
+	it("normalizes names to ids and heals an empty list away", () => {
+		const nodes = () => [{ id: "n_1", name: "Pairing argument" }];
+		const tool = concludeTool(createPracticeGate(ctxOf([])), nodes);
+		const named = tool.prepareArguments!({ ...CONCLUDE_INPUT, missedTargets: ["pairing argument"] }) as { missedTargets?: string[] };
+		assert.deepEqual(named.missedTargets, ["n_1"]);
+		const empty = tool.prepareArguments!({ ...CONCLUDE_INPUT, missedTargets: [] }) as { missedTargets?: string[] };
+		assert.equal(empty.missedTargets, undefined);
+	});
+});
+
 describe("the practice agent", () => {
 	it("bare registry: the session pair + the learner-filesystem set — no question, plan, or lesson tools", () => {
 		const tools = practiceTools(ctxOf([]));

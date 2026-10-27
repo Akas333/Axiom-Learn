@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 /**
  * THE shared menu shell (menu standardization, fix wave chunk B): one
  * placement body for the app's dropdown menus — portaled to document.body
+ * (or into the open modal dialog that holds the trigger)
  * (never clipped by an ancestor's overflow), fixed-anchored to the trigger's
  * rect, viewport-capped. PLACEMENT-ONLY by design: every site keeps its own
  * open/close/Esc contract (the layered-dismissal machinery differs
@@ -220,6 +221,11 @@ export function MenuShell({
 		};
 	}, [anchorRef, anchorTestid, preferredSide, align]);
 
+	// Portal host: an open modal <dialog> (Astryx Dialog) lives in the
+	// browser's top layer, so a menu portaled to <body> would sit behind it
+	// and be inert. Menus opened from inside a dialog portal into it.
+	const host = (anchor()?.closest("dialog[open]") as HTMLElement | null) ?? document.body;
+
 	// First pass: mounted hidden at the viewport's top-left so the layout
 	// effect can measure the real content height before anything is seen.
 	// The menu is positioned ONCE and then only re-anchored — no flash.
@@ -234,7 +240,7 @@ export function MenuShell({
 			>
 				{children}
 			</div>,
-			document.body,
+			host,
 		);
 	}
 	return createPortal(
@@ -254,6 +260,6 @@ export function MenuShell({
 		>
 			{children}
 		</div>,
-		document.body,
+		host,
 	);
 }

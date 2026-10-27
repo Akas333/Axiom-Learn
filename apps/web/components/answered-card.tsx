@@ -1,4 +1,5 @@
 
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { ConfidenceRail } from "@/components/confidence-rail";
 import { GlyphMark } from "@/components/ui/glyph-mark";
@@ -23,7 +24,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 	const [whyOpen, setWhyOpen] = useState(false); // the tucked explanation (predictions, owner 2026-10-03)
 	if (answer.dismissed) {
 		return (
-			<div className="rounded-2xl border border-input/70 bg-card p-4 text-sm text-muted-foreground">
+			<div className="rounded-2xl border border-strong/70 bg-card p-4 text-sm text-secondary">
 				<span className="font-medium">{answer.questionText}</span> — skipped
 			</div>
 		);
@@ -58,10 +59,10 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 		    p-4 into a 28px void below (12px above); the card's own padding is
 		    the bottom rhythm when a row ends the card. */}
 		<div
-			className="rounded-2xl border border-input/70 bg-card p-5 text-card-foreground [&>*:last-child]:mb-0"
+			className="rounded-2xl border border-strong/70 bg-card p-5 text-primary [&>*:last-child]:mb-0"
 			data-testid="answered-card"
 		>
-			<div className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+			<div className="mb-1 flex items-center gap-2 text-xs font-medium text-secondary">
 				{/* The tool's OWN name first (owner 2026-10-09): probe-phase
 			    cards label Probe/Recall — the phase boundary visible in the
 			    transcript. No `tool` on old records: kind labels as before. */}
@@ -78,7 +79,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 											: "Question"}
 				{isQuiz &&
 					(answer.dontKnow ? (
-						<span className="rounded-full bg-(--pill) px-2 py-0.5">didn't know</span>
+						<span className="rounded-full bg-overlay-hover px-2 py-0.5">didn't know</span>
 					) : answer.correct ? (
 						<span className="rounded-full bg-green-500/15 px-2 py-0.5 text-green-500">correct</span>
 					) : (
@@ -91,7 +92,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 			{parsedDetails && (
 				// The details line, same paint as the pending dock (owner,
 				// 2026-10-12): full markdown, LaTeX included.
-				<div className="mb-3 text-sm text-muted-foreground">
+				<div className="mb-3 text-sm text-secondary">
 					<ToolContentResponse>{parsedDetails}</ToolContentResponse>
 				</div>
 			)}
@@ -105,10 +106,10 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 							<div
 								key={opt.index}
 								className={cn(
-									"flex items-center gap-2 rounded-xl border border-input/70 px-3.5 py-2",
+									"flex items-center gap-2 rounded-xl border border-strong/70 px-3.5 py-2",
 									sel && key && "border-green-500/60 bg-green-500/10",
 									sel && !key && isQuiz && "border-red-500/60 bg-red-500/10",
-									sel && !isQuiz && "border-primary bg-primary/15",
+									sel && !isQuiz && "border-accent-bg bg-accent-bg/15",
 									!sel && key && "border-green-500/40",
 								)}
 							>
@@ -130,13 +131,13 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 										{(key || sel) && <GlyphMark kind={key ? "check" : "x"} className="size-3.5" />}
 									</span>
 								)}
-								<span className={cn(!sel && "text-muted-foreground")}>
+								<span className={cn(!sel && "text-secondary")}>
 									<ToolContentResponse>{opt.label}</ToolContentResponse>
 									{descByIndex.get(opt.index) && (
 										// Ask-option subtext (owner, 2026-10-12): same markdown path
 										// as the pending dock — LaTeX included. Quiz options carry
 										// none (owner ruling 2026-09-26); the map stays empty for them.
-										<ToolContentResponse className="lh-prose block text-xs text-muted-foreground">
+										<ToolContentResponse className="lh-prose block text-xs text-secondary">
 											{descByIndex.get(opt.index)}
 										</ToolContentResponse>
 									)}
@@ -150,7 +151,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 					{answer.other && (
 						<div
 							data-testid="answered-other"
-							className="flex items-center gap-2 rounded-xl border border-primary bg-primary/15 px-3.5 py-2"
+							className="flex items-center gap-2 rounded-xl border border-accent-bg bg-accent-bg/15 px-3.5 py-2"
 						>
 							<span>“{answer.other}”</span>
 						</div>
@@ -170,13 +171,13 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 			{isQuiz && answer.confidence != null && (
 				<div className="mt-3 flex items-center gap-3" data-testid="answered-confidence">
 					<ConfidenceRail value={answer.confidence} className="min-w-0 flex-1" />
-					<span className="w-9 shrink-0 text-right font-mono text-sm tabular-nums text-muted-foreground">
+					<span className="w-9 shrink-0 text-right font-mono text-sm tabular-nums text-secondary">
 						{answer.confidence}%
 					</span>
 				</div>
 			)}
 			{answer.dontKnow && isQuiz && (
-				<div className="mt-2 text-sm text-muted-foreground">Answered “I don't know”.</div>
+				<div className="mt-2 text-sm text-secondary">Answered “I don't know”.</div>
 			)}
 
 			{(answer.thinking ?? answer.note) && (
@@ -201,16 +202,10 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 				   toggle — viewable, never center stage. Identical to the
 				   prediction pattern it generalizes (owner, 2026-10-03). */
 				<div className="mt-2" data-testid="tucked-explanation">
-					<button
-						type="button"
-						onClick={() => setWhyOpen((v) => !v)}
-						className="inline-flex h-7 items-center rounded-full bg-(--pill) px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-(--pill-hover) hover:text-foreground"
-					>
-						{whyOpen ? "Hide why" : "Why"}
-					</button>
+					<Button size="sm" variant="secondary" onClick={() => setWhyOpen((v) => !v)}>{whyOpen ? "Hide why" : "Why"}</Button>
 					{whyOpen && (
-						<div className="mt-2 rounded-xl bg-(--pill) px-4 py-3 text-sm text-foreground/70">
-							<span className="font-medium text-muted-foreground">Why: </span>
+						<div className="mt-2 rounded-xl bg-overlay-hover px-4 py-3 text-sm text-primary/70">
+							<span className="font-medium text-secondary">Why: </span>
 							{/* Keep the first paragraph beside the label, not every paragraph:
 							   later paragraphs must retain their recovered document structure. */}
 							<ToolContentResponse className="inline [&>p:first-child]:inline [&>p:first-child]:m-0">{answer.explanation}</ToolContentResponse>
@@ -223,8 +218,8 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 			    — one field, reasoning included — shown on submit; no verdict,
 			    the model's next reply IS the grading. */}
 			{isExplain && answer.committed && (
-				<div className="mt-3 rounded-xl bg-(--pill) px-4 py-3 text-sm text-muted-foreground">
-					<span className="font-medium text-foreground">The answer: </span>
+				<div className="mt-3 rounded-xl bg-overlay-hover px-4 py-3 text-sm text-secondary">
+					<span className="font-medium text-primary">The answer: </span>
 					<ToolContentResponse className="inline [&>p:first-child]:inline [&>p:first-child]:m-0">{answer.committed}</ToolContentResponse>
 				</div>
 			)}

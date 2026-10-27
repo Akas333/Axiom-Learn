@@ -69,22 +69,22 @@ export function ConceptDoneCard({
 			aria-label={`Concept complete: ${title}`}
 		>
 			<div className="flex items-center gap-3 px-5 pt-4">
-				<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+				<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-inverted text-body">
 					<CheckIcon className="size-4" strokeWidth={2.5} aria-hidden />
 				</span>
 				<div className="min-w-0">
-					<div className="text-xs text-muted-foreground">{number ? `Concept ${number} complete` : "Concept complete"}</div>
-					<div className="truncate text-lg font-medium text-foreground">{title}</div>
+					<div className="text-xs text-secondary">{number ? `Concept ${number} complete` : "Concept complete"}</div>
+					<div className="truncate text-lg font-medium text-primary">{title}</div>
 				</div>
 			</div>
 
 			{recap.length > 0 && (
 				<div className="px-5 pt-3">
-					<div className="pb-1.5 text-xs text-muted-foreground">Recap</div>
-					<ul className="lh-prose space-y-1.5 text-foreground">
+					<div className="pb-1.5 text-xs text-secondary">Recap</div>
+					<ul className="lh-prose space-y-1.5 text-primary">
 						{recap.map((line, i) => (
 							<li key={i} className="flex gap-2.5">
-								<span className="mt-[0.6em] size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+								<span className="mt-[0.6em] size-1.5 shrink-0 rounded-full bg-accent-bg" aria-hidden />
 								<div className="min-w-0 flex-1 [&_p]:m-0">
 									<MessageResponse>{line}</MessageResponse>
 								</div>
@@ -94,26 +94,26 @@ export function ConceptDoneCard({
 				</div>
 			)}
 
-			<div className="mt-4 border-t border-border bg-background/40 px-5 py-4">
+			<div className="mt-4 border-t border-border bg-body/40 px-5 py-4">
 				{nextTitle ? (
 					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 						<div className="min-w-0">
-							<div className="text-xs text-muted-foreground">Up next</div>
-							<div className="font-medium text-foreground">{nextTitle}</div>
-							{input.nextHint && <p className="mt-0.5 text-sm text-muted-foreground">{input.nextHint}</p>}
+							<div className="text-xs text-secondary">Up next</div>
+							<div className="font-medium text-primary">{nextTitle}</div>
+							{input.nextHint && <p className="mt-0.5 text-sm text-secondary">{input.nextHint}</p>}
 						</div>
 						{live ? (
-							<Button data-testid="concept-continue" className="shrink-0" onClick={() => onContinue(nextTitle)}>
+							<Button data-testid="concept-continue" onClick={() => onContinue(nextTitle)}>
 								Continue
 								<ArrowRightIcon aria-hidden />
 							</Button>
 						) : (
-							<span className="shrink-0 text-xs text-muted-foreground">Continued</span>
+							<span className="shrink-0 text-xs text-secondary">Continued</span>
 						)}
 					</div>
 				) : (
-					<div className="flex items-center gap-2 text-sm text-foreground">
-						<FlagIcon className="size-4 text-primary" aria-hidden />
+					<div className="flex items-center gap-2 text-sm text-primary">
+						<FlagIcon className="size-4 text-accent" aria-hidden />
 						You've finished every concept in this plan.
 					</div>
 				)}

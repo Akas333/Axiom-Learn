@@ -4,6 +4,7 @@
  * the onboarding walkthrough.
  */
 
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import type { LearnerSettings } from "@/src/core";
 import { notifySettingsSaved } from "@/components/settings-signal";
@@ -56,7 +57,7 @@ export function LearnerSection({
 				</div>
 			</SettingsGroup>
 			<SettingsGroup label="Notes for your tutor">
-				<p className="mb-3 text-sm text-muted-foreground">
+				<p className="mb-3 text-sm text-secondary">
 					Anything else: your grade, what you're studying for, what you already know, how you like to learn.
 				</p>
 				<NotesField
@@ -68,15 +69,8 @@ export function LearnerSection({
 				/>
 			</SettingsGroup>
 			<div className="mt-8 flex items-center gap-4">
-				<button
-					type="button"
-					data-testid="learner-replay"
-					onClick={openOnboarding}
-					className="rounded-lg border border-border px-3 py-2 text-[15px] text-foreground transition-colors hover:bg-(--pill)"
-				>
-					Replay the intro
-				</button>
-				<span className="text-sm text-muted-foreground" role="status">
+				<Button size="sm" variant="secondary" data-testid="learner-replay" onClick={openOnboarding}>Replay the intro</Button>
+				<span className="text-sm text-secondary" role="status">
 					{status === "saving" ? "Saving…" : status === "saved" ? "Saved" : status === "idle" ? "" : status}
 				</span>
 			</div>

@@ -32,7 +32,7 @@ function render(draft: { confidenceSet?: boolean; dontKnow?: boolean }) {
 	);
 }
 
-const submitDisabled = (html: string) => /<button[^>]*disabled=""[^>]*>Submit answer/.test(html);
+const submitDisabled = (html: string) => /<button[^>]*disabled=""[^>]*>[\s\S]*?Submit answer/.test(html);
 
 describe("confidence is required", () => {
 	it("blocks Submit and asks how sure until confidence is set", () => {

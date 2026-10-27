@@ -1,5 +1,14 @@
-import { dueOrder, reviewEventsOf, reviewStates, type NodeReviewState, type ReviewEvent } from "../core/review.ts";
+import {
+	dueOrder,
+	masteryStateOf,
+	reviewEventsOf,
+	reviewStates,
+	type MasteryState,
+	type NodeReviewState,
+	type ReviewEvent,
+} from "../core/review.ts";
 import { stores } from "./stores.ts";
+import { cachedAnkiReviewEvents } from "./anki.ts";
 
 /**
  * The spaced-review read (GET /api/review, and the practice session
@@ -12,6 +21,7 @@ import { stores } from "./stores.ts";
 export interface ReviewNode extends NodeReviewState {
 	name: string;
 	statement: string;
+	state: MasteryState;
 }
 
 export interface ReviewView {
@@ -27,8 +37,10 @@ export function allReviewEvents(): ReviewEvent[] {
 	for (const summary of stores.chatStore.listChats()) {
 		const record = stores.chatStore.getChat(summary.id);
 		if (!record || record.kind !== "practice") continue;
-		events.push(...reviewEventsOf(record.messages));
+		events.push(...reviewEventsOf(record.messages, summary.id));
 	}
+	// Flashcard reviews from the learner's Anki deck (server/anki.ts).
+	events.push(...cachedAnkiReviewEvents());
 	return events;
 }
 
@@ -42,7 +54,7 @@ export function reviewView(now = Date.now()): ReviewView {
 	const nodes: ReviewNode[] = [];
 	for (const state of reviewStateMap(now).values()) {
 		const node = byId.get(state.nodeId);
-		if (node) nodes.push({ ...state, name: node.name, statement: node.statement });
+		if (node) nodes.push({ ...state, name: node.name, statement: node.statement, state: masteryStateOf(state) });
 	}
 	const due = dueOrder(nodes) as ReviewNode[];
 	return { now, nodes, due };

@@ -5,6 +5,7 @@
  */
 import * as activityAbort from "./routes/activity-abort.ts";
 import * as activity from "./routes/activity.ts";
+import * as anki from "./routes/anki.ts";
 import * as chat from "./routes/chat.ts";
 import * as chatsIdArtifactUi from "./routes/chats-id-artifact-ui.ts";
 import * as chatsIdDismiss from "./routes/chats-id-dismiss.ts";
@@ -63,6 +64,8 @@ export const API_ROUTES: readonly ApiRoute[] = [
 	{ path: "/api/events", handlers: { GET: events.GET as RouteHandler } },
 	{ path: "/api/graph/costs", handlers: { GET: graphCosts.GET as RouteHandler } },
 	{ path: "/api/review", handlers: { GET: review.GET as RouteHandler } },
+	{ path: "/api/anki", handlers: { GET: anki.GET as RouteHandler } },
+	{ path: "/api/anki/sync", handlers: { POST: anki.POST as RouteHandler } },
 	{ path: "/api/graph/coverage/extract", handlers: { POST: graphCoverageExtract.POST as RouteHandler } },
 	{ path: "/api/graph/import", handlers: { POST: graphImport.POST as RouteHandler } },
 	{ path: "/api/graph/nodes/:id", handlers: { DELETE: graphNodesId.DELETE as RouteHandler } },

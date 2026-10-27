@@ -15,6 +15,7 @@
  * both. Detection belongs to the designed wave.
  */
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import {
 	KEYBOARD_ACTIONS,
@@ -100,7 +101,7 @@ export function KeyboardSection() {
 				if (!actions.length) return null;
 				return (
 					<div key={scope} data-testid={`kbd-scope-${scope}`}>
-						<p className="mb-1 text-xs text-muted-foreground/70">{label}</p>
+						<p className="mb-1 text-xs text-secondary/70">{label}</p>
 						<div className="flex flex-col gap-2">
 							{actions.map((def) => {
 								const effective = overrides[def.id] ?? def.binding;
@@ -116,32 +117,12 @@ export function KeyboardSection() {
 												{rebinding === def.id ? "Press keys…" : formatBinding(effective)}
 											</kbd>
 											{def.displayOnly ? null : rebinding === def.id ? (
-												<button
-													type="button"
-													onClick={() => setRebinding(null)}
-													className="text-xs text-muted-foreground/70 underline-offset-2 hover:text-foreground hover:underline"
-												>
-													Cancel
-												</button>
+												<Button size="sm" variant="ghost" onClick={() => setRebinding(null)}>Cancel</Button>
 											) : (
 												<>
-													<button
-														type="button"
-														onClick={() => setRebinding(def.id)}
-														data-testid={`kbd-rebind-${def.id}`}
-														className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-													>
-														Rebind
-													</button>
+													<Button size="sm" variant="ghost" onClick={() => setRebinding(def.id)} data-testid={`kbd-rebind-${def.id}`}>Rebind</Button>
 													{overridden(def.id) && (
-														<button
-															type="button"
-															onClick={() => resetOne(def.id)}
-															data-testid={`kbd-reset-${def.id}`}
-															className="text-xs text-muted-foreground/70 underline-offset-2 hover:text-foreground hover:underline"
-														>
-															Reset
-														</button>
+														<Button size="sm" variant="ghost" onClick={() => resetOne(def.id)} data-testid={`kbd-reset-${def.id}`}>Reset</Button>
 													)}
 												</>
 											)}
@@ -154,15 +135,8 @@ export function KeyboardSection() {
 				);
 			})}
 			<div className="mt-1 flex items-center justify-between">
-				<span className="text-xs text-muted-foreground/70">Stored on this device (lh:keymap) — overrides only.</span>
-				<button
-					type="button"
-					onClick={resetAll}
-					data-testid="kbd-reset-all"
-					className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-				>
-					Reset all to defaults
-				</button>
+				<span className="text-xs text-secondary/70">Stored on this device (lh:keymap) — overrides only.</span>
+				<Button size="sm" variant="ghost" onClick={resetAll} data-testid="kbd-reset-all">Reset all to defaults</Button>
 			</div>
 		</>
 	);

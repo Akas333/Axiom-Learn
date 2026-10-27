@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import { KeyboardIcon, MicIcon } from "lucide-react";
 import { DictationControl, LevelDots, useDictationContext } from "@/components/dictation";
 import { useHandsFreePref, useVoiceThinking } from "@/components/voice-thinking";
@@ -19,7 +20,7 @@ import { cn } from "@/lib/utils";
  * "Talk" button brings listening back.
  */
 export const THINKING_TEXTAREA =
-	"field-sizing-content lh-input max-h-48 w-full resize-none bg-transparent px-3 py-1 outline-none placeholder:text-muted-foreground/70";
+	"field-sizing-content lh-input max-h-48 w-full resize-none bg-transparent px-3 py-1 outline-none placeholder:text-secondary/70";
 
 export function ThinkingField({
 	label,
@@ -65,17 +66,17 @@ export function ThinkingField({
 				"rounded-2xl border bg-card transition-[border-color,box-shadow] duration-200",
 				listening
 					? cn(
-							"border-primary/50 [&_textarea]:placeholder:text-transparent",
-							speaking && "border-primary shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_18%,transparent)]",
+							"border-accent-bg/50 [&_textarea]:placeholder:text-transparent",
+							speaking && "border-accent-bg shadow-[0_0_0_4px_color-mix(in_srgb,var(--color-accent)_18%,transparent)]",
 						)
-					: "border-input/70 focus-within:border-primary/50",
+					: "border-strong/70 focus-within:border-accent-bg/50",
 				className,
 			)}
 		>
-			<div className="flex items-center gap-2 px-3 pt-2.5 pb-0.5 text-xs font-medium text-muted-foreground">
+			<div className="flex items-center gap-2 px-3 pt-2.5 pb-0.5 text-xs font-medium text-secondary">
 				<span>{label}</span>
 				{listening && (
-					<span className="flex items-center gap-1.5 text-(--primary-soft)" data-testid="voice-status">
+					<span className="flex items-center gap-1.5 text-primary" data-testid="voice-status">
 						<span
 							className={cn("size-1.5 rounded-full bg-current", speaking ? "animate-pulse" : "opacity-60")}
 							aria-hidden
@@ -93,37 +94,21 @@ export function ThinkingField({
 								levelRef={voice.levelRef}
 								active={listening}
 								count={12}
-								className={speaking ? "text-(--primary-soft)" : "text-muted-foreground/60"}
+								className={speaking ? "text-primary" : "text-secondary/60"}
 							/>
-							<span className="min-w-0 truncate text-sm text-foreground/80">
+							<span className="min-w-0 truncate text-sm text-primary/80">
 								{listeningPrompt}
 							</span>
 						</div>
 					) : (
-						<span aria-hidden className="min-w-0 flex-1 truncate pl-1.5 text-xs text-muted-foreground">
+						<span aria-hidden className="min-w-0 flex-1 truncate pl-1.5 text-xs text-secondary">
 							{hint}
 						</span>
 					)}
 					{listening ? (
-						<button
-							type="button"
-							onClick={voice.typeInstead}
-							data-testid="voice-type-instead"
-							className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
-						>
-							<KeyboardIcon className="size-4" />
-							Type instead
-						</button>
+						<Button size="sm" variant="ghost" onClick={voice.typeInstead} data-testid="voice-type-instead" className="shrink-0"><KeyboardIcon className="size-4" />Type instead</Button>
 					) : canTalkAgain ? (
-						<button
-							type="button"
-							onClick={voice.listenAgain}
-							data-testid="voice-talk"
-							className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
-						>
-							<MicIcon className="size-4" />
-							Talk
-						</button>
+						<Button size="sm" variant="ghost" onClick={voice.listenAgain} data-testid="voice-talk" className="shrink-0"><MicIcon className="size-4" />Talk</Button>
 					) : (
 						<DictationControl show={mic} />
 					)}

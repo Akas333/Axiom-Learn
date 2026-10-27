@@ -2,13 +2,9 @@
  * The Appearance + Graph sections (thin settings wave).
  *
  * Appearance controls resolve against the factory in the provider; writes
- * PUT the whole appearance section and hand the delta back so the CSS
- * variables move IMMEDIATELY (the section's whole point — it must DO
- * something). Hex inputs commit on blur/Enter; the background derives the
- * raised/accent/edge palette in code (components/settings/appearance.tsx).
- * Mode is dark-only this wave: control rendered DISABLED with a note — the
- * light palette is the design wave's work, and a lying control is worse
- * than an honest disabled one.
+ * PUT the whole appearance section and hand the delta back so changes
+ * apply immediately. Colors come from the Astryx neutral theme; the only
+ * color choice is light or dark mode.
  *
  * Graph graying (owner, 2026-09-20) follows the graph viewer's render-panel
  * convention: the whole row dims when a parent is off (stored values
@@ -29,9 +25,8 @@
  * as text".
  */
 
-import { CheckIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { DEFAULT_THEME_ID, THEMES, themeById } from "./themes.ts";
+import { PICKER_TRIGGER } from "@/components/ui/picker-trigger";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
 import { useEffect, useRef, useState } from "react";
 import {
 	EXTRACTION_CHUNK_TOKENS_FLOOR,
@@ -43,7 +38,7 @@ import { MenuShell } from "@/components/menu-shell";
 import { Hint } from "@/components/ui/hint";
 import { useAppearance } from "./appearance.tsx";
 import { FontMenuList } from "./model-menu";
-import { CommitInput, SettingsRow, ThinSelect, Toggle } from "./controls.tsx";
+import { CommitInput, SettingsRow, Toggle } from "./controls.tsx";
 
 /** The factory reading family — the DEFAULT row's identity (unset =
  *  this). Exported for tests. */
@@ -188,75 +183,16 @@ export function AppearanceSection({
 
 	return (
 		<>
-			{/* Theme: preview cards for the standard palettes. Picking one
-			    clears a custom background so the theme shows as designed. */}
-			<div className="border-b border-border/60 py-4" data-testid="row-theme">
-				<div className="text-[15px] text-foreground">Theme</div>
-				<div className="mt-1 text-sm text-muted-foreground">Colors for the whole app. Light themes switch the app to light mode.</div>
-				<div role="radiogroup" aria-label="Theme" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-					{THEMES.map((t) => {
-						const selected = themeById(appearance?.theme).id === t.id;
-						const p = t.palette;
-						return (
-							<button
-								key={t.id}
-								type="button"
-								role="radio"
-								aria-checked={selected}
-								data-testid={`theme-${t.id}`}
-								onClick={() =>
-									onSectionChange({
-										...appearance,
-										theme: t.id === DEFAULT_THEME_ID ? null : t.id,
-										mode: t.mode,
-										background: null,
-									})
-								}
-								className={cn(
-									"group flex flex-col gap-2 rounded-xl p-1.5 text-left transition-colors hover:bg-(--pill)",
-									selected && "bg-(--pill)",
-								)}
-							>
-								{/* Mini window in the theme's own colors. */}
-								<span
-									aria-hidden
-									className={cn(
-										"relative block h-20 overflow-hidden rounded-lg border",
-										selected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : "",
-									)}
-									style={{ background: p.background, borderColor: p.border }}
-								>
-									<span className="absolute inset-y-0 left-0 w-1/4" style={{ background: p.card, borderRight: `1px solid ${p.border}` }} />
-									<span className="absolute left-[32%] top-3 h-1.5 w-1/2 rounded-full" style={{ background: p.foreground, opacity: 0.85 }} />
-									<span className="absolute left-[32%] top-6 h-1.5 w-2/5 rounded-full" style={{ background: p.mutedForeground }} />
-									<span className="absolute left-[32%] top-9 h-1.5 w-1/3 rounded-full" style={{ background: p.mutedForeground, opacity: 0.7 }} />
-									<span
-										className="absolute bottom-2.5 left-[32%] right-3 h-4 rounded-md"
-										style={{ background: p.card, border: `1px solid ${p.border}` }}
-									/>
-									<span className="absolute bottom-3.5 right-4 size-2 rounded-full" style={{ background: p.primary }} />
-								</span>
-								<span className="flex items-center justify-between gap-1 px-1 text-sm text-foreground">
-									<span className="truncate">{t.label}</span>
-									{selected && <CheckIcon className="size-3.5 shrink-0 text-primary" />}
-								</span>
-							</button>
-						);
-					})}
-				</div>
-			</div>
-			<SettingsRow
-				label="Background"
-				hint={`Empty = the theme's own (${themeById(appearance?.theme).palette.background})`}
-				testid="row-background"
-			>
-				<CommitInput
-					value={appearance?.background ?? ""}
-					placeholder={themeById(appearance?.theme).palette.background}
-					ariaLabel="background hex"
-					testid="input-background"
-					onCommit={(v) => onSectionChange({ ...appearance, background: v === "" ? null : v })}
-				/>
+			<SettingsRow label="Mode" hint="Astryx neutral theme, light or dark." testid="row-mode">
+				<SegmentedControl
+					label="Color mode"
+					size="sm"
+					value={resolved.mode}
+					onChange={(mode) => onSectionChange({ ...appearance, mode: mode === "light" ? "light" : "dark" })}
+				>
+					<SegmentedControlItem value="dark" label="Dark" />
+					<SegmentedControlItem value="light" label="Light" />
+				</SegmentedControl>
 			</SettingsRow>
 			<SettingsRow
 				label="Reading font"
@@ -280,10 +216,10 @@ export function AppearanceSection({
 								aria-expanded={fontMenuOpen}
 								data-testid="font-trigger"
 								onClick={openFontMenu}
-								className="flex h-7 min-w-20 items-center gap-1 rounded-sm border border-border bg-background px-1.5 font-ui text-xs text-foreground transition-colors hover:border-muted-foreground/50"
+								className={PICKER_TRIGGER + " min-w-40"}
 							>
 								<span className="min-w-0 flex-1 truncate">{appearance?.fontFamily || DEFAULT_READING_FONT}</span>
-								<span aria-hidden className="text-muted-foreground">
+								<span aria-hidden className="text-secondary">
 									▾
 								</span>
 							</button>

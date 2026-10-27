@@ -151,7 +151,7 @@ export function PlanMap({
 						fill="none"
 						strokeWidth={1.5}
 						strokeLinecap="round"
-						className={cn("transition-colors duration-500", lit ? "stroke-foreground/45" : "stroke-border")}
+						className={cn("transition-colors duration-500", lit ? "stroke-primary/45" : "stroke-border")}
 					/>
 				);
 			})}
@@ -172,29 +172,29 @@ export function PlanMap({
 					>
 						<title>{`${n}. ${titles.get(id) ?? id}`}</title>
 						{progress === "current" && (
-							<circle r={R + 4} className="fill-primary/60" filter="url(#plan-map-glow)">
+							<circle r={R + 4} className="fill-accent-bg/60" filter="url(#plan-map-glow)">
 								<animate attributeName="opacity" values="0.9;0.35;0.9" dur="2.4s" repeatCount="indefinite" />
 							</circle>
 						)}
-						{viewing && <circle r={R + 4.5} fill="none" strokeWidth={1.5} className="stroke-foreground/70" />}
+						{viewing && <circle r={R + 4.5} fill="none" strokeWidth={1.5} className="stroke-primary/70" />}
 						<circle
 							r={R}
 							strokeWidth={1.5}
 							className={cn(
 								"transition-colors duration-500",
-								progress === "done" && "fill-foreground stroke-foreground",
-								progress === "current" && "fill-primary stroke-primary",
+								progress === "done" && "fill-primary stroke-primary",
+								progress === "current" && "fill-accent-bg stroke-accent-bg",
 								progress === "upcoming" && "fill-card stroke-border",
 							)}
 						/>
 						{progress === "done" ? (
-							<path d="M -4.5 0.5 L -1.5 3.5 L 4.5 -3" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="stroke-background" />
+							<path d="M -4.5 0.5 L -1.5 3.5 L 4.5 -3" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="stroke-body" />
 						) : (
 							<text
 								textAnchor="middle"
 								dy="0.35em"
 								fontSize={11}
-								className={cn("tabular-nums", progress === "current" ? "fill-primary-foreground font-medium" : "fill-muted-foreground")}
+								className={cn("tabular-nums", progress === "current" ? "fill-on-accent font-medium" : "fill-secondary")}
 							>
 								{n}
 							</text>
@@ -205,7 +205,7 @@ export function PlanMap({
 								textAnchor="middle"
 								y={R + 13 + i * 11}
 								fontSize={9.5}
-								className={cn(progress === "upcoming" ? "fill-muted-foreground/80" : "fill-foreground", (progress === "current" || viewing) && "font-medium")}
+								className={cn(progress === "upcoming" ? "fill-secondary/80" : "fill-primary", (progress === "current" || viewing) && "font-medium")}
 							>
 								{line}
 							</text>

@@ -1,114 +1,39 @@
-@import "tailwindcss";
-
-@custom-variant dark (&:is(.dark *));
-
 /*
- * THE SKIN — wave 5. Design tokens, the single place to restyle the app.
- *
- * Mathematical soundness, per the owner's brief:
- *   - Tailwind's built-in 0.25rem (4px) spacing scale IS the rhythm — every
- *     padding/margin/gap in the app uses whole units of a 4px base.
- *   - The type scale below is a declared modular ladder (each --text-* token
- *     carries its own line-height); components never invent pixel sizes.
- *   - Radii ladder is 4 / 8 / 12 / 16px multiples of the 4px base.
- *   - Emphasis colors live in tokens (--lh-ink-strong / --lh-ink-italic) so a
- *     future settings UI reassigns them (configurable per the owner).
+ * UI library: Astryx (@astryxdesign/core) with the neutral theme.
+ * Layer order follows Astryx's Tailwind setup: Astryx components sit
+ * above Tailwind's preflight, Tailwind utilities win over both. The
+ * tailwind-theme bridge maps Astryx tokens to utilities (text-accent,
+ * text-muted, bg-body, bg-card, bg-surface, border-border, ...).
+ * The neutral theme stylesheet itself is imported by astryx-themes.ts.
  */
+@layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
 
-/* The no-ring law (owner, UI round 2026-10-01): the browser's default
-   focus/focus-visible outline appears NOWHERE in the app. Pointer focus
-   never showed it; any keypress while a clicked element still held focus
-   DID (:focus-visible re-evaluates on key input — a clicked sidebar
-   session lit up when the quiz's ←/→ were pressed). Surfaces carry their
-   own hover/active/selected affordances; the dock's keyboard walk uses
-   its own ring utilities, unaffected by an outline reset. */
-*:focus,
-*:focus-visible {
-	outline: none;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "@astryxdesign/core/reset.css";
+@import "@astryxdesign/core/astryx.css";
+@import "@astryxdesign/core/tailwind-theme.css";
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* No browser focus outline on hand-built surfaces. Kept in the base
+   layer so Astryx components (a higher layer) still draw their focus
+   rings. */
+@layer base {
+	*:focus,
+	*:focus-visible {
+		outline: none;
+	}
 }
 
-/* Palette: near-black page #111112, raised cards #1F1F22, quiet edges,
-   off-white text, one blue accent (#0064E0) for primary actions.
-   Type: Figtree everywhere (UI, prose, titles); JetBrains Mono for code. */
+/* App-only tokens that Astryx doesn't cover. Colors come from Astryx. */
 :root {
-	color-scheme: dark;
-	--font-figtree: "Figtree";
-	--font-jetbrains: "JetBrains Mono";
-	--radius: 12px;
-	--background: #111112;
-	--foreground: #f2f4f6;
-	--card: #1f1f22;
-	--card-foreground: #f2f4f6;
-	--popover: #1f1f22;
-	--popover-foreground: #f2f4f6;
-	--primary: #0064e0;
-	--primary-foreground: #ffffff;
-	--secondary: #1f1f22;
-	--secondary-foreground: #f2f4f6;
-	--muted: #1f1f22;
-	--muted-foreground: #9fa4ab;
-	--accent: #2b2c30;
-	--accent-foreground: #f2f4f6;
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: #2e3034;
-	--input: #3a3c41;
-	--ring: #0064e0;
-	/* Translucent grey pill (secondary buttons, segmented tracks). */
-	--pill: rgba(223, 226, 229, 0.2);
-	--pill-hover: rgba(223, 226, 229, 0.28);
-	/* Light blue for the active nav row's text and icon. */
-	--primary-soft: #4ca3ff;
-	/* Emphasis inks default to the REGULAR TEXT COLOR (owner ruling,
-	   appearance wave 2026-09-26 — the old #ee928c/#6fa9d6 factory
-	   emphasis colors are gone). Explicit overrides land via the
-	   appearance settings vars. */
-	--lh-ink-strong: var(--foreground);
-	--lh-ink-italic: var(--foreground);
-	/* THE READING SIZE = the ladder's 16px rung (--text-lg). Can't be
-	   var()-linked: @theme inline inlines literals into utilities without
-	   emitting runtime vars — so this is the one documented duplication:
-	   change one, change both. (owner, typography round 4: snapped from
-	   the reskin's hand-tuned 16.5 to the ladder's 16.) */
-	--lh-prose-size: 16px;
-	--lh-prose-leading: 1.5;
-	/* Markdown heading weight (appearance settings; 900 = the Black cut). */
-	--lh-heading-weight: 600;
-}
-
-/* The app is always dark (<html class="dark">); mirror the same values so
-   the block stays coherent under Tailwind's variant. */
-.dark {
-	--background: #111112;
-	--foreground: #f2f4f6;
-	--card: #1f1f22;
-	--card-foreground: #f2f4f6;
-	--popover: #1f1f22;
-	--popover-foreground: #f2f4f6;
-	--primary: #0064e0;
-	--primary-foreground: #ffffff;
-	--secondary: #1f1f22;
-	--secondary-foreground: #f2f4f6;
-	--muted: #1f1f22;
-	--muted-foreground: #9fa4ab;
-	--accent: #2b2c30;
-	--accent-foreground: #f2f4f6;
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: #2e3034;
-	--input: #3a3c41;
-	--ring: #0064e0;
-	/* Translucent grey pill (secondary buttons, segmented tracks). */
-	--pill: rgba(223, 226, 229, 0.2);
-	--pill-hover: rgba(223, 226, 229, 0.28);
-	/* Light blue for the active nav row's text and icon. */
-	--primary-soft: #4ca3ff;
-	/* Same emphasis ruling as the block above: unset = text color. */
-	--lh-ink-strong: var(--foreground);
-	--lh-ink-italic: var(--foreground);
-	/* THE READING SIZE = the ladder's 16px rung (--text-lg). Can't be
-	   var()-linked: @theme inline inlines literals into utilities without
-	   emitting runtime vars — so this is the one documented duplication:
-	   change one, change both. (owner, typography round 4: snapped from
-	   the reskin's hand-tuned 16.5 to the ladder's 16.) */
+	--radius: var(--radius-container);
+	/* Emphasis inks default to the regular text color. */
+	--lh-ink-strong: var(--color-text-primary);
+	--lh-ink-italic: var(--color-text-primary);
+	/* Reading size for teaching prose. */
 	--lh-prose-size: 16px;
 	--lh-prose-leading: 1.5;
 	/* Markdown heading weight (appearance settings; 900 = the Black cut). */
@@ -125,69 +50,11 @@
 }
 
 @theme inline {
-	/* Fonts: chrome = JetBrains Mono, prose = Source Sans 3, titles = CMU
-	   Serif bold. The JetBrains/SourceSans variables attach in app/layout.tsx.
-	   (owner, typography round) The Tailwind defaults are ALIASED to the app
-	   fonts: `font-mono`/`font-sans` utilities would otherwise fall to the
-	   SYSTEM stacks — a fourth font the app never chose — and streamdown's
-	   code-block chrome + mermaid-error + demo-card all use them. */
-	--font-ui: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
-	--font-prose: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
-	--font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
-	--font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+	/* App font roles, all on Astryx's body/code families. */
+	--font-ui: var(--font-family-body);
+	--font-prose: var(--font-family-body);
 	/* The Kapany wordmark only (sidebar band). Loaded in index.html. */
-	--font-brand: "Unbounded", var(--font-figtree), ui-sans-serif, sans-serif;
-	/* The modular type ladder — each size carries its own line-height.
-	   Component sizes must pull from this ladder. (owner, typography
-	   round 4: the 10px rung is merged into 11 — one pixel apart was a
-	   distinction with no visible difference, and 10px sits at the mono
-	   legibility floor; quiet labels get their quiet from color +
-	   tracking, not a notch of size. Reading prose = the 16px rung via
-	   --lh-prose-size.) */
-	/* --font-title lives in the NON-inline @theme below: inline tokens get
-	   their literal values baked into the utilities (.font-title{font-family:
-	   lh-cmu,serif}), which made the appearance "session names in serif"
-	   toggle write a runtime --font-title no consumer ever read (owner, fix
-	   wave: toggle looked dead). Non-inline emits :root { --font-title: … }
-	   and the utility reads var(--font-title) — appearance overrides win. */
-	--text-xs: 12px;
-	--text-xs--line-height: 1.4;
-	--text-sm: 13px;
-	--text-sm--line-height: 1.4;
-	--text-base: 15px;
-	--text-base--line-height: 1.45;
-	--text-lg: 16px;
-	--text-lg--line-height: 1.45;
-	--text-xl: 20px;
-	--text-xl--line-height: 1.4;
-	--text-2xl: 28px;
-	--text-2xl--line-height: 1.3;
-	--text-3xl: 40px;
-	--text-3xl--line-height: 1.2;
-	/* Radii ladder — 4/8/12/16 multiples of the 4px base. */
-	--radius-sm: 8px;
-	--radius-md: 12px;
-	--radius-lg: 16px;
-	--radius-xl: 20px;
-	--radius: 12px;
-	--color-background: var(--background);
-	--color-foreground: var(--foreground);
-	--color-card: var(--card);
-	--color-card-foreground: var(--card-foreground);
-	--color-popover: var(--popover);
-	--color-popover-foreground: var(--popover-foreground);
-	--color-primary: var(--primary);
-	--color-primary-foreground: var(--primary-foreground);
-	--color-secondary: var(--secondary);
-	--color-secondary-foreground: var(--secondary-foreground);
-	--color-muted: var(--muted);
-	--color-muted-foreground: var(--muted-foreground);
-	--color-accent: var(--accent);
-	--color-accent-foreground: var(--accent-foreground);
-	--color-destructive: var(--destructive);
-	--color-border: var(--border);
-	--color-input: var(--input);
-	--color-ring: var(--ring);
+	--font-brand: "Unbounded", var(--font-family-body);
 }
 
 * {
@@ -219,8 +86,8 @@ body {
 }
 
 body {
-	background: var(--color-background);
-	color: var(--color-foreground);
+	background: var(--color-background-body);
+	color: var(--color-text-primary);
 	font-family: var(--font-ui);
 	-webkit-text-size-adjust: 100%;
 	text-size-adjust: 100%;
@@ -335,7 +202,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background: var(--color-muted-foreground);
+	background: var(--color-text-secondary);
 }
 
 /* Dock variant swap — quick fade/rise on content change; the shell's HEIGHT
@@ -371,7 +238,7 @@ body {
 /* Token the streamdown utilities reference (code-block/mermaid chrome uses
  * bg-sidebar / border-sidebar): map it onto the app's card surface. */
 @theme inline {
-	--color-sidebar: var(--card);
+	--color-sidebar: var(--color-background-card);
 }
 
 /* Mermaid diagrams: keep wide charts inside the content column. Mermaid
@@ -400,8 +267,8 @@ body {
    2026-09-19) plus a subtle hairline outline. (md-blocks renders its own
    hover copy corner.) */
 [data-streamdown="code-block"] {
-	border: 1px solid var(--border);
-	background: color-mix(in oklab, var(--background) 86%, black);
+	border: 1px solid var(--color-border);
+	background: color-mix(in oklab, var(--color-background-body) 86%, black);
 	border-radius: 0.75rem;
 	padding: 0.375rem;
 }
@@ -420,7 +287,7 @@ body {
    edges). border-collapse merges the outer border with the row rules, so
    no edge doubles. (md-blocks supplies the wrapper + the copy corner.) */
 [data-streamdown="table"] {
-	border: 1px solid var(--border);
+	border: 1px solid var(--color-border);
 	/* Tables HUG their contents (owner, callout round 2026-10-07): no more
 	   full-width stretch with dead space. max-content sizes to the cells
 	   (width:auto would still stretch — the classic table trap). No
@@ -440,14 +307,14 @@ body {
    its row (owner ask, 2026-09-19) — border-collapse merges it with the row
    rules and the outer border, no doubled lines anywhere. */
 [data-streamdown="table"] :where(th, td):not(:first-child) {
-	border-left: 1px solid var(--border);
+	border-left: 1px solid var(--color-border);
 }
 [data-streamdown="table-header"] {
 	background: transparent;
-	border-bottom: 1px solid var(--border);
+	border-bottom: 1px solid var(--color-border);
 }
 [data-streamdown="table-body"] [data-streamdown="table-row"] {
-	border-bottom: 1px solid var(--border);
+	border-bottom: 1px solid var(--color-border);
 }
 
 /* The mermaid focus overlay's chart wrapper: the svg fills the wrapper
@@ -628,7 +495,7 @@ body {
    session-name-serif toggle overrides this var at runtime, so the
    .font-title utility must read it through var(), not carry a baked copy. */
 @theme {
-	--font-title: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+	--font-title: var(--font-family-heading);
 }
 
 /* Card enter (owner round, 2026-10-05): the transcript cards' one-shot
@@ -662,8 +529,8 @@ body {
 	scroll-margin-top: 1rem;
 }
 .lh-source-highlight {
-	background-color: var(--accent);
-	outline: 1px solid var(--border);
+	background-color: var(--color-overlay-hover);
+	outline: 1px solid var(--color-border);
 	border-radius: 0.25rem;
 }
 
@@ -671,11 +538,11 @@ body {
    the text color. Falls back to solid text where stroke is unsupported. */
 .lh-outline-text {
 	color: transparent;
-	-webkit-text-stroke: 1.5px var(--foreground);
+	-webkit-text-stroke: 1.5px var(--color-text-primary);
 }
 @supports not (-webkit-text-stroke: 1px black) {
 	.lh-outline-text {
-		color: var(--foreground);
+		color: var(--color-text-primary);
 	}
 }
 
@@ -697,9 +564,9 @@ body {
    the stacked-card pattern. */
 @layer components {
 	.lh-panel-card {
-		border: 1px solid var(--border);
+		border: 1px solid var(--color-border);
 		border-radius: 1rem;
-		background: color-mix(in oklab, var(--card) 55%, transparent);
+		background: color-mix(in oklab, var(--color-background-card) 55%, transparent);
 		padding: 0.75rem 1rem;
 	}
 }
@@ -709,7 +576,7 @@ body {
    rounded, taller, 14px — so every control in a row matches. */
 [data-testid="settings-dialog"] :is(button, select, input, textarea).rounded-sm.border-border {
 	border-radius: 0.5rem;
-	background-color: var(--pill);
+	background-color: var(--color-overlay-hover);
 }
 [data-testid="settings-dialog"] :is(button, select, input).h-7.rounded-sm.border-border {
 	height: 2.25rem;

@@ -1,13 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { Tooltip } from "@/components/ui/tooltip"
 import { bindingForAction, formatBinding, type KeyAction } from "@/src/core"
 
 /**
- * The tooltip composition for icon and pill controls (tooltip wave, owner
- * 2026-09-25; subtlety round same day). The styled Radix tooltip carries
- * the label, with the control's shortcut appended in parentheses when
+ * The tooltip composition for icon and pill controls. The Astryx tooltip
+ * carries the label, with the control's shortcut appended in parentheses when
  * it has one ("Dictate (⌘D)") — the owner call: the em-dash suffix read
  * as too much air.
  *
@@ -16,8 +15,7 @@ import { bindingForAction, formatBinding, type KeyAction } from "@/src/core"
  * `binding` for surface-owned keys with no registry entry ("escape" for a
  * dialog close, "enter" for a form submit).
  *
- * children must be a single element able to take a ref (TooltipTrigger
- * asChild merges onto it — no wrapper DOM, no layout shift).
+ * children is the trigger element the tooltip anchors to.
  */
 
 interface HintProps {
@@ -45,11 +43,8 @@ export function hintText(label: string, action?: KeyAction, binding?: string): s
 
 export function Hint({ label, action, binding, side = "top", children }: HintProps) {
 	return (
-		<TooltipProvider>
-			<Tooltip>
-				<TooltipTrigger asChild>{children}</TooltipTrigger>
-				<TooltipContent side={side}>{hintText(label, action, binding)}</TooltipContent>
-			</Tooltip>
-		</TooltipProvider>
+		<Tooltip content={hintText(label, action, binding)} side={side}>
+			{children}
+		</Tooltip>
 	)
 }

@@ -1,4 +1,5 @@
 import { NotebookPenIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { derivePlanStatuses, nodeProgress } from "@/src/core";
 import type { PlanTree } from "@/src/core";
 import { blurAfterPointerClick } from "@/components/focus-hygiene";
@@ -35,35 +36,20 @@ export function SummaryOfferBar({ onSummarize, onDismiss }: { onSummarize: () =>
 	return (
 		<div
 			data-testid="summary-offer-bar"
-			className="lh-card-enter my-4 ml-10 flex flex-wrap items-center gap-3 rounded-2xl border border-input/70 bg-card px-4 py-3"
+			className="lh-card-enter my-4 ml-10 flex flex-wrap items-center gap-3 rounded-2xl border border-strong/70 bg-card px-4 py-3"
 		>
 			<div className="mr-auto min-w-0">
-				<div className="text-sm font-semibold text-foreground">You've finished every concept 🎉</div>
-				<div className="text-xs text-muted-foreground">Want a short summary note of everything you learned here?</div>
+				<div className="text-sm font-semibold text-primary">You've finished every concept 🎉</div>
+				<div className="text-xs text-secondary">Want a short summary note of everything you learned here?</div>
 			</div>
-			<button
-				type="button"
-				data-testid="summary-dismiss"
-				onClick={(e) => {
+			<Button size="sm" variant="secondary" data-testid="summary-dismiss" onClick={(e) => {
 					blurAfterPointerClick(e);
 					onDismiss();
-				}}
-				className="inline-flex h-9 items-center gap-1.5 rounded-full bg-(--pill) px-4 text-sm font-medium text-foreground transition-colors hover:bg-(--pill-hover) focus-visible:outline-2 focus-visible:outline-primary"
-			>
-				No thanks
-			</button>
-			<button
-				type="button"
-				data-testid="summary-accept"
-				onClick={(e) => {
+				}}>No thanks</Button>
+			<Button size="sm" variant="primary" data-testid="summary-accept" onClick={(e) => {
 					blurAfterPointerClick(e);
 					onSummarize();
-				}}
-				className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-			>
-				<NotebookPenIcon className="size-4" />
-				Summarize
-			</button>
+				}}><NotebookPenIcon className="size-4" />Summarize</Button>
 		</div>
 	);
 }

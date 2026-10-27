@@ -139,7 +139,7 @@ export function QuestionDock({
 		canonical === "quiz" ? parseQuizInput(input) : canonical === "explain" ? parseExplainInput(input) : parseAskInput(input);
 	if (!parsed) {
 		return (
-			<div data-testid="malformed-question" className="rounded-xl border border-dashed bg-card/60 p-3 text-sm text-muted-foreground">
+			<div data-testid="malformed-question" className="rounded-xl border border-dashed bg-card/60 p-3 text-sm text-secondary">
 				This question arrived malformed — the transcript keeps the retry.
 			</div>
 		);
@@ -224,7 +224,7 @@ export function QuestionDockBar({
 		// options wait behind "Show answer options".
 		return (
 			<div data-testid="teach-check-card" className="dock-variant px-4 pt-3 pb-3">
-				<div className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+				<div className="mb-1 flex items-center gap-2 text-xs font-medium text-secondary">
 					<span>{label ?? toolLabel ?? "Check"}</span>
 					<span aria-hidden>·</span>
 					<span>Think it through, then see the options</span>
@@ -237,7 +237,7 @@ export function QuestionDockBar({
 						type="button"
 						data-testid="teach-check-reveal"
 						onClick={onExpand}
-						className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+						className="flex h-9 items-center gap-1.5 rounded-xl bg-accent-bg px-3.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90"
 					>
 						<PlayIcon className="size-3.5" />
 						Show answer options
@@ -252,14 +252,14 @@ export function QuestionDockBar({
 			type="button"
 			data-testid="question-dock-bar"
 			onClick={onExpand}
-			className="dock-variant flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm transition-colors hover:bg-accent/40"
+			className="dock-variant flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm transition-colors hover:bg-overlay-hover/40"
 		>
-			<span className="shrink-0 text-xs font-medium text-muted-foreground">
+			<span className="shrink-0 text-xs font-medium text-secondary">
 				{label ??
 							toolLabel ??
 							(toolName === "quiz" ? "Check" : toolName === "explain" ? "Explain" : "Question")}
 			</span>
-			<span className="min-w-0 flex-1 truncate text-muted-foreground">{teaserText(question)}</span>
+			<span className="min-w-0 flex-1 truncate text-secondary">{teaserText(question)}</span>
 			<span className="flex shrink-0 items-center gap-1 text-xs font-medium">
 				Answer <ArrowDownIcon className="size-3.5" />
 			</span>
@@ -610,7 +610,7 @@ function QuestionDockForm({
 			    Capped by the measured column (--dock-max-h; the old fixed 55dvh cut
 			    long questions short — owner round, 2026-10-05). */}
 			<div data-session-find-root="" className="max-h-[var(--dock-max-h,55dvh)] overflow-y-auto px-4 pt-3">
-				<div className="mb-1 text-xs font-medium text-muted-foreground">
+				<div className="mb-1 text-xs font-medium text-secondary">
 					{toolName === "probe"
 						? "Probe"
 						: toolName === "recall"
@@ -628,7 +628,7 @@ function QuestionDockForm({
 					<ToolContentResponse>{qd.question}</ToolContentResponse>
 				</div>
 				{qd.context && (
-					<div className="mb-3 text-sm text-muted-foreground">
+					<div className="mb-3 text-sm text-secondary">
 						<ToolContentResponse>{qd.context}</ToolContentResponse>
 					</div>
 				)}
@@ -647,15 +647,15 @@ function QuestionDockForm({
 									onClick={() => toggle(i)}
 									className={cn(
 										"flex items-start gap-3 rounded-lg border px-3 py-2 text-left text-sm outline-none transition-colors",
-										isSel ? "border-primary bg-accent" : "hover:bg-accent/50",
-										i === kbdIdx && !isSel && "ring-1 ring-border bg-accent/40",
+										isSel ? "border-accent-bg bg-overlay-hover" : "hover:bg-overlay-hover/50",
+										i === kbdIdx && !isSel && "ring-1 ring-border bg-overlay-hover/40",
 									)}
 								>
 									<span
 										className={cn(
 											"mt-0.5 flex size-4 shrink-0 items-center justify-center border",
 											qd.mode === "multi-select" ? "rounded-sm" : "rounded-full",
-											isSel ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40",
+											isSel ? "border-accent-bg bg-accent-bg text-on-accent" : "border-secondary/40",
 										)}
 									>
 										{isSel && (
@@ -674,7 +674,7 @@ function QuestionDockForm({
 											// records must not leak either. Same MessageResponse path as the
 											// label (owner, 2026-10-12): descriptions are full markdown —
 											// LaTeX included — not plain text.
-											<ToolContentResponse className="lh-prose block text-xs text-muted-foreground">
+											<ToolContentResponse className="lh-prose block text-xs text-secondary">
 												{opt.description}
 											</ToolContentResponse>
 										)}
@@ -695,16 +695,16 @@ function QuestionDockForm({
 									// Option-row layout + radio circle (owner); the dashed
 									// outline stays — this is the deliberate non-answer.
 									"flex items-start gap-3 rounded-lg border border-dashed px-3 py-2 text-left text-sm outline-none transition-colors",
-									sel.dontKnow ? "border-primary text-foreground" : "text-muted-foreground",
-									kbdIdx === optionCount && !sel.dontKnow && "ring-1 ring-border bg-accent/40",
+									sel.dontKnow ? "border-accent-bg text-primary" : "text-secondary",
+									kbdIdx === optionCount && !sel.dontKnow && "ring-1 ring-border bg-overlay-hover/40",
 								)}
 							>
 								<span
 									className={cn(
 										"mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
 										sel.dontKnow
-											? "border-primary bg-primary text-primary-foreground"
-											: "border-muted-foreground/40",
+											? "border-accent-bg bg-accent-bg text-on-accent"
+											: "border-secondary/40",
 									)}
 								>
 									{sel.dontKnow && <span className="size-1.5 rounded-full bg-current" />}
@@ -722,8 +722,8 @@ function QuestionDockForm({
 								onClick={selectOther}
 								className={cn(
 									"flex items-start gap-3 rounded-lg border px-3 py-2 text-left text-sm outline-none transition-colors",
-									sel.otherSelected ? "border-primary bg-accent" : "border-dashed hover:bg-accent/50",
-									kbdIdx === optionCount && !sel.otherSelected && "ring-1 ring-border bg-accent/40",
+									sel.otherSelected ? "border-accent-bg bg-overlay-hover" : "border-dashed hover:bg-overlay-hover/50",
+									kbdIdx === optionCount && !sel.otherSelected && "ring-1 ring-border bg-overlay-hover/40",
 								)}
 							>
 								<span
@@ -731,8 +731,8 @@ function QuestionDockForm({
 										"mt-0.5 flex size-4 shrink-0 items-center justify-center border",
 										qd.mode === "multi-select" ? "rounded-sm" : "rounded-full",
 										sel.otherSelected
-											? "border-primary bg-primary text-primary-foreground"
-											: "border-muted-foreground/40",
+											? "border-accent-bg bg-accent-bg text-on-accent"
+											: "border-secondary/40",
 									)}
 								>
 									{sel.otherSelected && (
@@ -776,7 +776,7 @@ function QuestionDockForm({
 											}
 									}}
 									placeholder="Type your own answer…"
-									className="lh-input w-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+									className="lh-input w-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-secondary"
 									onClick={(e) => e.stopPropagation()}
 								/>
 							</div>
@@ -805,10 +805,10 @@ function QuestionDockForm({
 							className={cn(
 								"shrink-0 text-xs font-medium",
 								sel.dontKnow
-									? "text-muted-foreground/50"
+									? "text-secondary/50"
 									: needsConfidence
-										? "text-(--primary-soft)"
-										: "text-muted-foreground",
+										? "text-primary"
+										: "text-secondary",
 							)}
 						>
 							{needsConfidence ? "How sure are you?" : "Confidence"}
@@ -860,7 +860,7 @@ function QuestionDockForm({
 								// A click on the resting thumb (50) changes nothing, so
 								// onChange never fires — count the click as choosing it.
 								onClick={() => setConfSet(true)}
-								style={{ color: confSet ? CONFIDENCE_COLORS[confIdx] : "var(--muted-foreground)" }}
+								style={{ color: confSet ? CONFIDENCE_COLORS[confIdx] : "var(--color-text-secondary)" }}
 								className={cn(
 									"absolute inset-0 h-4 w-full cursor-pointer appearance-none bg-transparent outline-none",
 									// Unset: a hollow, pulsing thumb asks to be moved.
@@ -876,14 +876,14 @@ function QuestionDockForm({
 							data-testid="confidence-value"
 							className={cn(
 								"w-9 shrink-0 text-right font-mono text-sm tabular-nums",
-								sel.dontKnow && "text-muted-foreground/50",
+								sel.dontKnow && "text-secondary/50",
 							)}
 						>
 							{sel.dontKnow || !confSet ? "—" : `${CONFIDENCE_STOPS[confIdx]}%`}
 						</span>
 					</div>
 					{askToSayConfidence && (
-						<p className="mt-1.5 text-xs text-(--primary-soft)" data-testid="say-confidence">
+						<p className="mt-1.5 text-xs text-primary" data-testid="say-confidence">
 							Say it out loud — “about 70 percent”, “pretty sure”, “fifty-fifty”
 						</p>
 					)}
@@ -921,7 +921,6 @@ function QuestionDockForm({
 						<Button
 							type="submit"
 							disabled={!canSubmit || compactionRunning}
-							className="h-9 rounded-xl px-3.5 text-sm font-medium"
 						>
 							Submit answer
 						</Button>

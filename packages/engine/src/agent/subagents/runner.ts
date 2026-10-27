@@ -92,6 +92,10 @@ export interface JobRunnerDeps {
 	 *  Injected because the agent layer may not read the key store; absent
 	 *  in tests that inject engines directly (test engines never owe a key). */
 	providerKeyMissing?: (provider: string, tier: ModelSlotName) => ProviderKeyMissing | null;
+	/** The learner-profile block, read FRESH per job (the onboarding /
+	 *  Settings → About you). The demo builder and visual maker make what
+	 *  the learner sees, so they follow the same level as the tutor. */
+	learnerContext?: () => string;
 }
 
 export interface JobRunner {
@@ -429,6 +433,7 @@ export function createJobRunner(deps: JobRunnerDeps): JobRunner {
 					chatId: loop.chatId,
 					onUsage: (usage) => loop.onUsage(piUsageToStep(usage)),
 					onActivity: (line) => jobStore.updateJob(jobId, { activity: line }),
+					learnerContext: deps.learnerContext?.(),
 				},
 			);
 			if (isDemoFailure(result) && stillRunning(jobId))
@@ -465,6 +470,7 @@ export function createJobRunner(deps: JobRunnerDeps): JobRunner {
 					chatId: loop.chatId,
 					onUsage: (usage) => loop.onUsage(piUsageToStep(usage)),
 					onActivity: (line) => jobStore.updateJob(jobId, { activity: line }),
+					learnerContext: deps.learnerContext?.(),
 				},
 			);
 			if (isVisualFailure(result) && stillRunning(jobId))

@@ -11,6 +11,7 @@ import { PRACTICE_CONCLUDE_TOOL, PRACTICE_PROBLEM_TOOL, newGraphContextMessage, 
 import {
 	dueOrder,
 	gradeForConclusion,
+	masteryStateOf,
 	intervalDays,
 	memoryNote,
 	retrievability,
@@ -43,7 +44,7 @@ function call(name: string, args: Record<string, unknown>, at: number, isError =
 	const assistant: LhMessage & AssistantMessage = {
 		id: `msg_a_${id}`,
 		role: "assistant",
-		content: [{ type: "toolCall", id, name, arguments: args }],
+		content: [{ type: "toolCall", id, name, arguments: args as never }],
 		timestamp: at,
 		...STAMPS,
 	};
@@ -85,8 +86,8 @@ describe("reviewEventsOf", () => {
 	it("one event per target of each clean conclude, stamped with the conclude's time", () => {
 		const messages = [...pose(["a", "b"], T0), ...conclude("solved", null, T0 + 1000)];
 		assert.deepEqual(reviewEventsOf(messages), [
-			{ nodeId: "a", at: T0 + 1000, grade: 3 },
-			{ nodeId: "b", at: T0 + 1000, grade: 3 },
+			{ nodeId: "a", at: T0 + 1000, grade: 3, mode: "recall" },
+			{ nodeId: "b", at: T0 + 1000, grade: 3, mode: "recall" },
 		]);
 	});
 
@@ -103,7 +104,7 @@ describe("reviewEventsOf", () => {
 
 	it("a refused pose does not lend its targets to the next conclude", () => {
 		const messages = [...pose(["a"], T0), ...pose(["x"], T0 + 1, true), ...conclude("surrendered", null, T0 + 2)];
-		assert.deepEqual(reviewEventsOf(messages), [{ nodeId: "a", at: T0 + 2, grade: 1 }]);
+		assert.deepEqual(reviewEventsOf(messages), [{ nodeId: "a", at: T0 + 2, grade: 1, mode: "recall" }]);
 	});
 });
 
@@ -176,5 +177,139 @@ describe("memory notes in the session context", () => {
 	it("leaves picks unannotated without notes", () => {
 		const msg = newGraphContextMessage([{ id: "a", name: "A", statement: "S" }], []);
 		assert.match(String(msg.content), /- \[a\] A: S$/m);
+	});
+});
+
+// ── missedTargets, careless slips, and the named states ─────────────────────
+
+const poseMode = (target: string[], mode: string, at: number) =>
+	call(PRACTICE_PROBLEM_TOOL, { statement: "s", mode, modelSolution: "m", target }, at);
+const concludeWith = (args: Record<string, unknown>, at: number) =>
+	call(PRACTICE_CONCLUDE_TOOL, { verdict: "v", rung: null, missClass: null, retest: false, ...args }, at);
+
+describe("reviewEventsOf with missedTargets", () => {
+	it("a finished problem blames only the missed targets and credits the rest", () => {
+		const messages = [
+			...poseMode(["a", "b", "c"], "composition", T0),
+			...concludeWith({ outcome: "solvedWithHints", rung: "R4", missedTargets: ["b"] }, T0 + 1),
+		];
+		const grades = Object.fromEntries(reviewEventsOf(messages).map((e) => [e.nodeId, e.grade]));
+		assert.deepEqual(grades, { a: 3, b: 1, c: 3 });
+	});
+
+	it("a surrendered problem gives no evidence about targets it did not break on", () => {
+		const messages = [
+			...poseMode(["a", "b"], "composition", T0),
+			...concludeWith({ outcome: "surrendered", missedTargets: ["a"] }, T0 + 1),
+		];
+		assert.deepEqual(
+			reviewEventsOf(messages).map((e) => [e.nodeId, e.grade]),
+			[["a", 1]],
+		);
+	});
+
+	it("ignores missedTargets that are not targets of the problem", () => {
+		const messages = [
+			...poseMode(["a", "b"], "composition", T0),
+			...concludeWith({ outcome: "surrendered", missedTargets: ["zzz"] }, T0 + 1),
+		];
+		assert.deepEqual(
+			reviewEventsOf(messages).map((e) => [e.nodeId, e.grade]),
+			[["a", 1], ["b", 1]],
+		);
+	});
+
+	it("stamps the session id when the caller passes one", () => {
+		const messages = [...pose(["a"], T0), ...conclude("solved", null, T0 + 1)];
+		assert.equal(reviewEventsOf(messages, "chat_1")[0]!.session, "chat_1");
+	});
+});
+
+describe("careless slips", () => {
+	it("a careless miss is graded as effortful, not forgotten", () => {
+		assert.equal(gradeForConclusion("surrendered", null, "careless"), 2);
+		assert.equal(gradeForConclusion("surrendered", null, "cue"), 1);
+		assert.equal(gradeForConclusion("solved", null, "careless"), 3);
+	});
+});
+
+describe("masteryStateOf (the named states)", () => {
+	const at = (days: number) => T0 + days * DAY;
+	const stateOf = (events: ReviewEvent[], nowDays: number) =>
+		masteryStateOf(reviewStates(events, at(nowDays)).get("a"));
+
+	it("never practiced is untested", () => {
+		assert.equal(masteryStateOf(undefined), "untested");
+	});
+
+	it("a latest miss is shaky, even after earlier successes", () => {
+		assert.equal(
+			stateOf(
+				[
+					{ nodeId: "a", at: at(0), grade: 3, session: "s1" },
+					{ nodeId: "a", at: at(3), grade: 3, session: "s2" },
+					{ nodeId: "a", at: at(5), grade: 1, session: "s3" },
+				],
+				5,
+			),
+			"shaky",
+		);
+	});
+
+	it("clean successes inside one session in one mode are only developing", () => {
+		assert.equal(
+			stateOf(
+				[
+					{ nodeId: "a", at: at(0), grade: 3, session: "s1", mode: "recall" },
+					{ nodeId: "a", at: at(0) + 1000, grade: 3, session: "s1", mode: "recall" },
+				],
+				0,
+			),
+			"developing",
+		);
+	});
+
+	it("a success that needed hints is developing", () => {
+		assert.equal(stateOf([{ nodeId: "a", at: at(0), grade: 2, session: "s1" }], 0), "developing");
+	});
+
+	it("clean successes in two sessions are solid", () => {
+		assert.equal(
+			stateOf(
+				[
+					{ nodeId: "a", at: at(0), grade: 3, session: "s1" },
+					{ nodeId: "a", at: at(3), grade: 3, session: "s2" },
+				],
+				3,
+			),
+			"solid",
+		);
+	});
+
+	it("clean successes in two modes within one session are solid", () => {
+		assert.equal(
+			stateOf(
+				[
+					{ nodeId: "a", at: at(0), grade: 3, session: "s1", mode: "recall" },
+					{ nodeId: "a", at: at(0) + 1000, grade: 3, session: "s1", mode: "discrimination" },
+				],
+				0,
+			),
+			"solid",
+		);
+	});
+
+	it("solid turns due once recall fades, and back to solid after a fresh success", () => {
+		const events: ReviewEvent[] = [
+			{ nodeId: "a", at: at(0), grade: 3, session: "s1" },
+			{ nodeId: "a", at: at(3), grade: 3, session: "s2" },
+		];
+		assert.equal(stateOf(events, 200), "due");
+		assert.equal(stateOf([...events, { nodeId: "a", at: at(200), grade: 3, session: "s3" }], 200), "solid");
+	});
+
+	it("the memory note names the state for the practice agent", () => {
+		const state = reviewStates([{ nodeId: "a", at: T0, grade: 1 }], T0).get("a");
+		assert.match(memoryNote(state, T0), /; state shaky(;|$)/);
 	});
 });

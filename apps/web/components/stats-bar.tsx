@@ -18,13 +18,13 @@ function ContextRing({ tokens, limit, label }: { tokens: number | null; limit: n
 			className="flex size-6 items-center justify-center"
 		>
 			<svg viewBox="0 0 20 20" className="size-5 -rotate-90">
-				<circle cx="10" cy="10" r={r} fill="none" stroke="var(--input)" strokeWidth="2.5" />
+				<circle cx="10" cy="10" r={r} fill="none" stroke="var(--color-border-emphasized)" strokeWidth="2.5" />
 				<circle
 					cx="10"
 					cy="10"
 					r={r}
 					fill="none"
-					stroke={share > 0.85 ? "var(--destructive)" : "var(--primary)"}
+					stroke={share > 0.85 ? "var(--color-error)" : "var(--color-accent)"}
 					strokeWidth="2.5"
 					strokeLinecap="round"
 					strokeDasharray={`${share * c} ${c}`}
@@ -122,7 +122,7 @@ export function StatsBar({
 			// (so its transparent gradient area never blocks scrolling) — this row
 			// must re-enable events or every control on it is dead (the model-
 			// control wave caught this live: buttons rendered, clicks never landed).
-			className="pointer-events-auto relative flex items-center justify-between gap-2 px-2 pt-2.5 sm:gap-3 sm:px-4 text-sm text-muted-foreground"
+			className="pointer-events-auto relative flex items-center justify-between gap-2 px-2 pt-2.5 sm:gap-3 sm:px-4 text-sm text-secondary"
 		>
 			{/* The summary button + its popover: the popover anchors to this
 			    wrapper, CENTERED over the button itself (owner, stats round 2)
@@ -144,7 +144,7 @@ export function StatsBar({
 				onClick={() => setOpen((o) => !o)}
 				aria-expanded={open}
 				data-testid="stats-summary"
-				className="flex items-center gap-1.5 whitespace-nowrap tabular-nums transition-colors hover:text-foreground"
+				className="flex items-center gap-1.5 whitespace-nowrap tabular-nums transition-colors hover:text-primary"
 			>
 				<span data-testid="stats-context">
 					{contextLabel}
@@ -157,31 +157,31 @@ export function StatsBar({
 						data-testid="stats-detail"
 						className="absolute bottom-full left-0 z-40 mb-1.5 w-72 max-w-[calc(100vw-1.5rem)] sm:left-1/2 sm:-translate-x-1/2 rounded-xl border bg-card p-3 text-xs shadow-xl"
 					>
-						<div className="mb-2 text-xs font-medium text-muted-foreground">
+						<div className="mb-2 text-xs font-medium text-secondary">
 							Session stats
 						</div>
-						<div className="flex flex-col gap-1 text-muted-foreground">
+						<div className="flex flex-col gap-1 text-secondary">
 							<div className="flex justify-between gap-2">
 								<span>Context (last call)</span>
-								<span className="tabular-nums text-card-foreground">
+								<span className="tabular-nums text-primary">
 									{contextLabel}
 								</span>
 							</div>
 							<div className="flex justify-between gap-2">
 								<span>{subscription ? "Usage" : "Total cost"}</span>
-								<span className="tabular-nums text-card-foreground">{costLabel}</span>
+								<span className="tabular-nums text-primary">{costLabel}</span>
 							</div>
 							{providers.includes("ChatGPT") && <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noreferrer" className="underline underline-offset-2">Manage ChatGPT usage</a>}
 							{unpriced > 0 && (
 								<div className="flex justify-between gap-2">
 									<span>Unpriced turns</span>
-									<span className="tabular-nums text-card-foreground">{unpriced}</span>
+									<span className="tabular-nums text-primary">{unpriced}</span>
 								</div>
 							)}
 						</div>
 						{turns.length > 0 && (
 							<>
-								<div className="mb-1 mt-2.5 border-t pt-2 text-xs font-medium text-muted-foreground">
+								<div className="mb-1 mt-2.5 border-t pt-2 text-xs font-medium text-secondary">
 									Turns
 								</div>
 								<ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
@@ -189,11 +189,11 @@ export function StatsBar({
 										const c = pricing?.turnCosts[turn.id] ?? null;
 										return (
 											<li key={`${turn.messageId}-${i}`} className="flex items-center justify-between gap-2">
-												<span className="truncate text-muted-foreground">
+												<span className="truncate text-secondary">
 													#{i + 1} · {prettyModel(turn.model, true)}
 												</span>
-												<span className="flex shrink-0 items-center gap-2 tabular-nums text-card-foreground">
-													<span className="text-muted-foreground">{turn.steps.length} steps</span>
+												<span className="flex shrink-0 items-center gap-2 tabular-nums text-primary">
+													<span className="text-secondary">{turn.steps.length} steps</span>
 													<span>{subscriptionLabel(turn.model) ?? (c === null ? "—" : formatUsd(c))}</span>
 												</span>
 											</li>

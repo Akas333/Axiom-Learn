@@ -1,17 +1,13 @@
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import { blurAfterPointerClick } from "@/components/focus-hygiene";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible } from "@astryxdesign/core/Collapsible";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon } from "lucide-react";
 import { BrailleSpinner } from "@/components/braille-spinner";
 import type { ComponentProps, ReactNode } from "react";
 import {
+  Children,
   createContext,
+  isValidElement,
   memo,
   useCallback,
   useContext,
@@ -43,7 +39,9 @@ export const useReasoning = () => {
   return context;
 };
 
-export type ReasoningProps = ComponentProps<typeof Collapsible> & {
+export type ReasoningProps = {
+  className?: string;
+  children?: ReactNode;
   isStreaming?: boolean;
   open?: boolean;
   defaultOpen?: boolean;
@@ -60,7 +58,6 @@ export const Reasoning = memo(
     defaultOpen,
     onOpenChange,
     children,
-    ...props
   }: ReasoningProps) => {
     // COLLAPSED BY DEFAULT, ALWAYS (owner, streaming round 2026-10-01):
     // the old default opened on streaming and an auto-open effect
@@ -109,22 +106,24 @@ export const Reasoning = memo(
 
     return (
       <ReasoningContext.Provider value={contextValue}>
+        {/* Astryx Collapsible: the ReasoningTrigger child becomes its
+            trigger row, everything else is the collapsing body. */}
         <Collapsible
           className={cn("not-prose mb-4", className)}
           onOpenChange={handleOpenChange}
-          open={isOpen}
-          {...props}
+          isOpen={isOpen}
+          trigger={Children.toArray(children).find(isTrigger)}
         >
-          {children}
+          {Children.toArray(children).filter((c) => !isTrigger(c))}
         </Collapsible>
       </ReasoningContext.Provider>
     );
   }
 );
 
-export type ReasoningTriggerProps = ComponentProps<
-  typeof CollapsibleTrigger
-> & {
+export type ReasoningTriggerProps = {
+  className?: string;
+  children?: ReactNode;
   getThinkingMessage?: (isStreaming: boolean) => ReactNode;
 };
 
@@ -145,53 +144,29 @@ export const ReasoningTrigger = memo(
     className,
     children,
     getThinkingMessage = defaultGetThinkingMessage,
-    ...props
   }: ReasoningTriggerProps) => {
-    const { isStreaming, isOpen } = useReasoning();
-
+    const { isStreaming } = useReasoning();
     return (
-      <CollapsibleTrigger
-        className={cn(
-          /* The heading register (owner round 4, 2026-10-05): the small
-             mono caps of the card eyebrows — matching YOUR THINKING, whose
-             rail offsets it by exactly the one-character difference. */
-          "inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-(--pill) px-3 text-muted-foreground text-xs font-medium transition-colors hover:bg-(--pill-hover) hover:text-foreground",
-          className
-        )}
-        {...props}
-        /* FOCUS HYGIENE (owner, keyboard round 2026-10-10): a pointer click
-           on the thinking toggle must not leave focus here — the learner's
-           next Enter submits, it must not re-toggle. Radix composes this
-           with its own toggle handler. */
-        onClick={(e) => blurAfterPointerClick(e)}
-      >
+      <span className={cn("inline-flex items-center gap-1.5 text-secondary text-xs font-medium", className)}>
         {children ?? (
           <>
-            {/* The working-state grammar (owner, streaming round
-                2026-10-01): the Braille spinner replaces the brain icon
-                WHILE STREAMING ONLY — motion is the signal, so a finished
-                row carries no icon at all, just text + chevron. Size:
-                the component default (h-3) — IDENTICAL to the placeholder
-                spinner (owner, 2026-10-02): the handoff between the two
-                states must be visually seamless, one size everywhere. */}
+            {/* The spinner shows only while streaming: motion is the signal. */}
             {isStreaming && <BrailleSpinner label="Thinking" />}
             {getThinkingMessage(isStreaming)}
-            <ChevronDownIcon
-              className={cn(
-                "size-3.5 transition-transform",
-                isOpen ? "rotate-180" : "rotate-0"
-              )}
-            />
           </>
         )}
-      </CollapsibleTrigger>
+      </span>
     );
   }
 );
 
-export type ReasoningContentProps = ComponentProps<
-  typeof CollapsibleContent
-> & {
+/** The Collapsible's trigger is whichever child is a ReasoningTrigger. */
+function isTrigger(node: unknown): boolean {
+  return isValidElement(node) && node.type === ReasoningTrigger;
+}
+
+export type ReasoningContentProps = {
+  className?: string;
   children: string;
 };
 
@@ -199,19 +174,12 @@ export type ReasoningContentProps = ComponentProps<
 // remark-breaks) — reasoning renders the same contract as message text.
 
 export const ReasoningContent = memo(
-  ({ className, children, ...props }: ReasoningContentProps) => (
-    <CollapsibleContent
-      className={cn(
-        "mt-4 text-sm",
-        "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-muted-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
-        className
-      )}
-      {...props}
-    >
+  ({ className, children }: ReasoningContentProps) => (
+    <div className={cn("mt-2 text-sm text-secondary", className)}>
       <Streamdown components={mdComponents} plugins={streamdownPlugins}>
         {transformMathDelimiters(children)}
       </Streamdown>
-    </CollapsibleContent>
+    </div>
   )
 );
 

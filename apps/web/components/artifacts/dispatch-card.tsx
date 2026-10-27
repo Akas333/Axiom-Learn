@@ -1,4 +1,5 @@
 
+import { Button } from "@/components/ui/button";
 import { useContext } from "react";
 import { CheckIcon, SettingsIcon, XIcon } from "lucide-react";
 import { JobsContext } from "@/components/jobs-context";
@@ -48,7 +49,7 @@ export function DispatchCard({ toolCallId, kind }: { toolCallId: string; kind: J
 	const failed = job.status === "error";
 	return (
 		<div
-			className="flex items-center gap-2 text-xs text-muted-foreground"
+			className="flex items-center gap-2 text-xs text-secondary"
 			data-testid="dispatch-settled"
 		>
 			{failed ? <XIcon className="size-3.5 text-red-500" /> : <CheckIcon className="size-3.5" />}
@@ -63,21 +64,14 @@ function DispatchRefusedCard({ label, line, button }: { label: string; line: str
 	const ctx = useContext(ChatActionsContext);
 	return (
 		<div
-			className="flex items-center gap-2 text-xs text-muted-foreground"
+			className="flex items-center gap-2 text-xs text-secondary"
 			data-testid="dispatch-refused"
 		>
 			<SettingsIcon className="size-3.5" />
 			<span className="font-medium">{label}</span>
 			<span>{line}</span>
 			{ctx && (
-				<button
-					type="button"
-					data-testid="dispatch-setup-link"
-					onClick={ctx.openSetup}
-					className="ml-1 rounded-sm border border-border bg-card px-2 py-0.5 font-ui normal-case tracking-normal text-foreground transition-colors hover:border-muted-foreground/50"
-				>
-					{button}
-				</button>
+				<Button size="sm" variant="secondary" data-testid="dispatch-setup-link" onClick={ctx.openSetup}>{button}</Button>
 			)}
 		</div>
 	);
@@ -90,10 +84,10 @@ function DispatchActivityCard({ job, label }: { job: JobRecord | null; label: st
 		job && job.createdAt ? Math.max(0, Math.round((Date.now() - Date.parse(job.createdAt)) / 1000)) : null;
 	return (
 		<div
-			className="rounded-xl border bg-card p-4 text-card-foreground"
+			className="rounded-xl border bg-card p-4 text-primary"
 			data-testid="dispatch-card"
 		>
-			<div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+			<div className="flex items-center gap-2 text-xs font-medium text-secondary">
 				{/* The working-state grammar (owner, streaming round 2026-10-01):
 				    the Braille spinner replaces the pulsing dot — one indicator
 				    everywhere. This is the ONLY dispatch-card change; the card's
@@ -103,12 +97,12 @@ function DispatchActivityCard({ job, label }: { job: JobRecord | null; label: st
 				{elapsed !== null && <span className="font-normal">· {elapsed}s</span>}
 			</div>
 			{job?.activity && (
-				<div className="mt-1 truncate text-sm text-muted-foreground" data-testid="dispatch-activity-line">
+				<div className="mt-1 truncate text-sm text-secondary" data-testid="dispatch-activity-line">
 					{job.activity}
 				</div>
 			)}
 			{!job && (
-				<div className="mt-1 text-sm text-muted-foreground" data-testid="dispatch-pending">
+				<div className="mt-1 text-sm text-secondary" data-testid="dispatch-pending">
 					Dispatched…
 				</div>
 			)}

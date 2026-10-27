@@ -1,4 +1,5 @@
 
+import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "@/lib/navigation";
 import { Composer, COMPOSER_SHELL } from "@/components/composer";
@@ -188,8 +189,8 @@ export function DraftShell({
 					    every control (layout after Perplexity's home). */}
 					<SphereBackdrop />
 					<div className="relative flex min-w-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[12vh] pt-16">
-						<LhMark className="size-10 text-foreground" />
-						<h1 className="mt-6 text-center text-3xl font-normal tracking-tight text-foreground sm:text-[2.1rem]">
+						<LhMark className="size-10 text-primary" />
+						<h1 className="mt-6 text-center text-3xl font-normal tracking-tight text-primary sm:text-[2.1rem]">
 							{mode === "practice" ? "What do you want to practice?" : "What do you want to learn?"}
 						</h1>
 						<div className={`${DOCK} mt-9`}>
@@ -214,15 +215,7 @@ export function DraftShell({
 									leading={
 										mode === "practice" ? (
 											<Hint label="Pick nodes from your graph" side="bottom">
-												<button
-													type="button"
-													aria-label="Pick nodes from your graph"
-													data-testid="practice-props-chip"
-													onClick={onOpenPicker}
-													className="flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
-												>
-													<PlusIcon className="size-5" />
-												</button>
+												<Button size="icon-sm" variant="ghost" aria-label="Pick nodes from your graph" data-testid="practice-props-chip" onClick={onOpenPicker} className="shrink-0"><PlusIcon className="size-4" /></Button>
 											</Hint>
 										) : undefined
 									}
@@ -239,25 +232,17 @@ export function DraftShell({
 													type="button"
 													data-testid="practice-review-due"
 													onClick={onPickDue}
-													className="flex items-center gap-1.5 rounded-full bg-(--pill) px-2.5 py-0.5 text-sm text-foreground transition-colors hover:bg-(--pill-hover)"
+													className="flex items-center gap-1.5 rounded-full bg-overlay-hover px-2.5 py-0.5 text-sm text-primary transition-colors hover:bg-overlay-pressed"
 												>
-													<HistoryIcon className="size-3.5 text-muted-foreground" />
+													<HistoryIcon className="size-3.5 text-secondary" />
 													Review {dueCount} due
 												</button>
 											</Hint>
 										)}
 										{picks.length > 0 && (
-											<span className="flex items-center gap-1 rounded-full bg-(--pill) py-0.5 pl-2.5 pr-0.5 text-sm text-foreground">
+											<span className="flex items-center gap-1 rounded-full bg-overlay-hover py-0.5 pl-2.5 pr-0.5 text-sm text-primary">
 												{picks.length} {picks.length === 1 ? "node" : "nodes"}
-												<button
-													type="button"
-													aria-label="Clear picked nodes"
-													data-testid="practice-props-clear"
-													onClick={onClearPicks}
-													className="flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-(--pill-hover) hover:text-foreground"
-												>
-													<XIcon className="size-3.5" />
-												</button>
+												<Button size="icon-sm" variant="ghost" aria-label="Clear picked nodes" data-testid="practice-props-clear" onClick={onClearPicks}><XIcon className="size-4" /></Button>
 											</span>
 										)}
 									</div>
@@ -424,14 +409,7 @@ export function NewSession({ initialConfigured, mode = "teach" }: { initialConfi
 						<ZeroKeysPill inline onOpen={() => setSetupOpen(true)} />
 					) : (
 						!configured && (
-							<button
-								type="button"
-								data-testid="setup-cta"
-								onClick={() => setSetupOpen(true)}
-								className="rounded-sm border border-border bg-card px-3 py-1.5 font-ui text-xs text-foreground transition-colors hover:border-muted-foreground/50 hover:bg-accent cursor-pointer"
-							>
-								Set up your models
-							</button>
+							<Button size="sm" variant="secondary" data-testid="setup-cta" onClick={() => setSetupOpen(true)}>Set up your models</Button>
 						)
 					)
 				}

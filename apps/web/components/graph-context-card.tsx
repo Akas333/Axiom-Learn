@@ -29,7 +29,7 @@ export function GraphContextCard({ data }: { data: GraphContextData }) {
 				type="button"
 				data-testid="graph-context-toggle"
 				onClick={() => setOpen((v) => !v)}
-				className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border/70 px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
+				className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border/70 px-3 py-2 text-left text-xs text-secondary transition-colors hover:text-primary"
 			>
 				<ChevronRightIcon aria-hidden="true" className={cn("size-3.5 shrink-0 transition-transform", open && "rotate-90")} />
 				<span className="font-medium">Graph context</span>
@@ -42,14 +42,14 @@ export function GraphContextCard({ data }: { data: GraphContextData }) {
 				<div data-testid="graph-context-body" className="mt-1 space-y-1 rounded-lg border border-dashed border-border/70 px-4 py-3 text-xs">
 					{propositions.map((p) => (
 						<div key={p.id} data-testid={`graph-context-prop-${p.id}`} className="leading-relaxed">
-							<span className="font-medium text-foreground/80">{p.name}</span>
-							<span className="text-muted-foreground"> — {p.statement}</span>
+							<span className="font-medium text-primary/80">{p.name}</span>
+							<span className="text-secondary"> — {p.statement}</span>
 						</div>
 					))}
 					{chains.length > 0 && (
 						<div className="pt-1">
 							{chains.map((c, i) => (
-								<div key={i} className="font-mono text-[11px] text-muted-foreground">
+								<div key={i} className="font-mono text-[11px] text-secondary">
 									{c}
 								</div>
 							))}

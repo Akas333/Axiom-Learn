@@ -105,6 +105,9 @@ const jobRunner = createJobRunner({
 	// null = honestly unavailable; the dispatch-level drop (below) uses the
 	// same signal so keyless servers never see the research tool at all.
 	searchProvider,
+	// The learner profile, read fresh per job: demos and figures the
+	// learner sees follow the same level as the tutor.
+	learnerContext: () => composeLearnerContext(effectiveSettings().learner),
 });
 /** The app's ONE extraction pipeline instance — both front doors share it:
  *  quiz-triggered session runs (turn-service) and notes imports

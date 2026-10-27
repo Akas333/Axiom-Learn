@@ -1,6 +1,6 @@
 import { chainsForSelection, formatChainLine } from "../../core/index.ts";
-import { memoryNote, newGraphContextMessage, type GraphContextPick } from "../../core/index.ts";
-import { compactionInFlight, createChat, reviewStateMap, isTurnRunning, listChats, readSettingsRecord, stores, titleFromPrompt } from "../../server/index.ts";
+import { ankiNote, memoryNote, newGraphContextMessage, type GraphContextPick } from "../../core/index.ts";
+import { cachedAnkiCardStats, compactionInFlight, createChat, refreshAnkiReviews, reviewStateMap, isTurnRunning, listChats, readSettingsRecord, stores, titleFromPrompt } from "../../server/index.ts";
 import type { ChatListItem } from "../../core/index.ts";
 
 /** The session picker's list: record-derived summaries (phase, pending
@@ -65,14 +65,22 @@ export async function POST(req: Request) {
 		const chainLines = chainsForSelection(pickedNodes, stores.graphStore.readChains()).map((c) =>
 			formatChainLine(c, Object.fromEntries(byId)),
 		);
-		// SPACED REVIEW: a practice session's picks carry each node's memory
-		// state (last practiced, estimated recall, due) so the agent can
-		// weigh decay when it picks targets and difficulty.
-		let notes: Record<string, string> | undefined;
-		if (kind === "practice") {
-			const now = Date.now();
-			const states = reviewStateMap(now);
-			notes = Object.fromEntries(picks.map((p) => [p.id, memoryNote(states.get(p.id), now)]));
+		// SPACED REVIEW: the picks carry each node's memory state (last
+		// practiced, estimated recall, due) so the agent can weigh decay when
+		// it picks targets and difficulty. The learner's Anki reviews are read
+		// first (when the sync is on) and count toward that state; their card
+		// stats ride along. Practice notes every pick; a lesson only the picks
+		// with any review history.
+		await refreshAnkiReviews();
+		const now = Date.now();
+		const states = reviewStateMap(now);
+		const cards = cachedAnkiCardStats();
+		const notes: Record<string, string> = {};
+		for (const p of picks) {
+			const state = states.get(p.id);
+			const anki = ankiNote(cards[p.id], now);
+			if (kind !== "practice" && !state && !anki) continue;
+			notes[p.id] = [memoryNote(state, now), anki].filter(Boolean).join("; ");
 		}
 		stores.chatStore.saveMessages(chat.id, [newGraphContextMessage(picks, chainLines, notes)]);
 	}

@@ -1,4 +1,5 @@
 import { CheckIcon, PencilIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { blurAfterPointerClick } from "@/components/focus-hygiene";
 
 /** What the Confirm button sends: the teacher starts the first concept on it. */
@@ -14,36 +15,20 @@ export function PlanConfirmBar({ onConfirm, onChange }: { onConfirm: () => void;
 	return (
 		<div
 			data-testid="plan-confirm-bar"
-			className="lh-card-enter my-4 ml-10 flex flex-wrap items-center gap-3 rounded-2xl border border-input/70 bg-card px-4 py-3"
+			className="lh-card-enter my-4 ml-10 flex flex-wrap items-center gap-3 rounded-2xl border border-strong/70 bg-card px-4 py-3"
 		>
 			<div className="mr-auto min-w-0">
-				<div className="text-sm font-semibold text-foreground">Ready to start?</div>
-				<div className="text-xs text-muted-foreground">Confirm the plan, or tell the teacher what to change.</div>
+				<div className="text-sm font-semibold text-primary">Ready to start?</div>
+				<div className="text-xs text-secondary">Confirm the plan, or tell the teacher what to change.</div>
 			</div>
-			<button
-				type="button"
-				data-testid="plan-change"
-				onClick={(e) => {
+			<Button size="sm" variant="secondary" data-testid="plan-change" onClick={(e) => {
 					blurAfterPointerClick(e);
 					onChange();
-				}}
-				className="inline-flex h-9 items-center gap-1.5 rounded-full bg-(--pill) px-4 text-sm font-medium text-foreground transition-colors hover:bg-(--pill-hover) focus-visible:outline-2 focus-visible:outline-primary"
-			>
-				<PencilIcon className="size-3.5" />
-				Change plan
-			</button>
-			<button
-				type="button"
-				data-testid="plan-confirm"
-				onClick={(e) => {
+				}}><PencilIcon className="size-4" />Change plan</Button>
+			<Button size="sm" variant="primary" data-testid="plan-confirm" onClick={(e) => {
 					blurAfterPointerClick(e);
 					onConfirm();
-				}}
-				className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-			>
-				<CheckIcon className="size-4" />
-				Confirm plan
-			</button>
+				}}><CheckIcon className="size-4" />Confirm plan</Button>
 		</div>
 	);
 }

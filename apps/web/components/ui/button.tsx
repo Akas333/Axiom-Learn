@@ -1,64 +1,85 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { Slot } from "radix-ui"
+/**
+ * The app's button: Astryx Button (labelled) or IconButton (icon sizes),
+ * behind the call-site API the app already uses (variant/size/children).
+ */
+import * as React from "react";
+import { Button as AstryxButton } from "@astryxdesign/core/Button";
+import { IconButton } from "@astryxdesign/core/IconButton";
 
-import { cn } from "@/lib/utils"
+type Variant = "default" | "primary" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+type Size = "default" | "xs" | "sm" | "md" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg";
 
-const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
-        outline:
-          "border border-white/15 bg-transparent hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary:
-          "bg-white/15 text-secondary-foreground hover:bg-white/20",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-9 px-5 py-2 has-[>svg]:px-4",
-        xs: "h-6 gap-1 rounded-full px-2.5 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 rounded-full px-3.5 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-full px-6 has-[>svg]:px-4",
-        icon: "size-9",
-        "icon-xs": "size-6 rounded-full [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
+const VARIANT: Record<Variant, "primary" | "secondary" | "ghost" | "destructive"> = {
+	default: "primary",
+	primary: "primary",
+	destructive: "destructive",
+	outline: "secondary",
+	secondary: "secondary",
+	ghost: "ghost",
+	link: "ghost",
+};
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot.Root : "button"
+const SIZE: Record<Size, "sm" | "md" | "lg"> = {
+	default: "md",
+	md: "md",
+	xs: "sm",
+	sm: "sm",
+	lg: "lg",
+	icon: "md",
+	"icon-xs": "sm",
+	"icon-sm": "sm",
+	"icon-lg": "lg",
+};
 
-  return (
-    <Comp
-      data-slot="button"
-      data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
+/** Plain text of a React node, for the accessible label. */
+function textOf(node: React.ReactNode): string {
+	if (node == null || typeof node === "boolean") return "";
+	if (typeof node === "string" || typeof node === "number") return String(node);
+	if (Array.isArray(node)) return node.map(textOf).join("");
+	if (React.isValidElement<{ children?: React.ReactNode }>(node)) return textOf(node.props.children);
+	return "";
 }
 
-export { Button, buttonVariants }
+export type ButtonProps = Omit<React.ComponentProps<"button">, "color"> & {
+	variant?: Variant;
+	size?: Size;
+	/** Accessible label; defaults to aria-label or the children's text. */
+	label?: string;
+	isLoading?: boolean;
+	tooltip?: string;
+	ref?: React.Ref<HTMLButtonElement>;
+};
+
+function Button({
+	variant = "default",
+	size = "default",
+	children,
+	disabled,
+	label,
+	type = "button",
+	isLoading,
+	tooltip,
+	...props
+}: ButtonProps) {
+	const text = (label ?? props["aria-label"] ?? (textOf(children).trim() || tooltip)) || "Button";
+	const common = {
+		...(props as Record<string, unknown>),
+		type,
+		variant: VARIANT[variant],
+		size: SIZE[size],
+		isDisabled: disabled,
+		isLoading,
+		tooltip,
+		"data-variant": variant,
+	};
+	if (size.startsWith("icon")) {
+		return <IconButton {...common} label={text} icon={children} />;
+	}
+	return (
+		<AstryxButton {...common} label={text}>
+			{typeof children === "string" ? undefined : children}
+		</AstryxButton>
+	);
+}
+
+export { Button };

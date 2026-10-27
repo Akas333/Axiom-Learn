@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { withLearnerContext } from "../../core/learner.ts";
 import type { AssistantMessage, Message, Tool, ToolResultMessage, Usage } from "@earendil-works/pi-ai";
 import { normalizeContext } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
@@ -49,6 +50,9 @@ export interface VisualMakerOptions {
 	onUsage?: (usage: Usage) => void;
 	/** Debug: raw provider-event recording key (LH_PROVIDER_EVENTS=1). */
 	chatId?: string;
+	/** The learner-profile block (core/learner.ts), appended to the
+	 *  instructions so what the learner sees fits their level. */
+	learnerContext?: string;
 }
 
 const INSTRUCTIONS = `You are a visual maker — a diagram author + renderer for precise, spatial figures. You
@@ -163,7 +167,7 @@ export async function runVisualMaker(input: VisualMakerInput, opts: VisualMakerO
 			// loop owns tool execution and the image-in-the-loop injection).
 			const result = await streamOnce(
 				engine,
-				INSTRUCTIONS,
+				withLearnerContext(INSTRUCTIONS, opts.learnerContext),
 				messages,
 				toolDeclarations,
 				sessionId,

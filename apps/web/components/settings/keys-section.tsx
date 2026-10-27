@@ -22,6 +22,8 @@
  * effect immediately. Plaintext never returns from the store.
  */
 
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
 import { AUTH_KEYS, type AuthKeyStatus } from "@/src/core";
 import { SettingsGroup } from "./controls.tsx";
@@ -69,29 +71,22 @@ export function OllamaRow({ ollama, onRecheck }: { ollama: OllamaInfo | undefine
 	return (
 		<div className="flex flex-col gap-1 px-1 py-1.5" data-testid="ollama-row">
 			<div className="flex items-center justify-between gap-3">
-				<span className="font-ui text-xs text-foreground">Ollama (local, no key)</span>
+				<span className="font-ui text-xs text-primary">Ollama (local, no key)</span>
 				<span className="flex items-center gap-2">
-					<span className={`text-[11px] ${usable ? "text-foreground" : "text-muted-foreground"}`} data-testid="ollama-status">
+					<span className={`text-[11px] ${usable ? "text-primary" : "text-secondary"}`} data-testid="ollama-status">
 						{status}
 					</span>
-					<button
-						type="button"
-						onClick={onRecheck}
-						data-testid="ollama-recheck"
-						className="rounded-sm border border-border bg-background px-2 py-0.5 font-ui text-[11px] text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground"
-					>
-						Check again
-					</button>
+					<Button size="sm" variant="secondary" onClick={onRecheck} data-testid="ollama-recheck">Check again</Button>
 				</span>
 			</div>
 			{ollama && !usable && (
-				<p className="text-[11px] text-muted-foreground" data-testid="ollama-help">
+				<p className="text-[11px] text-secondary" data-testid="ollama-help">
 					Install Ollama from ollama.com, then run <code className="font-mono">ollama pull llama3.1</code>. Axiom looks for it at{" "}
 					<code className="font-mono">{ollama.host}</code>.
 				</p>
 			)}
 			{usable && ollama.skipped.length > 0 && (
-				<p className="text-[11px] text-muted-foreground/70" data-testid="ollama-skipped">
+				<p className="text-[11px] text-secondary/70" data-testid="ollama-skipped">
 					Not shown (no tool support): {ollama.skipped.join(", ")}
 				</p>
 			)}
@@ -210,49 +205,28 @@ function KeyTableRow({
 		return (
 			<div data-testid={testid}>
 				<div className="flex items-center gap-2 rounded-sm px-1 py-1.5" data-testid={`${testid}-editor`}>
-					<span className="shrink-0 font-ui text-xs text-foreground">{label}</span>
-					<input
-						type="text"
+					<span className="shrink-0 font-ui text-xs text-primary">{label}</span>
+					<TextInput
+						label={`${label} key`}
+						isLabelHidden
+						size="sm"
 						value={value}
-						onChange={(e) => setValue(e.target.value)}
+						onChange={setValue}
 						onKeyDown={(e) => {
 							if (e.key === "Enter") void save();
 						}}
 						placeholder="Paste key…"
-						aria-label={`${label} key`}
 						data-testid={`${testid}-input`}
-						disabled={busy}
-						autoFocus
-						className="h-7 min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 font-mono text-xs text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-muted-foreground/50"
+						isDisabled={busy}
+						hasAutoFocus
+						autoComplete="off"
+						containerClassName="min-w-0 flex-1"
+						controlClassName="font-mono"
 					/>
-					<button
-						type="button"
-						onClick={() => void save()}
-						disabled={busy || !value.trim()}
-						data-testid={`${testid}-save`}
-						className="shrink-0 text-xs text-foreground underline-offset-2 hover:underline disabled:text-muted-foreground/40 disabled:no-underline"
-					>
-						Save
-					</button>
-					<button
-						type="button"
-						onClick={onCancel}
-						disabled={busy}
-						data-testid={`${testid}-cancel`}
-						className="shrink-0 text-xs text-muted-foreground/70 underline-offset-2 hover:text-foreground hover:underline"
-					>
-						Cancel
-					</button>
+					<Button size="sm" variant="ghost" onClick={() => void save()} disabled={busy || !value.trim()} data-testid={`${testid}-save`}>Save</Button>
+					<Button size="sm" variant="ghost" onClick={onCancel} disabled={busy} data-testid={`${testid}-cancel`}>Cancel</Button>
 					{status.present && status.source === "file" && onDelete && (
-						<button
-							type="button"
-							onClick={() => void onDelete()}
-							disabled={busy}
-							data-testid={`${testid}-delete`}
-							className="shrink-0 text-xs text-muted-foreground/70 underline-offset-2 hover:text-red-500 hover:underline"
-						>
-							Delete
-						</button>
+						<Button size="sm" variant="ghost" onClick={() => void onDelete()} disabled={busy} data-testid={`${testid}-delete`}>Delete</Button>
 					)}
 				</div>
 				{error && (
@@ -272,10 +246,10 @@ function KeyTableRow({
 				data-testid={`${testid}-row`}
 				onClick={() => !envOwned && onToggle()}
 				className={`flex w-full items-center justify-between gap-3 rounded-sm px-1 py-1.5 text-left ${
-					envOwned ? "cursor-default" : "cursor-pointer transition-colors hover:bg-accent/50"
+					envOwned ? "cursor-default" : "cursor-pointer transition-colors hover:bg-overlay-hover/50"
 				}`}
 			>
-				<span className="font-ui text-xs text-foreground">{label}</span>
+				<span className="font-ui text-xs text-primary">{label}</span>
 				<span className="flex items-center gap-2">
 					{docsUrl && (
 						<a
@@ -283,12 +257,12 @@ function KeyTableRow({
 							target="_blank"
 							rel="noreferrer"
 							onClick={(e) => e.stopPropagation()}
-							className="text-[10px] text-muted-foreground/60 underline-offset-2 hover:text-foreground hover:underline"
+							className="text-[10px] text-secondary/60 underline-offset-2 hover:text-primary hover:underline"
 						>
 							key ↗
 						</a>
 					)}
-					<span data-testid={`${testid}-status`} className="font-mono text-[11px] text-muted-foreground">
+					<span data-testid={`${testid}-status`} className="font-mono text-[11px] text-secondary">
 						{keyStatusLine(status)}
 					</span>
 				</span>
@@ -343,7 +317,7 @@ function AddProviderRow({
 				aria-expanded={open}
 				data-testid="add-provider"
 				onClick={() => setOpen((v) => !v)}
-				className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-1.5 text-left font-ui text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+				className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-1.5 text-left font-ui text-xs text-secondary transition-colors hover:bg-overlay-hover/50 hover:text-primary"
 			>
 				<span>+ Add provider key</span>
 				{addable.length > 0 && <span className="font-mono text-[11px]">{addable.length}</span>}
@@ -456,7 +430,7 @@ export function KeysSection({
 	}
 
 	if (loading || statuses === null) {
-		return <p className="px-6 py-5 text-xs text-muted-foreground/70">Loading keys…</p>;
+		return <p className="px-6 py-5 text-xs text-secondary/70">Loading keys…</p>;
 	}
 
 	const { providerRows, toolRows, unknownRows, addable } = classifyKeys(statuses, providers);
@@ -503,14 +477,14 @@ export function KeysSection({
 				)}
 				{adding && (
 					<div className="flex items-center gap-2 rounded-sm px-1 py-1.5" data-testid={`key-${adding.id}-editor`}>
-						<span className="shrink-0 font-ui text-xs text-foreground">{adding.label}</span>
+						<span className="shrink-0 font-ui text-xs text-primary">{adding.label}</span>
 						<AddProviderEditor provider={adding} onSave={(v) => void saveNewProvider(adding, v)} onCancel={() => setAdding(null)} error={addError} />
 					</div>
 				)}
 				{unknownRows.length > 0 && <div data-testid="group-unknown-keys">
 					{unknownRows.map((status) => <div key={status.id} data-testid={`unknown-${status.id}`} className="flex items-center justify-between gap-3 px-1 py-1.5 opacity-40">
-						<span className="font-mono text-xs text-foreground">{status.id}</span>
-						<span className="font-mono text-[11px] text-muted-foreground">{status.masked}</span>
+						<span className="font-mono text-xs text-primary">{status.id}</span>
+						<span className="font-mono text-[11px] text-secondary">{status.masked}</span>
 					</div>)}
 				</div>}
 			</SettingsGroup>
@@ -534,8 +508,8 @@ export function KeysSection({
 
 			<SettingsGroup label="Dictation" testid="group-dictation">
 				<div className="flex items-center justify-between gap-3 px-1 py-1.5" data-testid="dictation-engine">
-					<span className="text-xs text-foreground">Muse Voice Transcribe (Meta)</span>
-					<span className="text-[11px] text-muted-foreground">uses your Meta key</span>
+					<span className="text-xs text-primary">Muse Voice Transcribe (Meta)</span>
+					<span className="text-[11px] text-secondary">uses your Meta key</span>
 				</div>
 			</SettingsGroup>
 
@@ -580,36 +554,24 @@ function AddProviderEditor({
 	const [value, setValue] = useState("");
 	return (
 		<>
-			<input
-				type="text"
+			<TextInput
+				label={`${provider.label} key`}
+				isLabelHidden
+				size="sm"
 				value={value}
-				onChange={(e) => setValue(e.target.value)}
+				onChange={setValue}
 				onKeyDown={(e) => {
 					if (e.key === "Enter" && value.trim()) onSave(value);
 				}}
 				placeholder="Paste key…"
-				aria-label={`${provider.label} key`}
 				data-testid={`key-${provider.id}-input`}
-				autoFocus
-				className="h-7 min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 font-mono text-xs text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-muted-foreground/50"
+				hasAutoFocus
+				autoComplete="off"
+				containerClassName="min-w-0 flex-1"
+				controlClassName="font-mono"
 			/>
-			<button
-				type="button"
-				onClick={() => value.trim() && onSave(value)}
-				disabled={!value.trim()}
-				data-testid={`key-${provider.id}-save`}
-				className="shrink-0 text-xs text-foreground underline-offset-2 hover:underline disabled:text-muted-foreground/40 disabled:no-underline"
-			>
-				Save
-			</button>
-			<button
-				type="button"
-				onClick={onCancel}
-				data-testid={`key-${provider.id}-cancel`}
-				className="shrink-0 text-xs text-muted-foreground/70 underline-offset-2 hover:text-foreground hover:underline"
-			>
-				Cancel
-			</button>
+			<Button size="sm" variant="ghost" onClick={() => value.trim() && onSave(value)} disabled={!value.trim()} data-testid={`key-${provider.id}-save`}>Save</Button>
+			<Button size="sm" variant="ghost" onClick={onCancel} data-testid={`key-${provider.id}-cancel`}>Cancel</Button>
 			{error && (
 				<p role="alert" className="w-full pl-0 text-xs text-red-500" data-testid={`key-${provider.id}-error`}>
 					{error}

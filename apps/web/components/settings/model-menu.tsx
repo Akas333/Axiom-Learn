@@ -104,11 +104,11 @@ export function ModelMenuList({
 					}
 				}}
 				placeholder="Search models…"
-				className="lh-input mb-1.5 w-full rounded-lg border bg-background px-2 py-1.5 text-foreground outline-none focus:ring-1 focus:ring-ring"
+				className="lh-input mb-1.5 w-full rounded-lg border bg-body px-2 py-1.5 text-primary outline-none focus:ring-1 focus:ring-accent-bg"
 			/>
-			{!models && <div className="px-2 py-3 text-center text-muted-foreground">Loading models…</div>}
+			{!models && <div className="px-2 py-3 text-center text-secondary">Loading models…</div>}
 			{models && results.length === 0 && (
-				<div className="px-2 py-3 text-center text-muted-foreground">No models match.</div>
+				<div className="px-2 py-3 text-center text-secondary">No models match.</div>
 			)}
 			<ul ref={listRef} data-testid="model-list" className="flex max-h-72 flex-col overflow-y-auto px-1">
 				{results.map((m, i) => (
@@ -119,16 +119,16 @@ export function ModelMenuList({
 							data-idx={i}
 							onClick={() => onPick(m)}
 							className={`flex w-full flex-col gap-0.5 rounded-lg px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted ${
-								i === menuIdx ? "bg-accent/40 ring-1 ring-inset ring-border" : ""
+								i === menuIdx ? "bg-overlay-hover/40 ring-1 ring-inset ring-border" : ""
 							}${m.id === effectiveId && m.provider === (effectiveProvider ?? m.provider) && i !== menuIdx ? " bg-muted/60" : ""}`}
 						>
 							<span className="flex items-center justify-between gap-2">
-								<span className="truncate text-card-foreground">{m.name}</span>
-								<span className="shrink-0 tabular-nums text-muted-foreground" title={subscriptionLabel(`${m.provider}:${m.id}`) ? "Subscription connection" : "USD per 1M tokens in/out"}>
+								<span className="truncate text-primary">{m.name}</span>
+								<span className="shrink-0 tabular-nums text-secondary" title={subscriptionLabel(`${m.provider}:${m.id}`) ? "Subscription connection" : "USD per 1M tokens in/out"}>
 									{subscriptionLabel(`${m.provider}:${m.id}`) ?? priceLabel(m.cost)}
 								</span>
 							</span>
-							<span className="flex items-center justify-between gap-2 text-muted-foreground">
+							<span className="flex items-center justify-between gap-2 text-secondary">
 								<span className="truncate">{subscriptionLabel(`${m.provider}:${m.id}`) ? `${subscriptionLabel(`${m.provider}:${m.id}`)} (subscription)` : m.provider} · {m.id}</span>
 								<span className="shrink-0 tabular-nums">{formatTokens(m.contextWindow)}</span>
 							</span>
@@ -137,7 +137,7 @@ export function ModelMenuList({
 				))}
 			</ul>
 			{footer && (
-				<div className="mt-1 border-t px-2 pt-1.5 text-xs text-muted-foreground">{footer}</div>
+				<div className="mt-1 border-t px-2 pt-1.5 text-xs text-secondary">{footer}</div>
 			)}
 		</>
 	);
@@ -162,7 +162,7 @@ export function ThinkingMenuList({
 	return (
 		<>
 			{levels.length === 0 ? (
-				<div className="px-2 py-3 text-center text-muted-foreground">{empty ?? "No thinking levels."}</div>
+				<div className="px-2 py-3 text-center text-secondary">{empty ?? "No thinking levels."}</div>
 			) : (
 				levels.map((level) => (
 					<button
@@ -171,7 +171,7 @@ export function ThinkingMenuList({
 						data-testid={`thinking-option-${level}`}
 						onClick={() => onPick(level)}
 						className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted ${
-							level === effectiveLevel ? "bg-muted/60 text-card-foreground" : "text-card-foreground"
+							level === effectiveLevel ? "bg-muted/60 text-primary" : "text-primary"
 						}`}
 					>
 						<span>{level}</span>
@@ -180,7 +180,7 @@ export function ThinkingMenuList({
 				))
 			)}
 			{footer && (
-				<div className="mt-1 border-t px-2 pt-1.5 text-xs text-muted-foreground">{footer}</div>
+				<div className="mt-1 border-t px-2 pt-1.5 text-xs text-secondary">{footer}</div>
 			)}
 		</>
 	);
@@ -248,10 +248,10 @@ export function ProviderMenuList({
 					}
 				}}
 				placeholder="Search providers…"
-				className="lh-input mb-1.5 w-full rounded-lg border bg-background px-2 py-1.5 text-foreground outline-none focus:ring-1 focus:ring-ring"
+				className="lh-input mb-1.5 w-full rounded-lg border bg-body px-2 py-1.5 text-primary outline-none focus:ring-1 focus:ring-accent-bg"
 			/>
 			{results.length === 0 && (
-				<div className="px-2 py-3 text-center text-muted-foreground">No providers match.</div>
+				<div className="px-2 py-3 text-center text-secondary">No providers match.</div>
 			)}
 			<ul ref={listRef} data-testid="provider-list" className="flex max-h-72 flex-col overflow-y-auto px-1">
 				{results.map((p, i) => (
@@ -262,11 +262,11 @@ export function ProviderMenuList({
 							data-idx={i}
 							onClick={() => onPick(p)}
 							className={`flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted ${
-								i === menuIdx ? "bg-accent/40 ring-1 ring-inset ring-border" : ""
+								i === menuIdx ? "bg-overlay-hover/40 ring-1 ring-inset ring-border" : ""
 							}`}
 						>
-							<span className="truncate text-card-foreground">{p.label}</span>
-							<span className="shrink-0 font-mono text-[11px] text-muted-foreground">{p.envVar}</span>
+							<span className="truncate text-primary">{p.label}</span>
+							<span className="shrink-0 font-mono text-[11px] text-secondary">{p.envVar}</span>
 						</button>
 					</li>
 				))}
@@ -378,9 +378,9 @@ export function FontMenuList({
 					}
 				}}
 				placeholder="Search fonts…"
-				className="lh-input mb-1.5 w-full rounded-lg border bg-background px-2 py-1.5 text-foreground outline-none focus:ring-1 focus:ring-ring"
+				className="lh-input mb-1.5 w-full rounded-lg border bg-body px-2 py-1.5 text-primary outline-none focus:ring-1 focus:ring-accent-bg"
 			/>
-			{!families && <div className="px-2 py-3 text-center text-muted-foreground">Loading fonts…</div>}
+			{!families && <div className="px-2 py-3 text-center text-secondary">Loading fonts…</div>}
 			<ul ref={listRef} data-testid="font-list" className="flex max-h-72 flex-col overflow-y-auto px-1">
 				{families &&
 					results.map((family, i) => {
@@ -394,11 +394,11 @@ export function FontMenuList({
 									data-idx={i}
 									onClick={() => onPick(family)}
 									className={`flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted ${
-										i === menuIdx ? "bg-accent/40 ring-1 ring-inset ring-border" : ""
+										i === menuIdx ? "bg-overlay-hover/40 ring-1 ring-inset ring-border" : ""
 									}${effective && i !== menuIdx ? " bg-muted/60" : ""}`}
 								>
-									<span className="truncate text-card-foreground">{family ?? "Source Sans 3"}</span>
-									<span className="shrink-0 text-muted-foreground">{isDefault ? "default" : effective && <span aria-hidden>✓</span>}</span>
+									<span className="truncate text-primary">{family ?? "Source Sans 3"}</span>
+									<span className="shrink-0 text-secondary">{isDefault ? "default" : effective && <span aria-hidden>✓</span>}</span>
 								</button>
 							</li>
 						);
@@ -411,16 +411,16 @@ export function FontMenuList({
 							data-idx={0}
 							onClick={() => onPick(customFamily)}
 							className={`flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted ${
-								menuIdx === 0 ? "bg-accent/40 ring-1 ring-inset ring-border" : ""
+								menuIdx === 0 ? "bg-overlay-hover/40 ring-1 ring-inset ring-border" : ""
 							}`}
 						>
-							<span className="truncate text-card-foreground">Use “{customFamily}”</span>
-							<span className="shrink-0 text-muted-foreground">custom</span>
+							<span className="truncate text-primary">Use “{customFamily}”</span>
+							<span className="shrink-0 text-secondary">custom</span>
 						</button>
 					</li>
 				)}
 			</ul>
-			{footer && <div className="px-2 pt-1.5 text-xs text-muted-foreground">{footer}</div>}
+			{footer && <div className="px-2 pt-1.5 text-xs text-secondary">{footer}</div>}
 		</>
 	);
 }

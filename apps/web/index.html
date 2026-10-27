@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" data-theme="dark" data-astryx-theme="neutral">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
@@ -11,17 +11,14 @@
 		<link rel="manifest" href="/site.webmanifest" />
 		<meta name="theme-color" content="#141414" />
 		<script>
-			// Paint the last-chosen theme before the app loads (no flash).
+			// Paint the last-chosen mode before the app loads (no flash).
 			// Written by components/settings/appearance.tsx.
 			try {
 				var c = JSON.parse(localStorage.getItem("lh:appearance-boot") || "null");
 				if (c) {
 					var r = document.documentElement;
 					for (var k in c.vars) r.style.setProperty(k, c.vars[k]);
-					if (c.dark === false) {
-						r.classList.remove("dark");
-						r.style.colorScheme = "light";
-					}
+					if (c.mode === "light" || c.dark === false) r.setAttribute("data-theme", "light");
 				}
 			} catch (e) {}
 		</script>

@@ -50,28 +50,28 @@ export function KnowledgeSummary({
 			    part with one empty line; the notes COUNT (never the file
 			    list) rides after the same parting. */}
 			<div className="flex flex-col gap-1">
-				<p className="font-ui text-sm text-muted-foreground">
+				<p className="font-ui text-sm text-secondary">
 					{propositions} {propositions === 1 ? "proposition" : "propositions"}
 				</p>
-				<p className="font-ui text-sm text-muted-foreground">
+				<p className="font-ui text-sm text-secondary">
 					{chains} {chains === 1 ? "chain" : "chains"}
 				</p>
 			</div>
 			<div className="h-4" aria-hidden="true" />
 			<div className="flex flex-col gap-1">
-				<p className="font-ui text-sm text-muted-foreground">
+				<p className="font-ui text-sm text-secondary">
 					{teachSessions} {teachSessions === 1 ? "teaching session" : "teaching sessions"}
 				</p>
-				<p className="font-ui text-sm text-muted-foreground">
+				<p className="font-ui text-sm text-secondary">
 					{practiceSessions} {practiceSessions === 1 ? "practice session" : "practice sessions"}
 				</p>
 			</div>
 			<div className="h-4" aria-hidden="true" />
-			<p className="font-ui text-sm text-muted-foreground">
+			<p className="font-ui text-sm text-secondary">
 				{importedNotes} {importedNotes === 1 ? "imported note" : "imported notes"}
 			</p>
 			{empty && (
-				<p className="pt-2 font-ui text-xs text-muted-foreground/70">
+				<p className="pt-2 font-ui text-xs text-secondary/70">
 					Nothing here yet — import notes to begin building the graph.
 				</p>
 			)}
@@ -171,7 +171,7 @@ export function MinimalHome({
 								type="button"
 								onClick={() => setChainsOpen(true)}
 								data-testid="open-chain-table"
-								className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent"
+								className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs text-secondary transition-colors hover:bg-overlay-hover"
 							>
 								<ListTreeIcon className="size-3" />
 								<span className="max-sm:sr-only">Chains</span>
@@ -185,7 +185,7 @@ export function MinimalHome({
 								disabled={importing}
 								onClick={() => fileInputRef.current?.click()}
 								data-testid="import-notes"
-								className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
+								className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs text-secondary transition-colors hover:bg-overlay-hover disabled:opacity-50"
 							>
 								<UploadIcon className="size-3" />
 								<span className="max-sm:sr-only">{importing ? "Importing…" : "Import notes…"}</span>

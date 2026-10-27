@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * Corner-radius math (concentric with the shell): shell rounded-3xl (24px)
  * − row padding p-2 (8px) ≈ button rounded-xl (12px).
  */
-export const COMPOSER_SHELL = "rounded-3xl border border-input/70 bg-card shadow-lg";
+export const COMPOSER_SHELL = "rounded-3xl border border-strong/70 bg-card shadow-lg";
 /** What one Enter press does, in precedence order: stop a busy stream,
  *  otherwise send the message, otherwise — practice sessions only — fire
  *  the next-problem signal while the between-problems pause is live
@@ -117,7 +117,7 @@ export function Composer({
 				autoFocus={autoFocus}
 				rows={1}
 				className={cn(
-					"field-sizing-content lh-input max-h-48 min-h-9 flex-1 resize-none bg-transparent py-2 outline-none placeholder:text-muted-foreground/70",
+					"field-sizing-content lh-input max-h-48 min-h-9 flex-1 resize-none bg-transparent py-2 outline-none placeholder:text-secondary/70",
 					leading ? "px-1.5" : "px-3",
 				)}
 			/>
@@ -145,8 +145,8 @@ export function Composer({
 					className={cn(
 						"flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors",
 						stopMode || canSend
-							? "text-foreground hover:bg-(--pill)"
-							: "text-muted-foreground/50",
+							? "text-primary hover:bg-overlay-hover"
+							: "text-secondary/50",
 					)}
 				>
 					{stopMode ? <CircleStopIcon className="size-5" /> : <CornerDownLeftIcon className="size-5" />}

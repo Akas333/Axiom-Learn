@@ -32,7 +32,13 @@ const HEAVY_HINT_RUNGS = new Set(["R3", "R4", "R5"]);
  * against the learner, so it is skipped. A dismissal counts as a
  * surrender (the practice doctrine's reading).
  */
-export function gradeForConclusion(outcome: unknown, rung: unknown): ReviewGrade | null {
+export function gradeForConclusion(outcome: unknown, rung: unknown, missClass?: unknown): ReviewGrade | null {
+	const grade = baseGrade(outcome, rung);
+	// A careless slip is not a memory failure: the right idea came to mind.
+	return grade === 1 && missClass === "careless" ? 2 : grade;
+}
+
+function baseGrade(outcome: unknown, rung: unknown): ReviewGrade | null {
 	switch (outcome) {
 		case "solved":
 			return rung === null || rung === undefined || rung === "R0" ? 3 : 2;
@@ -55,10 +61,22 @@ export interface ReviewEvent {
 	/** Epoch ms of the concluding turn. */
 	at: number;
 	grade: ReviewGrade;
+	/** The practice chat the review happened in (when the caller knows it). */
+	session?: string;
+	/** The problem's demand mode: recall, discrimination, or composition. */
+	mode?: string;
 }
 
-/** Every review a chat record holds: one per (clean conclude × target). */
-export function reviewEventsOf(messages: readonly LhMessage[]): ReviewEvent[] {
+/**
+ * Every review a chat record holds: one per (clean conclude × target).
+ *
+ * When the conclusion names `missedTargets` (a multi-target problem that
+ * broke on some targets only), the grade applies to those targets alone.
+ * The other targets were retrieved: they count as a clean success when the
+ * problem was finished, and give no evidence when it was given up (the
+ * learner may never have reached them).
+ */
+export function reviewEventsOf(messages: readonly LhMessage[], session?: string): ReviewEvent[] {
 	const clean = new Set<string>();
 	for (const m of messages) {
 		if ((m as { role?: string }).role !== "toolResult") continue;
@@ -72,14 +90,35 @@ export function reviewEventsOf(messages: readonly LhMessage[]): ReviewEvent[] {
 		for (const block of assistant.content) {
 			if (block.type !== "toolCall" || block.name !== PRACTICE_CONCLUDE_TOOL) continue;
 			if (!clean.has(block.id)) continue;
-			const args = (block.arguments ?? {}) as { outcome?: unknown; rung?: unknown };
-			const grade = gradeForConclusion(args.outcome, args.rung);
+			const args = (block.arguments ?? {}) as {
+				outcome?: unknown;
+				rung?: unknown;
+				missClass?: unknown;
+				missedTargets?: unknown;
+			};
+			const grade = gradeForConclusion(args.outcome, args.rung, args.missClass);
 			if (grade === null) continue;
-			const target = problemInputForConclude(messages, block.id)?.target;
+			const pose = problemInputForConclude(messages, block.id);
+			const target = pose?.target;
 			if (!Array.isArray(target)) continue;
+			const ids = [...new Set(target)].filter((id): id is string => typeof id === "string" && id.length > 0);
+			const missed = Array.isArray(args.missedTargets)
+				? new Set(args.missedTargets.filter((id) => ids.includes(id as string)))
+				: new Set<unknown>();
+			const finished = args.outcome === "solved" || args.outcome === "solvedWithHints";
 			const at = typeof assistant.timestamp === "number" ? assistant.timestamp : 0;
-			for (const id of new Set(target)) {
-				if (typeof id === "string" && id.length > 0) events.push({ nodeId: id, at, grade });
+			const mode = typeof pose?.mode === "string" ? pose.mode : undefined;
+			for (const id of ids) {
+				let g: ReviewGrade | null = grade;
+				if (missed.size > 0 && !missed.has(id)) g = finished ? 3 : null;
+				if (g === null) continue;
+				events.push({
+					nodeId: id,
+					at,
+					grade: g,
+					...(session !== undefined ? { session } : {}),
+					...(mode !== undefined ? { mode } : {}),
+				});
 			}
 		}
 	}
@@ -152,6 +191,12 @@ export interface NodeReviewState {
 	/** Epoch ms when recall reaches the target retention. */
 	dueAt: number;
 	due: boolean;
+	/** Distinct practice sessions with a clean success (grade 3+). */
+	strongSessions: number;
+	/** Distinct demand modes with a clean success (grade 3+). */
+	strongModes: number;
+	/** The latest review's demand mode ("flashcard" for an Anki review). */
+	lastMode?: string;
 }
 
 /**
@@ -177,6 +222,10 @@ export function reviewStates(events: readonly ReviewEvent[], now: number): Map<s
 		}
 		const last = list[list.length - 1]!;
 		const dueAt = last.at + intervalDays(mem.s) * DAY_MS;
+		const strong = list.filter((e) => e.grade >= 3);
+		// Events without a session id each count as their own session.
+		const sessions = new Set(strong.map((e, i) => e.session ?? `#${i}`));
+		const modes = new Set(strong.map((e) => e.mode ?? "recall"));
 		out.set(nodeId, {
 			nodeId,
 			reviews: list.length,
@@ -187,6 +236,9 @@ export function reviewStates(events: readonly ReviewEvent[], now: number): Map<s
 			recall: retrievability((now - last.at) / DAY_MS, mem.s),
 			dueAt,
 			due: now >= dueAt,
+			strongSessions: sessions.size,
+			strongModes: modes.size,
+			...(last.mode !== undefined ? { lastMode: last.mode } : {}),
 		});
 	}
 	return out;
@@ -195,6 +247,28 @@ export function reviewStates(events: readonly ReviewEvent[], now: number): Map<s
 /** Due nodes first, weakest recall first — the order a review session uses. */
 export function dueOrder(states: Iterable<NodeReviewState>): NodeReviewState[] {
 	return [...states].filter((s) => s.due).sort((a, b) => a.recall - b.recall);
+}
+
+// ─── named states ────────────────────────────────────────────────────────────
+
+/**
+ * How well a claim is held, in five words (the graph's node states):
+ *   - untested   — never practiced
+ *   - shaky      — the latest attempt was missed or needed heavy hints
+ *   - developing — retrieved, but not yet from more than one kind of cue
+ *   - solid      — retrieved cleanly in 2+ sessions or 2+ demand modes
+ *   - due        — was solid, but recall has faded below the target
+ * Solid asks for variety because one session or one problem shape only
+ * shows the claim comes to mind in that one context.
+ */
+export const MASTERY_STATES = ["untested", "shaky", "developing", "solid", "due"] as const;
+export type MasteryState = (typeof MASTERY_STATES)[number];
+
+export function masteryStateOf(state: NodeReviewState | undefined): MasteryState {
+	if (!state) return "untested";
+	if (state.lastGrade === 1) return "shaky";
+	if (state.strongSessions >= 2 || state.strongModes >= 2) return state.due ? "due" : "solid";
+	return "developing";
 }
 
 // ─── wording ─────────────────────────────────────────────────────────────────
@@ -215,13 +289,20 @@ const GRADE_TEXT: Record<ReviewGrade, string> = {
 	4: "solved easily",
 };
 
+const ANKI_GRADE_TEXT: Record<ReviewGrade, string> = { 1: "again", 2: "hard", 3: "good", 4: "easy" };
+
 /** The one-line memory note the practice agent reads beside a proposition. */
 export function memoryNote(state: NodeReviewState | undefined, now: number): string {
 	if (!state) return "memory: never practiced";
+	const last =
+		state.lastMode === "flashcard"
+			? `last reviewed in Anki ${agoText(now - state.lastReviewedAt)} (${ANKI_GRADE_TEXT[state.lastGrade]})`
+			: `last practiced ${agoText(now - state.lastReviewedAt)} (${GRADE_TEXT[state.lastGrade]})`;
 	const parts = [
-		`last practiced ${agoText(now - state.lastReviewedAt)} (${GRADE_TEXT[state.lastGrade]})`,
+		last,
 		`${state.reviews} ${state.reviews === 1 ? "review" : "reviews"}`,
 		`estimated recall ${Math.round(state.recall * 100)}%`,
+		`state ${masteryStateOf(state)}`,
 	];
 	if (state.due) parts.push("DUE for review");
 	return `memory: ${parts.join("; ")}`;

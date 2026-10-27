@@ -76,12 +76,12 @@ export function ConceptOpener({ number, title, nodeId }: { number: number; title
 			className="my-6 flex scroll-mt-24 items-center gap-3"
 		>
 			<div className="h-px flex-1 bg-gradient-to-r from-transparent to-border" aria-hidden />
-			<div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 py-1 pl-1 pr-3.5">
-				<span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-medium tabular-nums text-primary-foreground">
+			<div className="flex items-center gap-2 rounded-full border border-accent-bg/40 bg-accent-bg/10 py-1 pl-1 pr-3.5">
+				<span className="flex size-6 items-center justify-center rounded-full bg-accent-bg text-xs font-medium tabular-nums text-on-accent">
 					{number}
 				</span>
-				<span className="text-xs text-muted-foreground">Concept</span>
-				<span className="text-sm font-medium text-foreground">{title}</span>
+				<span className="text-xs text-secondary">Concept</span>
+				<span className="text-sm font-medium text-primary">{title}</span>
 			</div>
 			<div className="h-px flex-1 bg-gradient-to-l from-transparent to-border" aria-hidden />
 		</div>

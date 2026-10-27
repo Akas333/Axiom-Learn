@@ -10,6 +10,7 @@
  * (autoInstallOnAppQuit); the banner is a courtesy, not a gate.
  */
 
+import { Button } from "@/components/ui/button";
 import { useUpdateState } from "@/components/settings/update-settings.tsx";
 
 export default function UpdateBanner() {
@@ -22,15 +23,9 @@ export default function UpdateBanner() {
 		>
 			<div className="text-sm">
 				<span className="font-medium">Kapany {ready.version ?? "update"} is ready</span>
-				<span className="text-muted-foreground"> — restart to finish installing.</span>
+				<span className="text-secondary"> — restart to finish installing.</span>
 			</div>
-			<button
-				type="button"
-				onClick={() => window.lh?.installUpdate?.()}
-				className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent/80"
-			>
-				Restart
-			</button>
+			<Button size="sm" variant="secondary" onClick={() => window.lh?.installUpdate?.()}>Restart</Button>
 		</div>
 	);
 }

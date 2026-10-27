@@ -594,10 +594,10 @@ export function DictationButton({ dictation }: { dictation: Dictation }) {
 				data-testid="dictation-toggle"
 				className={`flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
 					active
-						? "bg-primary/25 text-(--primary-soft) hover:bg-primary/35"
+						? "bg-accent-bg/25 text-primary hover:bg-accent-bg/35"
 						: error
-							? "text-destructive hover:bg-(--pill)"
-							: "text-muted-foreground hover:bg-(--pill) hover:text-foreground"
+							? "text-error hover:bg-overlay-hover"
+							: "text-secondary hover:bg-overlay-hover hover:text-primary"
 				}`}
 			>
 				{phase === "stopping" || phase === "connecting" ? (
@@ -654,7 +654,7 @@ export function LevelDots({
 
 /** The manual run's meter (nothing unless a run is live). */
 export function DictationMeter({ dictation }: { dictation: Dictation }) {
-	return <LevelDots levelRef={dictation.levelRef} active={dictation.active} className="text-muted-foreground" />;
+	return <LevelDots levelRef={dictation.levelRef} active={dictation.active} className="text-secondary" />;
 }
 
 /** Meter + mic together, read from the page's DictationProvider — the

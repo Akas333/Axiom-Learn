@@ -132,6 +132,12 @@ export function composeLearnerContext(learner: LearnerSettings | undefined): str
 	return lines.join("\n");
 }
 
+/** Append the learner-profile block to an agent's instructions. */
+export function withLearnerContext(instructions: string, learnerContext?: string): string {
+	const block = learnerContext?.trim();
+	return block ? `${instructions}\n\n---\n\n${block}` : instructions;
+}
+
 /** Read-side sanitizer: lenient, drops anything malformed. */
 export function sanitizeLearner(raw: unknown): LearnerSettings | undefined {
 	if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return undefined;

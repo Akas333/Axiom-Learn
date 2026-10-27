@@ -23,7 +23,10 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { useBackdropDismiss } from "@/components/backdrop-dismiss";
+import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
+import { HStack, Layout, LayoutContent } from "@astryxdesign/core/Layout";
+import { Text } from "@astryxdesign/core/Text";
+import { VStack } from "@astryxdesign/core/VStack";
 import { useRouter } from "@/lib/navigation";
 import {
 	actionForBinding,
@@ -150,8 +153,6 @@ export function KeyboardShortcuts() {
  *  Until the settings milestone ships an editor, this is how shortcuts
  *  stay discoverable. */
 function CheatSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-	const backdropDismiss = useBackdropDismiss(onClose);
-	if (!open) return null;
 	const scopes = ["global", "chat", "graph"] as const;
 	const scopeLabels: Record<(typeof scopes)[number], string> = {
 		global: "Global",
@@ -159,41 +160,46 @@ function CheatSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
 		graph: "Graph view",
 	};
 	return (
-		<div
-			data-testid="cheat-sheet"
-			className="lh-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-			{...backdropDismiss}
+		<Dialog
+			isOpen={open}
+			onOpenChange={(next) => {
+				if (!next) onClose();
+			}}
+			width={576}
+			maxHeight="80dvh"
+			padding={0}
 		>
-			<div
-				className="max-h-[80dvh] w-full max-w-[36rem] overflow-y-auto rounded-xl border bg-card p-5 shadow-2xl"
-				onClick={(e) => e.stopPropagation()}
-			>
-				<div className="mb-4 flex items-baseline justify-between">
-					<span className="text-sm font-medium text-card-foreground">Keyboard shortcuts</span>
-					<span className="text-xs text-muted-foreground">Esc to close</span>
-				</div>
-				{scopes.map((scope) => {
-					const actions = KEYBOARD_ACTIONS.filter((a) => a.scope === scope);
-					if (actions.length === 0) return null;
-					return (
-						<div key={scope} className="mb-4">
-							<div className="mb-1.5 text-xs text-muted-foreground/70">
-								{scopeLabels[scope]}
-							</div>
-							<div className="flex flex-col gap-1">
-								{actions.map((a) => (
-									<div key={a.id} className="flex items-center justify-between gap-4 text-sm">
-										<span className="text-muted-foreground">{a.label}</span>
-										<kbd className="rounded-md border border-border bg-background px-1.5 py-0.5 font-mono text-xs text-card-foreground">
-											{formatBinding(bindingForAction(a.id))}
-										</kbd>
-									</div>
-								))}
-							</div>
-						</div>
-					);
-				})}
-			</div>
-		</div>
+			{open && (
+				<Layout
+					data-testid="cheat-sheet"
+					header={<DialogHeader title="Keyboard shortcuts" onOpenChange={() => onClose()} />}
+					content={
+						<LayoutContent isScrollable>
+							<VStack gap={5}>
+								{scopes.map((scope) => {
+									const actions = KEYBOARD_ACTIONS.filter((a) => a.scope === scope);
+									if (actions.length === 0) return null;
+									return (
+										<VStack key={scope} gap={2}>
+											<Text type="label" color="secondary">
+												{scopeLabels[scope]}
+											</Text>
+											{actions.map((a) => (
+												<HStack key={a.id} gap={4} align="center" justify="between">
+													<Text type="body">{a.label}</Text>
+													<kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-xs text-primary">
+														{formatBinding(bindingForAction(a.id))}
+													</kbd>
+												</HStack>
+											))}
+										</VStack>
+									);
+								})}
+							</VStack>
+						</LayoutContent>
+					}
+				/>
+			)}
+		</Dialog>
 	);
 }

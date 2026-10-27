@@ -89,7 +89,7 @@ export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmi
 				type="button"
 				data-testid="practice-dock-bar"
 				onClick={onExpand}
-				className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
+				className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-left text-sm text-secondary transition-colors hover:text-primary"
 			>
 				<ChevronRightIcon className="size-4 shrink-0 rotate-90" />
 				<span className="font-medium">Problem</span>
@@ -106,7 +106,7 @@ export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmi
 			    markdown + LaTeX rendered, capped by the measured column
 			    (--dock-max-h; the old fixed 40vh cut long problems short). */}
 			<div className="max-h-[var(--dock-max-h,40vh)] overflow-y-auto px-4 pt-3 pb-2">
-				<div className="mb-1 text-xs font-medium text-muted-foreground">Problem</div>
+				<div className="mb-1 text-xs font-medium text-secondary">Problem</div>
 				<div className="lh-prose text-[15px]">
 					<ToolContentResponse>{input.statement}</ToolContentResponse>
 				</div>
@@ -125,7 +125,6 @@ export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmi
 						data-testid="practice-send"
 						disabled={thinking.trim().length === 0 || compactionRunning}
 						onClick={() => submit()}
-						className="h-9 rounded-xl px-3.5 text-sm font-medium"
 					>
 						Submit thinking
 					</Button>

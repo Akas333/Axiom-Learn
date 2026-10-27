@@ -62,6 +62,10 @@
  * camera never moves.
  */
 
+import { Button } from "@astryxdesign/core/Button";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { Slider } from "@astryxdesign/core/Slider";
+import { TextInput } from "@astryxdesign/core/TextInput";
 import { onGraphSearch, takePendingGraphSearch } from "@/lib/graph-search";
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NotesImportErrors, useNotesImport } from "@/components/notes-import.tsx";
@@ -109,8 +113,8 @@ import {
 } from "@/src/core";
 
 /** The resting node and link color (canvas wants hex, not oklch): quiet
- *  grey, Obsidian-style. The hover neighbourhood uses --primary-soft. */
-const NODE_COLOR_TOKEN = "--muted-foreground";
+ *  grey, Obsidian-style. The hover neighbourhood uses the theme blue. */
+const NODE_COLOR_TOKEN = "--color-text-secondary";
 
 /** Per-device graph camera persistence (zoom+pan view state). v1 in the
  *  key: the stored shape is the renderer's d3 transform {k, x, y}. */
@@ -209,8 +213,15 @@ function cssColorToHex(css: string): string {
 		.join("")}`;
 }
 
+/** A theme color token as hex. Astryx tokens are light-dark() values, so
+ *  they're resolved through a probe element under the page's color scheme. */
 function tokenHex(cssVar: string): string {
-	const value = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
+	const probe = document.createElement("span");
+	probe.style.color = `var(${cssVar})`;
+	probe.style.display = "none";
+	document.body.appendChild(probe);
+	const value = getComputedStyle(probe).color;
+	probe.remove();
 	return value ? cssColorToHex(value) : "#888888";
 }
 
@@ -255,22 +266,18 @@ function SettingSlider({
 	disabled?: boolean;
 }) {
 	return (
-		<label className={`flex flex-col gap-1${disabled ? " opacity-40" : ""}`}>
-			<span className="flex items-center justify-between text-[11px] text-muted-foreground">
-				{label}
-				<span className="tabular-nums">{display ?? value}</span>
-			</span>
-			<input
-				type="range"
-				min={min}
-				max={max}
-				step={step}
-				value={value}
-				disabled={disabled}
-				onChange={(e) => onChange(Number(e.target.value))}
-				className="h-1.5 w-full accent-primary"
-			/>
-		</label>
+		<Slider
+			label={label}
+
+			min={min}
+			max={max}
+			step={step}
+			value={value}
+			isDisabled={disabled}
+			valueDisplay="text"
+			formatValue={display === undefined ? undefined : () => display}
+			onChange={(v: number) => onChange(v)}
+		/>
 	);
 }
 
@@ -355,8 +362,8 @@ export function GraphCostControl({ costs }: { costs: GraphCostSummary }) {
 				type="button"
 				aria-expanded={open}
 				onClick={() => setOpen((o) => !o)}
-				className={`rounded-lg px-2 py-1 text-xs tabular-nums transition-colors hover:bg-accent ${
-					open ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+				className={`rounded-lg px-2 py-1 text-xs tabular-nums transition-colors hover:bg-overlay-hover ${
+					open ? "text-primary" : "text-secondary hover:text-primary"
 				}`}
 			>
 				{graphUsageLabel(costs)}
@@ -392,26 +399,26 @@ function GraphCostPanel({ costs }: { costs: GraphCostSummary }) {
 	return (
 		<div className="w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border bg-card/95 p-3 text-xs shadow-lg backdrop-blur">
 			<div className="mb-2 flex items-baseline justify-between">
-				<span className="text-[10px] font-medium text-muted-foreground">
+				<span className="text-[10px] font-medium text-secondary">
 					Graph pipeline costs
 				</span>
-				<span className="text-foreground tabular-nums">
+				<span className="text-primary tabular-nums">
 					{graphUsageLabel(costs)}
 					{unpricedRuns > 0 && (
-						<span className="text-muted-foreground"> · {unpricedRuns} unpriced</span>
+						<span className="text-secondary"> · {unpricedRuns} unpriced</span>
 					)}
 				</span>
 			</div>
 			<div className="flex flex-col gap-1">
 				{stageRows.map(([label, stage]) => (
 					<div key={label} className="flex items-baseline justify-between gap-2 text-[11px]">
-						<span className="shrink-0 text-muted-foreground">{label}</span>
+						<span className="shrink-0 text-secondary">{label}</span>
 						<span className="min-w-0 text-right tabular-nums">
 							{fmtRunCost(stage.runs - stage.unpricedRuns - (stage.subscriptionRuns ?? 0) <= 0 ? null : stage.dollars, graphProviders(stage))}
 							{stage.unpricedRuns > 0 && (stage.runs - stage.unpricedRuns - (stage.subscriptionRuns ?? 0) > 0 || (stage.subscriptionRuns ?? 0) > 0) && (
-								<span className="text-muted-foreground"> +{stage.unpricedRuns} unpriced</span>
+								<span className="text-secondary"> +{stage.unpricedRuns} unpriced</span>
 							)}
-							<span className="text-muted-foreground">
+							<span className="text-secondary">
 								{" "}
 								· {fmtTokens(stage.tokens.inputTokens)} in / {fmtTokens(stage.tokens.outputTokens)} out
 							</span>
@@ -422,11 +429,11 @@ function GraphCostPanel({ costs }: { costs: GraphCostSummary }) {
 			<div className="mt-2 flex flex-col gap-0.5 border-t pt-2">
 				{costs.runs.map((run) => (
 						<div key={run.startedAt} className="flex items-baseline justify-between gap-2 text-[11px]">
-							<span className="min-w-0 flex-1 truncate text-muted-foreground">
-								<span className="text-foreground/70">{timeAgo(run.startedAt)}</span>{" "}
+							<span className="min-w-0 flex-1 truncate text-secondary">
+								<span className="text-primary/70">{timeAgo(run.startedAt)}</span>{" "}
 								{run.title}
 								{run.merged && (
-									<span className="text-muted-foreground">
+									<span className="text-secondary">
 										{" "}
 										+{run.merged.nodes}n
 									</span>
@@ -467,16 +474,15 @@ function GraphSettingsControl({
 				label="Graph display settings"
 				side="bottom"
 			>
-				<button
-				type="button"
-				aria-expanded={open}
-				onClick={() => setOpen((o) => !o)}
-				className={`flex size-9 items-center justify-center rounded-xl border bg-card/85 shadow-lg backdrop-blur transition-colors hover:bg-accent ${
-					open ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-				}`}
-			>
-				<SettingsIcon className="size-4" />
-			</button>
+				<IconButton
+					label="Graph display settings"
+					size="sm"
+					variant="secondary"
+					elevation="med"
+					aria-expanded={open}
+					icon={<SettingsIcon className="size-4" />}
+					onClick={() => setOpen((o) => !o)}
+				/>
 			</Hint>
 			{open && (
 				// Viewport-capped + internally scrollable — the coverage
@@ -490,7 +496,7 @@ function GraphSettingsControl({
 				// (pr-2.5) -> scrollbar -> 10px (p-2.5) -> panel edge. The
 				// scrollbar itself does NOT move: it stays pinned at the same
 				// distance from the panel's right border.
-				<div className="absolute right-0 top-full mt-2 flex max-h-[60dvh] w-72 flex-col rounded-xl border bg-card/85 p-2.5 shadow-lg backdrop-blur">
+				<div className="absolute right-0 top-full mt-2 flex max-h-[60dvh] w-72 flex-col rounded-xl border border-border bg-popover p-2.5 shadow-lg">
 					<div className="flex flex-col gap-2 overflow-y-auto pr-2.5">
 							{/* Size/zoom/region sliders: LADDER-mapped 0-100, step 10 (11
 							    stops, every DEFAULT dead-center at 50, every value a nice
@@ -548,13 +554,13 @@ function GraphSettingsControl({
 									changeSettings((cur) => ({ ...cur, labelZoom: fromLadderPosition(p, LABEL_ZOOM_LADDER) }))}
 							/>
 							{/* Cluster names: drawn above each cluster in its colour. */}
-							<label className="flex cursor-pointer items-center justify-between text-[11px] text-muted-foreground">
+							<label className="flex cursor-pointer items-center justify-between text-[11px] text-secondary">
 								<span>Cluster labels</span>
 								<input
 									type="checkbox"
 									checked={settings.clusterLabels}
 									onChange={(e) => changeSettings((cur) => ({ ...cur, clusterLabels: e.target.checked }))}
-									className="accent-primary"
+									className="accent-accent-bg"
 								/>
 							</label>
 							<SettingSlider
@@ -582,7 +588,7 @@ function GraphSettingsControl({
 						    Order (user 2026-09-17): general forces first; depth
 						    anchor + its gray-out-able controls last. */}
 						<div className="mt-1.5 flex flex-col gap-1.5 border-t pt-1.5">
-							<span className="text-[10px] font-medium text-muted-foreground">
+							<span className="text-[10px] font-medium text-secondary">
 								Physics
 							</span>
 							<SettingSlider
@@ -670,7 +676,7 @@ function GraphSettingsControl({
 							<label className="flex items-center justify-between gap-2 text-xs">
 								Depth anchor
 								<select
-									className="rounded border bg-background px-1 py-0.5 text-xs"
+									className="rounded border bg-body px-1 py-0.5 text-xs"
 									value={physicsTuning.depthMode}
 									onChange={(e) =>
 										changeSettings((cur) => ({
@@ -774,51 +780,51 @@ export function GraphChromeRow({
 	return (
 		<>
 			{!isEmpty && (
-				<div className="graph-chrome-fade-in w-56 min-w-0 shrink rounded-xl border bg-card/85 px-1 py-[3px] shadow-lg backdrop-blur">
+				<div className="graph-chrome-fade-in w-56 min-w-0 shrink">
 					<Hint
 						// ⌘F focuses node search (surface-scoped registry action).
 						label="Search nodes"
 						action="find"
 						side="bottom"
 					>
-					<div className="relative">
-						<SearchIcon className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-						<input
+						<TextInput
 							ref={searchInputRef}
+							label="Search nodes"
+							isLabelHidden
+							size="sm"
+							width="100%"
+							startIcon={SearchIcon}
+							hasClear
 							value={query}
-							onChange={(e) => onQuery(e.target.value)}
+							onChange={onQuery}
 							placeholder="Search nodes…"
-							aria-label="Search nodes"
-							spellCheck={false}
-							className="h-7 w-full rounded-lg border bg-background pl-8 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
+							status={noMatch ? { type: "warning", message: "No matching nodes." } : undefined}
+							statusVariant="detached"
+							controlClassName="shadow-lg"
 						/>
-					</div>
 					</Hint>
-					{noMatch && (
-						<div className="px-1.5 pt-1 text-[11px] text-muted-foreground">No matching nodes.</div>
-					)}
 				</div>
 			)}
 			{/* The chain table (chains overlay, owner plan 2026-09-29). Own
 			    container (36px band), between the search and Import. */}
 			{!isEmpty && (
-				<div className="graph-chrome-fade-in shrink-0 rounded-xl border bg-card/85 px-1 py-[3px] shadow-lg backdrop-blur">
+				<div className="graph-chrome-fade-in shrink-0">
 					<Hint label="Every reasoning chain" side="bottom">
-						<button
-							type="button"
+						<Button
+							label="Chains"
+							size="sm"
+							variant="secondary"
+							elevation="med"
+							icon={<ListTreeIcon className="size-4" />}
 							onClick={onOpenChains}
 							data-testid="open-chain-table"
-							className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent"
-						>
-							<ListTreeIcon className="size-3" />
-							<span className="max-sm:sr-only">Chains</span>
-						</button>
+						/>
 					</Hint>
 				</div>
 			)}
 			{/* Import notes — its own container (36px, header band); ALWAYS
 			    rendered (the empty-graph ruling above — the entry point). */}
-			<div className="shrink-0 rounded-xl border bg-card/85 px-1 py-[3px] shadow-lg backdrop-blur">
+			<div className="shrink-0">
 				<input
 					ref={fileInputRef}
 					type="file"
@@ -837,16 +843,16 @@ export function GraphChromeRow({
 					label="Import notes into the graph"
 					side="bottom"
 				>
-					<button
-						type="button"
-						disabled={importing}
+					<Button
+						label="Import notes…"
+						size="sm"
+						variant="secondary"
+						elevation="med"
+						icon={<UploadIcon className="size-4" />}
+						isLoading={importing}
 						onClick={() => fileInputRef.current?.click()}
 						data-testid="import-notes"
-					className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
-				>
-						<UploadIcon className="size-3" />
-						<span className="max-sm:sr-only">{importing ? "Importing…" : "Import notes…"}</span>
-					</button>
+					/>
 				</Hint>
 			</div>
 			{!isEmpty && (
@@ -1335,10 +1341,10 @@ export function GraphView({
 			colors: {
 				node: tokenHex(NODE_COLOR_TOKEN),
 				edge: tokenHex(NODE_COLOR_TOKEN),
-				label: tokenHex("--muted-foreground"),
-				hoverText: tokenHex("--foreground"),
-				accent: tokenHex("--primary-soft"),
-				background: tokenHex("--background"),
+				label: tokenHex("--color-text-secondary"),
+				hoverText: tokenHex("--color-text-primary"),
+				accent: tokenHex("--color-text-blue"),
+				background: tokenHex("--color-background-body"),
 			},
 			// Match the app typography (Geist via the body's stack).
 			fontFamily: getComputedStyle(document.body).fontFamily,
@@ -1405,8 +1411,8 @@ export function GraphView({
 				// The empty graph keeps the first action clear without zero-valued statistics.
 				<div className="relative flex h-full w-full items-center justify-center overflow-hidden px-4">
 					<SphereBackdrop />
-					<div className="relative flex flex-col items-center gap-4 text-center text-muted-foreground">
-						<h1 className="text-3xl font-medium text-foreground sm:text-5xl sm:leading-[1.15]">
+					<div className="relative flex flex-col items-center gap-4 text-center text-secondary">
+						<h1 className="text-3xl font-medium text-primary sm:text-5xl sm:leading-[1.15]">
 							Knowledge <span className="lh-outline-text">graph</span>
 						</h1>
 						<p className="max-w-md text-base sm:text-lg">
@@ -1452,7 +1458,7 @@ export function GraphView({
 							setDeletingNode({ id: ctxNode.id, name: ctxNode.name });
 							setCtxNode(null);
 						}}
-						className="flex items-center rounded-lg px-2.5 py-1.5 text-left text-muted-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
+						className="flex items-center rounded-lg px-2.5 py-1.5 text-left text-secondary/80 transition-colors hover:bg-overlay-hover hover:text-primary"
 					>
 						Delete
 					</button>
@@ -1540,11 +1546,11 @@ export function GraphView({
 			{pipelineRuns.map((run) => (
 				<div
 					key={run.id}
-					className="flex items-center gap-2 rounded-full border bg-card/85 px-3 py-1.5 text-xs text-muted-foreground shadow-lg backdrop-blur"
+					className="flex items-center gap-2 rounded-full border bg-card/85 px-3 py-1.5 text-xs text-secondary shadow-lg backdrop-blur"
 				>
 					<Loader2Icon className="size-3.5 shrink-0 animate-spin" />
 					<span className="capitalize">{run.phase}</span>
-					<span className="max-w-48 truncate text-foreground">{run.title}</span>
+					<span className="max-w-48 truncate text-primary">{run.title}</span>
 					<span className="tabular-nums">{Math.max(0, Math.round((Date.now() - run.startedAt) / 1000))}s</span>
 				</div>
 			))}
@@ -1562,18 +1568,18 @@ export function GraphView({
 					className="lh-no-drag absolute z-10 w-80 max-w-[calc(100%-1rem)] rounded-xl border bg-card p-4 text-left shadow-lg"
 				>
 					<div className="text-sm font-medium leading-snug">{selected.node.name}</div>
-					<div className="mt-1 text-xs leading-relaxed text-muted-foreground">{selected.node.statement}</div>
+					<div className="mt-1 text-xs leading-relaxed text-secondary">{selected.node.statement}</div>
 					{selected.sourceIds.length > 0 ? (
 						<div className="mt-3 flex flex-col gap-1">
-							<div className="text-xs text-muted-foreground">Sessions</div>
+							<div className="text-xs text-secondary">Sessions</div>
 							{selected.sourceIds.map((sourceId) => {
 								// An imported-notes file: a STATIC entry — the path,
 								// plain text, never a link (no session to open).
 								if (snapshot?.fileSources?.[sourceId] !== undefined) {
 									return (
 										<div key={sourceId} className="flex items-center gap-1.5">
-											<FileTextIcon className="size-3.5 shrink-0 text-muted-foreground" />
-											<span className="min-w-0 flex-1 truncate px-2 py-1.5 text-sm text-muted-foreground">
+											<FileTextIcon className="size-3.5 shrink-0 text-secondary" />
+											<span className="min-w-0 flex-1 truncate px-2 py-1.5 text-sm text-secondary">
 												{snapshot.fileSources[sourceId]}
 											</span>
 										</div>
@@ -1585,7 +1591,7 @@ export function GraphView({
 										<Link
 											href={propositionSessionHref(selected.node, sourceId)}
 											scroll={false}
-											className="min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-accent"
+											className="min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-sm text-primary transition-colors hover:bg-overlay-hover"
 										>
 											{snapshot?.sessions[sourceId] ?? sourceId}
 										</Link>
@@ -1594,7 +1600,7 @@ export function GraphView({
 							})}
 						</div>
 					) : (
-						<div className="mt-3 text-xs text-muted-foreground">No sessions recorded.</div>
+						<div className="mt-3 text-xs text-secondary">No sessions recorded.</div>
 					)}
 				</div>
 			)}

@@ -14,6 +14,7 @@
  * its own save), the same re-read pattern chat.tsx uses for "models".
  */
 
+import { Button } from "@/components/ui/button";
 import type { AuthKeyStatus } from "@/src/core";
 import { classifyKeys, type ProviderKeyInfo } from "@/components/settings/keys-section";
 import { useModelCatalog } from "@/components/model-picker";
@@ -46,14 +47,7 @@ export function useZeroKeys(): boolean {
  *  "setup-cta"; probes can tell them apart). */
 export function ZeroKeysPill({ onOpen, inline = false }: { onOpen: () => void; inline?: boolean }) {
 	const button = (
-		<button
-			type="button"
-			data-testid="setup-cta-keys"
-			onClick={onOpen}
-			className="rounded-sm border border-border bg-card px-3 py-1.5 font-ui text-xs text-foreground transition-colors hover:border-muted-foreground/50 hover:bg-accent cursor-pointer"
-		>
-			Add a provider key
-		</button>
+		<Button size="sm" variant="secondary" data-testid="setup-cta-keys" onClick={onOpen}>Add a provider key</Button>
 	);
 	return inline ? button : <div className="pointer-events-auto mb-2 flex justify-center">{button}</div>;
 }

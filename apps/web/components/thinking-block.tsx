@@ -123,13 +123,13 @@ export function ThinkingBlock({
 					blurAfterPointerClick(e);
 				}}
 				aria-expanded={open}
-				className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-(--pill) px-3 font-medium text-muted-foreground transition-colors hover:bg-(--pill-hover) hover:text-foreground"
+				className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-overlay-hover px-3 font-medium text-secondary transition-colors hover:bg-overlay-pressed hover:text-primary"
 			>
 				{label}
 				<ChevronDownIcon className={cn("size-3.5 shrink-0 transition-transform", open ? "rotate-180" : "rotate-0")} />
 			</button>
 			{open && (
-				<span className={cn("lh-prose block max-w-[80%] whitespace-pre-wrap rounded-2xl border border-input/70 px-4 py-2.5 text-[15px] italic text-foreground/60", inCard && "max-w-full")}>{text}</span>
+				<span className={cn("lh-prose block max-w-[80%] whitespace-pre-wrap rounded-2xl border border-strong/70 px-4 py-2.5 text-[15px] italic text-primary/60", inCard && "max-w-full")}>{text}</span>
 			)}
 		</div>
 	);

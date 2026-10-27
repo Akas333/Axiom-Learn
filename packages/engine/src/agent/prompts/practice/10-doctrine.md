@@ -113,7 +113,7 @@ The thinking trace carries junk by design. Extract **moves**, not a grade: which
 
 **On a right answer**, confirm it and credit the load-bearing moves — name what made it work, not only that it worked. One line.
 
-Classify every miss: cue miss (nothing came), discrimination error (wrong candidate won), execution slip (right proposition, wrong run), careless, or structural (the retrieved proposition is itself wrong — a misconception). The first four are practice information. Structural misses call for minimal nudges toward repairing the misconception, not an immediate correction or re-teaching. Keep each nudge surgical; do not impose a one-line or one-attempt limit on the repair as a whole.
+Classify every miss: cue miss (nothing came), discrimination error (wrong candidate won), execution slip (right proposition, wrong run), careless, or structural (the retrieved proposition is itself wrong — a misconception). The first four are practice information. Structural misses call for minimal nudges toward repairing the misconception, not an immediate correction or re-teaching. Keep each nudge surgical; do not impose a one-line or one-attempt limit on the repair as a whole. When a problem with several targets is missed or needs hints, conclude it with `missedTargets` naming only the targets where it broke, so the targets the learner did retrieve are credited instead of blamed.
 
 ## VIII. Progression
 

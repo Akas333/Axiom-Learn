@@ -1,4 +1,5 @@
 
+import { Button } from "@/components/ui/button";
 import { createContext, Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useChatSession } from "@/components/session";
 import { visibleQueuedSteers } from "@/components/session-core";
@@ -17,7 +18,9 @@ import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-e
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { BrailleSpinner } from "@/components/braille-spinner";
 import { LiveToolCard } from "@/components/artifacts/live-tool-card";
-import { Separator } from "@/components/ui/separator";
+import { Divider } from "@astryxdesign/core/Divider";
+import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
+import { Kbd } from "@astryxdesign/core/Kbd";
 import { AnsweredCard } from "@/components/answered-card";
 import { artifactRenderers } from "@/components/artifacts";
 import { SubagentSteerCard } from "@/components/artifacts/steer-card";
@@ -96,7 +99,7 @@ import { useSettingsSaved } from "@/components/settings-signal";
 const COLUMN = "mx-auto w-full max-w-none px-4 sm:px-6";
 /** Ghost icon button for the session top bar's right-edge toolbar. */
 const TOPBAR_ICON =
-	"lh-no-drag flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground";
+	"lh-no-drag flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-secondary transition-colors hover:bg-overlay-hover hover:text-primary";
 const DOCK = "mx-auto w-full max-w-[46rem] px-3 sm:px-4";
 // The DOCK container's fixed width (46rem) and the plan marginalia's
 // geometry (owner, plan-placement round): the bare diagram sits in the
@@ -182,7 +185,7 @@ function SystemLine({ children, testId }: { children: React.ReactNode; testId?: 
 	return (
 		<div
 			data-testid={testId}
-			className="flex items-center justify-center gap-1.5 py-1 text-xs text-muted-foreground"
+			className="flex items-center justify-center gap-1.5 py-1 text-xs text-secondary"
 		>
 			{children}
 		</div>
@@ -1354,47 +1357,45 @@ export function Chat({
 						{/* Title + ▾: one control that opens the session menu
 						    (Rename — also F2 — and Export). */}
 						<div className="relative min-w-0 shrink">
-							<button
-								type="button"
-								data-testid="session-title-menu"
-								aria-expanded={titleMenu}
-								onClick={() => setTitleMenu((v) => !v)}
-								className="lh-no-drag flex min-w-0 max-w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left text-[15px] font-medium text-foreground transition-colors hover:bg-(--pill)"
-							>
-								<span className="truncate">{titleText}</span>
-								<ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-							</button>
-							{titleMenu && (
-								<>
-									<div className="lh-no-drag fixed inset-0 z-40" aria-hidden="true" onClick={() => setTitleMenu(false)} />
-									<div className="lh-no-drag absolute left-0 top-full z-50 mt-1 flex w-52 flex-col rounded-xl border bg-popover p-1 text-sm shadow-xl">
-										<button
-											type="button"
-											data-testid="title-menu-rename"
-											onClick={() => {
-												setTitleMenu(false);
-												setTitleDraft(titleText);
-												setRenaming(true);
-											}}
-											className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground transition-colors hover:bg-accent"
-										>
-											<PencilIcon className="size-3.5 text-muted-foreground" />
-											Rename
-											<span className="ml-auto text-xs text-muted-foreground">F2</span>
-										</button>
-										<a
-											href={`/api/chats/${chatId}/markdown`}
-											download=""
-											data-testid="title-menu-export"
-											onClick={() => setTitleMenu(false)}
-											className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground transition-colors hover:bg-accent"
-										>
-											<DownloadIcon className="size-3.5 text-muted-foreground" />
-											Export as Markdown
-										</a>
-									</div>
-								</>
-							)}
+							<DropdownMenu
+								isMenuOpen={titleMenu}
+								onOpenChange={setTitleMenu}
+								menuWidth={208}
+								renderTrigger={(trigger) => (
+									<button
+										{...trigger}
+										type="button"
+										data-testid="session-title-menu"
+										className="lh-no-drag flex min-w-0 max-w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left text-[15px] font-medium text-primary transition-colors hover:bg-overlay-hover"
+									>
+										<span className="truncate">{titleText}</span>
+										<ChevronDownIcon className="size-4 shrink-0 text-secondary" />
+									</button>
+								)}
+								items={[
+									{
+										id: "rename",
+										label: "Rename",
+										icon: <PencilIcon className="size-4" />,
+										endContent: <Kbd keys="F2" />,
+										onClick: () => {
+											setTitleDraft(titleText);
+											setRenaming(true);
+										},
+									},
+									{
+										id: "export",
+										label: "Export as Markdown",
+										icon: <DownloadIcon className="size-4" />,
+										onClick: () => {
+											const a = document.createElement("a");
+											a.href = `/api/chats/${chatId}/markdown`;
+											a.download = "";
+											a.click();
+										},
+									},
+								]}
+							/>
 						</div>
 							{/* flex-1 spacer: keeps the chips at the right edge AND stays a
 							    drag surface (no carve-out) — the freed bar is grippable. */}
@@ -1416,7 +1417,7 @@ export function Chat({
 							data-testid="phase-chip"
 							data-phase="practice"
 							aria-hidden="true"
-							className="pointer-events-none flex shrink-0 select-none items-center gap-1 text-xs font-medium text-muted-foreground"
+							className="pointer-events-none flex shrink-0 select-none items-center gap-1 text-xs font-medium text-secondary"
 						>
 							<DumbbellIcon className="size-3" />
 							Practice
@@ -1430,19 +1431,10 @@ export function Chat({
 					<div className="flex shrink-0 items-center gap-0.5">
 						{planTree && (
 							<Hint label="Summarize what you've learned" side="bottom">
-								<button
-									type="button"
-									data-testid="summarize-chip"
-									aria-label="Summarize"
-									disabled={!!pending || compacting}
-									onClick={(e) => {
+								<Button size="icon-sm" variant="ghost" data-testid="summarize-chip" aria-label="Summarize" disabled={!!pending || compacting} onClick={(e) => {
 										blurAfterPointerClick(e);
 										requestSummary();
-									}}
-									className={`${TOPBAR_ICON} disabled:cursor-not-allowed disabled:opacity-40`}
-								>
-									<NotebookPenIcon className="size-[18px]" aria-hidden />
-								</button>
+									}}><NotebookPenIcon className="size-4" aria-hidden /></Button>
 							</Hint>
 						)}
 						<Hint label={planSidebar ? "Hide the side panel" : "Show the side panel"} side="bottom">
@@ -1455,7 +1447,7 @@ export function Chat({
 									blurAfterPointerClick(e);
 									setPlanSidebar(!planSidebar);
 								}}
-								className={`${TOPBAR_ICON} ${planSidebar ? "bg-(--pill) text-foreground" : ""}`}
+								className={`${TOPBAR_ICON} ${planSidebar ? "bg-overlay-hover text-primary" : ""}`}
 							>
 								{planSidebar ? <PanelRightCloseIcon className="size-[18px]" aria-hidden /> : <PanelRightOpenIcon className="size-[18px]" aria-hidden />}
 							</button>
@@ -1523,7 +1515,7 @@ export function Chat({
 													<div
 														key={pi}
 														data-testid="practice-next-line"
-														className="my-4 flex items-center justify-center gap-1.5 font-ui text-xs font-medium text-muted-foreground"
+														className="my-4 flex items-center justify-center gap-1.5 font-ui text-xs font-medium text-secondary"
 													>
 														<ArrowRightIcon className="size-3" />
 														Next problem
@@ -1566,7 +1558,7 @@ export function Chat({
 										    bubble. Rendered plain — the model's LaTeX pipeline is not
 										    applied to learner-authored text ($ stays $). */
 										<div data-testid="user-message" className="my-4 flex w-full justify-end">
-											<div className="lh-prose max-w-[80%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-(--pill) px-4 py-2.5 text-[15px] text-foreground">
+											<div className="lh-prose max-w-[80%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-overlay-hover px-4 py-2.5 text-[15px] text-primary">
 												{m.parts.filter((p) => p.type === "text").map((p) => p.text).join("\n")}
 											</div>
 										</div>
@@ -1578,14 +1570,14 @@ export function Chat({
 										    the speaker, and the prose gets the width. */}
 										<div className="w-7 shrink-0 pt-0.5 max-sm:hidden">
 											{messages[mi - 1]?.role !== "assistant" && (
-												<span className="flex size-7 items-center justify-center rounded-full border border-input bg-card">
+												<span className="flex size-7 items-center justify-center rounded-full border border-strong bg-card">
 													<LhMark className="size-4" />
 												</span>
 											)}
 										</div>
 									<Message from="assistant" className="min-w-0 max-w-full flex-1">
 									{messages[mi - 1]?.role !== "assistant" && (
-										<div className="flex h-7 items-center text-sm font-semibold text-foreground">Kapany</div>
+										<div className="flex h-7 items-center text-sm font-semibold text-primary">Kapany</div>
 									)}
 									<MessageContent className="w-full">
 											{m.parts.map((part, pi) => [partOpenerFor(mi, pi), ((): ReactNode => {
@@ -1637,7 +1629,7 @@ export function Chat({
 													case "step-start":
 														if (teachBoundary)
 															return <PhaseDivider key={`teach-step-${pi}`} phase="teach" />;
-														return pi > 0 ? <Separator key={pi} className="my-3" /> : null;
+														return pi > 0 ? <Divider key={pi} className="my-3" /> : null;
 													case "data-plan-block":
 														// The plan in the chat (wave 4): a frozen snapshot
 														// block — rendered as carried, never re-derived.
@@ -1735,13 +1727,13 @@ export function Chat({
 								<SummaryOfferBar onSummarize={requestSummary} onDismiss={dismissSummaryOffer} />
 							)}
 							{compacting && (
-								<span className="flex items-center gap-2 font-ui text-xs font-medium text-muted-foreground">
+								<span className="flex items-center gap-2 font-ui text-xs font-medium text-secondary">
 									<BrailleSpinner label="Compacting context" />
 									<Shimmer duration={1}>COMPACTING CONTEXT…</Shimmer>
 								</span>
 							)}
 							{(status === "submitted" || turnInFlight) && (
-								<span className="flex items-center gap-2 font-ui text-xs font-medium text-muted-foreground">
+								<span className="flex items-center gap-2 font-ui text-xs font-medium text-secondary">
 									<BrailleSpinner label="Thinking" />
 									<Shimmer duration={1}>
 										THINKING…
@@ -1749,7 +1741,7 @@ export function Chat({
 								</span>
 							)}
 							{error && (
-								<div className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm">
+								<div className="rounded-lg border border-error/50 bg-error/10 px-3 py-2 text-sm">
 									Something went wrong: {error.message}
 								</div>
 							)}
@@ -1794,14 +1786,7 @@ export function Chat({
 						) : (
 							!configured && (
 								<div className="pointer-events-auto mb-2 flex justify-center">
-									<button
-										type="button"
-										data-testid="setup-cta"
-										onClick={() => setSetupOpen(true)}
-										className="rounded-sm border border-border bg-card px-3 py-1.5 font-ui text-xs text-foreground transition-colors hover:border-muted-foreground/50 hover:bg-accent cursor-pointer"
-									>
-										Set up your models
-									</button>
+									<Button size="sm" variant="secondary" data-testid="setup-cta" onClick={() => setSetupOpen(true)}>Set up your models</Button>
 								</div>
 							)
 						)
@@ -2487,8 +2472,8 @@ function DockOverlay({
 	return (
 		<VoiceThinkingProvider value={voice}>
 		<div className="pointer-events-none absolute inset-x-0 bottom-0" style={{ right: sbInset }}>
-			<div className="h-24 bg-gradient-to-t from-background via-background/85 to-transparent" />
-			<div ref={blockRef} className="relative bg-background pb-5" style={{ "--dock-max-h": dockMaxH ? `${dockMaxH}px` : undefined } as React.CSSProperties}>
+			<div className="h-24 bg-gradient-to-t from-body via-body/85 to-transparent" />
+			<div ref={blockRef} className="relative bg-body pb-5" style={{ "--dock-max-h": dockMaxH ? `${dockMaxH}px` : undefined } as React.CSSProperties}>
 				<div className={DOCK}>
 					{setupCta}
 					{/* The queued-steer indicator (owner spec 2026-10-03): quiet

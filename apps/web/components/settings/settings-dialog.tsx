@@ -9,7 +9,7 @@
  *   backdrop, and ✕ all close. Modal-only — /settings redirects, so
  *   nothing links into a dead surface.
  * - Left section nav in the app's mono chrome (text-only, session-list
- *   language — active = bg-accent), no icons, matching the minimal-color
+ *   language — active = bg-overlay-hover), no icons, matching the minimal-color
  *   doctrine.
  * - The dialog is surface-agnostic by construction: the sections talk to
  *   /api/settings* and localStorage only, so this shell can be re-mounted
@@ -28,8 +28,18 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { createPortal } from "react-dom";
-import { useBackdropDismiss } from "@/components/backdrop-dismiss";
+import { Banner } from "@astryxdesign/core/Banner";
+import { Dialog } from "@astryxdesign/core/Dialog";
+import { Heading } from "@astryxdesign/core/Heading";
+import { useMediaQuery } from "@astryxdesign/core/hooks";
+import { HStack } from "@astryxdesign/core/HStack";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { Layout } from "@astryxdesign/core/Layout";
+import { Selector } from "@astryxdesign/core/Selector";
+import { SideNav, SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
+import { Spinner } from "@astryxdesign/core/Spinner";
+import { Text } from "@astryxdesign/core/Text";
+import { TextInput } from "@astryxdesign/core/TextInput";
 import {
 	CURRENT_SETTINGS_VERSION,
 	type AgentSettings,
@@ -51,11 +61,11 @@ import { Hint } from "@/components/ui/hint";
 import { AppearanceSection, GraphSection } from "./appearance-section.tsx";
 import { KeyboardSection } from "./keyboard-section.tsx";
 import { LearnerSection } from "./learner-section.tsx";
+import { AnkiSection } from "./anki-section.tsx";
 import { ChatGPTUIProvider } from "./chatgpt-connection.tsx";
 import { NativeSubscriptionUIProvider } from "./subscription-connections.tsx";
 import { SettingsSkinContext } from "./controls.tsx";
-import { BotIcon, GraduationCapIcon, KeyboardIcon, KeyRoundIcon, NetworkIcon, PaletteIcon, SearchIcon, SettingsIcon, XIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { BotIcon, LayersIcon, GraduationCapIcon, KeyboardIcon, KeyRoundIcon, NetworkIcon, PaletteIcon, SearchIcon, SettingsIcon, XIcon } from "lucide-react";
 
 /** Owner (2026-09-20): hints earn their place — mechanics-explaining
  *  prose is out; only the keyboard note stays (storage location is a
@@ -67,6 +77,7 @@ const SECTIONS = [
 	{ id: "learner", label: "About you", group: "Learning", Icon: GraduationCapIcon, keywords: "learner profile level grade school math style intuitive formal notes onboarding intro context" },
 	{ id: "agent", label: "Agent", group: "Learning", Icon: BotIcon, keywords: "models tools prompts instructions quizzing quiz compaction context search engine" },
 	{ id: "graph", label: "Graph", group: "Learning", Icon: NetworkIcon, keywords: "knowledge graph rendering extraction chunk" },
+	{ id: "anki", label: "Anki", group: "Connections", Icon: LayersIcon, keywords: "anki flashcards deck spaced repetition ankiconnect sync review cards" },
 	{ id: "keys", label: "Providers", group: "Connections", Icon: KeyRoundIcon, keywords: "api keys model provider local ollama meta subscriptions chatgpt dictation tavily brave" },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -99,9 +110,12 @@ export function SettingsDialogProvider({
 	return (
 		<ChatGPTUIProvider><NativeSubscriptionUIProvider><DialogContext.Provider value={{ open }}>
 			{children}
-			{show && (
-				<SettingsDialog onClose={() => setShow(false)} initialSection={landOn} initialRow={landOnRow} />
-			)}
+			<SettingsDialog
+				isOpen={show}
+				onClose={() => setShow(false)}
+				initialSection={landOn}
+				initialRow={landOnRow}
+			/>
 		</DialogContext.Provider></NativeSubscriptionUIProvider></ChatGPTUIProvider>
 	);
 }
@@ -111,27 +125,30 @@ export function useSettingsDialog() {
 }
 
 function SettingsDialog({
+	isOpen,
 	onClose,
 	initialSection,
 	initialRow,
 }: {
+	isOpen: boolean;
 	onClose: () => void;
 	initialSection: SectionId;
 	/** The keys-section row to unfold (see DialogContext above). */
 	initialRow: string | null;
 }) {
-	const backdropDismiss = useBackdropDismiss(onClose);
-	// Plain dim backdrop (no blur — nothing decorative); a genuine
-	// backdrop click closes, the dialog body stops propagation.
-	return createPortal(
-		<div
-			className="lh-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-background/80"
-			data-testid="settings-backdrop"
-			{...backdropDismiss}
+	return (
+		<Dialog
+			isOpen={isOpen}
+			onOpenChange={(open) => {
+				if (!open) onClose();
+			}}
+			purpose="form"
+			width={1040}
+			maxHeight="min(780px, calc(100dvh - 2rem))"
+			padding={0}
 		>
-			<SettingsDialogBody onClose={onClose} initialSection={initialSection} initialRow={initialRow} />
-		</div>,
-		document.body,
+			{isOpen && <SettingsDialogBody onClose={onClose} initialSection={initialSection} initialRow={initialRow} />}
+		</Dialog>
 	);
 }
 
@@ -187,6 +204,7 @@ export function SettingsDialogBody({
 	}, []);
 	const [active, setActive] = useState<SectionId>(initialSection);
 	const [search, setSearch] = useState("");
+	const narrow = useMediaQuery("(max-width: 640px)");
 	const q = search.trim().toLowerCase();
 	const matches = q
 		? SECTIONS.filter((s) => `${s.label} ${s.keywords}`.toLowerCase().includes(q))
@@ -225,6 +243,8 @@ export function SettingsDialogBody({
 				// abort) must not also act. One Esc, one action.
 				e.preventDefault();
 				e.stopPropagation();
+				// A stacked dialog (a connection flow) owns this Esc.
+				if (document.querySelectorAll("dialog[open]").length > 1) return;
 				onClose();
 			}
 		};
@@ -272,112 +292,104 @@ export function SettingsDialogBody({
 		[onAppearanceChange],
 	);
 
-	return (
-		<div
-			role="dialog"
-			aria-modal="true"
-			aria-label="Settings"
-			data-testid="settings-dialog"
-			className="settings-dialog-pop flex h-full max-h-full w-full flex-col sm:h-[min(780px,90dvh)] sm:w-[1040px] sm:max-w-[94vw] overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
-			onClick={(e) => e.stopPropagation()}
+	const nav = (
+		<SideNav
+			aria-label="Settings sections"
+			data-testid="settings-nav"
+			header={
+				<HStack gap={2} align="center" paddingInline={2} className="min-h-8">
+					<Heading level={4}>Settings</Heading>
+				</HStack>
+			}
+			topContent={
+				<TextInput
+					label="Search settings"
+					isLabelHidden
+					placeholder="Search"
+					size="sm"
+					width="100%"
+					hasClear
+					startIcon={SearchIcon}
+					data-testid="settings-search"
+					value={search}
+					onChange={setSearch}
+					onEnter={() => matches[0] && setActive(matches[0].id)}
+				/>
+			}
 		>
-			{/* Header — the app's quiet CMU title language. */}
-			<header className="flex h-15 shrink-0 items-center gap-3 border-b border-border px-5">
-				<h2 className="text-lg font-medium text-foreground">Settings</h2>
-				<Hint label="Close" binding="escape" side="left">
-					<button
-						type="button"
-						aria-label="Close settings"
-						data-testid="settings-close"
-						className="ml-auto flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
-						onClick={onClose}
-					>
-						<XIcon className="size-5" />
-					</button>
-				</Hint>
-			</header>
+			{matches.length === 0 && (
+				<Text type="supporting" className="px-2">
+					No settings match.
+				</Text>
+			)}
+			{SECTION_GROUPS.map((group) => {
+				const items = matches.filter((m) => m.group === group);
+				if (items.length === 0) return null;
+				return (
+					<SideNavSection key={group} title={group}>
+						{items.map((s) => (
+							<SideNavItem
+								key={s.id}
+								data-testid={`settings-nav-${s.id}`}
+								label={s.label}
+								icon={<s.Icon className="size-4" aria-hidden />}
+								isSelected={active === s.id}
+								onClick={() => setActive(s.id)}
+							/>
+						))}
+					</SideNavSection>
+				);
+			})}
+		</SideNav>
+	);
 
-			<SettingsSkinContext.Provider value={true}>
-			<div className="flex min-h-0 flex-1 max-sm:flex-col">
-				{/* Left nav — text-only, the session-list mono language,
-					    active = bg-accent. */}
-				<nav
-					aria-label="Settings sections"
-					data-testid="settings-nav"
-					className="flex w-64 shrink-0 flex-col overflow-y-auto border-r border-border p-4 max-sm:w-full max-sm:flex-row max-sm:items-center max-sm:gap-1 max-sm:overflow-x-auto max-sm:border-r-0 max-sm:border-b max-sm:p-2"
-				>
-					{/* Search: narrows the list to sections whose settings match;
-					    Enter opens the first match. */}
-					<div className="relative mb-4 max-sm:mb-0 max-sm:w-40 max-sm:shrink-0">
-						<SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-						<input
-							value={search}
-							onChange={(e) => setSearch(e.target.value)}
-							onKeyDown={(e) => {
-								if (e.key === "Enter" && matches[0]) setActive(matches[0].id);
-							}}
-							placeholder="Search"
-							aria-label="Search settings"
-							data-testid="settings-search"
-							className="h-10 w-full rounded-lg border border-border bg-(--pill) pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
-						/>
-					</div>
-					{matches.length === 0 && <p className="px-2 text-sm text-muted-foreground">No settings match.</p>}
-					{SECTION_GROUPS.map((group) => {
-						const items = matches.filter((m) => m.group === group);
-						if (items.length === 0) return null;
-						return (
-							<div key={group} className="mb-4 max-sm:contents">
-								<div className="mb-1.5 px-2 text-[13px] text-muted-foreground max-sm:hidden">{group}</div>
-								{items.map((s) => (
-									<button
-										key={s.id}
-										type="button"
-										data-testid={`settings-nav-${s.id}`}
-										aria-current={active === s.id}
-										className={cn(
-											"flex h-10 w-full shrink-0 items-center gap-3 whitespace-nowrap rounded-lg px-3 text-left text-[15px] transition-colors max-sm:w-auto",
-											active === s.id ? "bg-(--pill) text-foreground" : "text-foreground/85 hover:bg-(--pill)/60 hover:text-foreground",
-										)}
-										onClick={() => setActive(s.id)}
-									>
-										<s.Icon className="size-[18px] shrink-0 text-muted-foreground" aria-hidden />
-										{s.label}
-									</button>
-								))}
-							</div>
-						);
-					})}
-				</nav>
-
-				{/* Content column — one section at a time, this scrolls — and
-				    LOCKS while any MenuShell is open (owner ruling: no
-				    scrolling with a dropdown down; MenuShell announces
-				    open/close, the count keeps overlap honest). The lock
-				    intercepts wheel/touch instead of hiding the scrollbar —
-				    nothing may shift when the lock engages. */}
+	return (
+		<SettingsSkinContext.Provider value={true}>
+			<Layout
+				data-testid="settings-dialog"
+				className="h-[min(780px,calc(100dvh-2rem))]"
+				start={narrow ? undefined : nav}
+				header={
+					<HStack gap={2} align="center" justify="between" paddingInline={4} paddingBlock={2}>
+						{narrow ? (
+							<Selector
+								label="Settings section"
+								isLabelHidden
+								size="sm"
+								options={SECTIONS.map((s) => ({ value: s.id, label: s.label }))}
+								value={active}
+								onChange={(next) => next && setActive(next as SectionId)}
+							/>
+						) : (
+							<span />
+						)}
+						<Hint label="Close" binding="escape" side="left">
+							<IconButton
+								label="Close settings"
+								data-testid="settings-close"
+								variant="ghost"
+								icon={<XIcon className="size-4" />}
+								onClick={onClose}
+							/>
+						</Hint>
+					</HStack>
+				}
+				content={
 				<div
 					ref={contentRef}
-					className="min-w-0 flex-1 overflow-y-auto"
+					className="h-full min-w-0 overflow-y-auto"
 					data-testid="settings-content"
 				>
 					{error && (
-						<p
-							role="alert"
-							className="m-4 rounded-sm border border-red-500/40 px-3 py-2 text-xs text-red-500"
-							data-testid="settings-error"
-						>
-							{error}
-						</p>
+						<Banner status="error" title={error} collapsible={false} data-testid="settings-error" className="m-4" />
 					)}
 					{record === undefined ? (
-						<p className="px-6 py-5 text-xs text-muted-foreground/70">
-							Loading settings…
-						</p>
+						<HStack gap={2} align="center" padding={6}>
+							<Spinner size="sm" />
+							<Text type="supporting">Loading settings…</Text>
+						</HStack>
 					) : record === null ? (
-						<p className="px-6 py-5 text-xs text-muted-foreground/70">
-							Settings could not be loaded — refresh to retry.
-						</p>
+						<Banner status="error" title="Settings could not be loaded — refresh to retry." collapsible={false} className="m-6" />
 					) : (
 						<div>
 							{active === "general" && (
@@ -403,6 +415,14 @@ export function SettingsDialogBody({
 									<LearnerSection
 										learner={record.learner}
 										onSave={(next) => setRecord((prev) => ({ ...(prev ?? { version: CURRENT_SETTINGS_VERSION }), learner: next }))}
+									/>
+								</SettingsSection>
+							)}
+							{active === "anki" && (
+								<SettingsSection title="Anki" hint="Study your knowledge map as flashcards." testid="section-anki">
+									<AnkiSection
+										anki={record.anki}
+										onSave={(next) => setRecord((prev) => ({ ...(prev ?? { version: CURRENT_SETTINGS_VERSION }), anki: next }))}
 									/>
 								</SettingsSection>
 							)}
@@ -471,8 +491,8 @@ export function SettingsDialogBody({
 						</div>
 					)}
 				</div>
-			</div>
-			</SettingsSkinContext.Provider>
-		</div>
+				}
+			/>
+		</SettingsSkinContext.Provider>
 	);
 }

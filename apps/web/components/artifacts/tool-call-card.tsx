@@ -72,7 +72,7 @@ export function ToolCallCard({ part }: ArtifactPartProps) {
 			data-tool={tool}
 			className="group my-1 w-full max-w-2xl select-none"
 		>
-			<summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-muted-foreground [&::-webkit-details-marker]:hidden">
+			<summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-secondary [&::-webkit-details-marker]:hidden">
 				<span className={`font-medium ${failed ? "text-red-500": ""}`}>
 					{tool}
 				</span>
@@ -82,7 +82,7 @@ export function ToolCallCard({ part }: ArtifactPartProps) {
 			<div className="mt-2 space-y-2 rounded-xl border bg-card p-3 text-xs">
 				{p.input != null && (
 					<div>
-						<div className="mb-1 font-medium text-muted-foreground">
+						<div className="mb-1 font-medium text-secondary">
 							Input
 						</div>
 						<pre className="max-h-32 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed">
@@ -92,7 +92,7 @@ export function ToolCallCard({ part }: ArtifactPartProps) {
 				)}
 				{typeof p.errorText === "string" ? (
 					<div>
-						<div className="mb-1 font-medium text-muted-foreground">
+						<div className="mb-1 font-medium text-secondary">
 							Error
 						</div>
 						<pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-red-500">
@@ -101,7 +101,7 @@ export function ToolCallCard({ part }: ArtifactPartProps) {
 					</div>
 				) : out != null ? (
 					<div>
-						<div className="mb-1 font-medium text-muted-foreground">
+						<div className="mb-1 font-medium text-secondary">
 							Output
 						</div>
 						<pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed">
@@ -110,7 +110,7 @@ export function ToolCallCard({ part }: ArtifactPartProps) {
 					</div>
 				) : (
 					p.state !== "output-available" && (
-						<div className="text-muted-foreground italic">running…</div>
+						<div className="text-secondary italic">running…</div>
 					)
 				)}
 			</div>

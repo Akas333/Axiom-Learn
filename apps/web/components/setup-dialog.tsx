@@ -31,9 +31,14 @@
  * CMU title, z-50.
  */
 
+import { TextInput } from "@astryxdesign/core/TextInput";
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { useBackdropDismiss } from "@/components/backdrop-dismiss";
+import { Button } from "@astryxdesign/core/Button";
+import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { Layout, LayoutContent } from "@astryxdesign/core/Layout";
+import { XIcon } from "lucide-react";
+import { PICKER_TRIGGER } from "@/components/ui/picker-trigger";
 import type React from "react";
 import { type ModelCatalogEntry, type ModelSlotName, type ModelsSettings } from "@/src/core";
 import { prettyModel } from "@/components/usage-format";
@@ -156,7 +161,7 @@ export function SetupKeysBody({
 }) {
 	return (
 		<div className="flex flex-col gap-3 px-6 py-5" data-testid="setup-stage-keys">
-			<p className="text-xs text-muted-foreground">
+			<p className="text-xs text-secondary">
 				Paste your Meta Model API key to use the Muse models, or run Ollama for local models with no key. You’ll pick your models next.
 			</p>
 			<div className="flex flex-col gap-2">
@@ -167,10 +172,10 @@ export function SetupKeysBody({
 						data-testid="setup-key-provider"
 						aria-expanded={menuOpen}
 						onClick={onToggleMenu}
-						className="flex h-7 w-full items-center gap-1 rounded-sm border border-border bg-background px-1.5 font-ui text-xs text-foreground transition-colors hover:border-muted-foreground/50"
+						className={PICKER_TRIGGER + " w-full"}
 					>
 						<span className="min-w-0 flex-1 truncate text-left">{provider ? provider.label : "Pick a provider…"}</span>
-						<span aria-hidden className="text-muted-foreground">
+						<span aria-hidden className="text-secondary">
 							▾
 						</span>
 					</button>
@@ -188,29 +193,24 @@ export function SetupKeysBody({
 				</div>
 				{provider && (
 					<div className="flex max-w-96 items-center gap-2">
-						<input
-							type="text"
+						<TextInput
+							label={`${provider.label} key`}
+							isLabelHidden
+							size="sm"
 							value={value}
-							onChange={(e) => onValue(e.target.value)}
+							onChange={onValue}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" && value.trim()) onSave();
 							}}
 							placeholder="Paste key…"
-							aria-label={`${provider.label} key`}
 							data-testid="setup-key-input"
-							disabled={saving}
-							autoFocus
-							className="h-7 min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 font-mono text-xs text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-muted-foreground/50"
+							isDisabled={saving}
+							hasAutoFocus
+							autoComplete="off"
+							containerClassName="min-w-0 flex-1"
+							controlClassName="font-mono"
 						/>
-						<button
-							type="button"
-							onClick={onSave}
-							disabled={saving || !value.trim()}
-							data-testid="setup-key-save"
-							className="shrink-0 rounded-sm border border-border bg-background px-3 py-1.5 font-ui text-xs text-foreground transition-colors hover:border-muted-foreground/50 disabled:cursor-not-allowed disabled:opacity-40"
-						>
-							{saving ? "Saving…" : "Save key"}
-						</button>
+						<Button size="sm" variant="primary" label="Save key" onClick={onSave} isDisabled={!value.trim()} isLoading={saving} data-testid="setup-key-save" />
 					</div>
 				)}
 				{error && (
@@ -220,10 +220,10 @@ export function SetupKeysBody({
 				)}
 			</div>
 			<div className="mt-2 max-w-[28rem] border-t border-border/60 pt-4">
-				<h3 className="mb-2 font-ui text-xs text-muted-foreground">Local models</h3>
+				<h3 className="mb-2 font-ui text-xs text-secondary">Local models</h3>
 				<OllamaRow ollama={ollama} onRecheck={onRecheckOllama ?? (() => undefined)} />
 			</div>
-			{allProviders && <div className="mt-2 border-t border-border/60 pt-4"><h3 className="mb-3 font-ui text-xs text-muted-foreground">Subscriptions</h3><SubscriptionConnections setup /></div>}
+			{allProviders && <div className="mt-2 border-t border-border/60 pt-4"><h3 className="mb-3 font-ui text-xs text-secondary">Subscriptions</h3><SubscriptionConnections setup /></div>}
 		</div>
 	);
 }
@@ -239,7 +239,6 @@ export function SetupDialog({
 	onClose: () => void;
 	onDone: (models: ModelsSettings) => void;
 }) {
-	const backdropDismiss = useBackdropDismiss(onClose);
 	const [body, setBody] = useState<ModelsBody | null>(null);
 	const [failed, setFailed] = useState(false);
 	const [picked, setPicked] = useState<Partial<Record<ModelSlotName, ModelCatalogEntry>>>({});
@@ -361,8 +360,6 @@ export function SetupDialog({
 		};
 	}, [open, onClose, openMenu, keyMenuOpen]);
 
-	if (!open) return null;
-
 	const stage = failed ? "keys" : setupStage(body ? body.providers : null);
 	const allPicked = SLOT_ORDER.every((s) => picked[s]);
 
@@ -416,39 +413,36 @@ export function SetupDialog({
 		onDone(models);
 	}
 
-	return createPortal(
-		<div
-			className="lh-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-background/80"
-			data-testid="setup-backdrop"
-			{...backdropDismiss}
+	return (
+		<Dialog
+			isOpen={open}
+			onOpenChange={(next) => {
+				if (!next) onClose();
+			}}
+			purpose="form"
+			width={640}
+			maxHeight="85dvh"
+			padding={0}
 		>
-			<div
-				role="dialog"
-				aria-modal="true"
-				aria-label="Set up your models"
+			{open && (
+			<Layout
 				data-testid="setup-dialog"
-				className="settings-dialog-pop flex max-h-[85dvh] w-[640px] max-w-[90vw] flex-col overflow-hidden rounded-md border border-border bg-card shadow-xl"
-				onClick={(e) => e.stopPropagation()}
-			>
-				<header className="flex h-15 shrink-0 items-center gap-3 border-b border-border px-5">
-					<h2 className="font-title text-2xl tracking-tight">Set up your models</h2>
-					<Hint label="Close" binding="escape" side="left">
-<button
-						type="button"
-						aria-label="Close setup"
-						data-testid="setup-close"
-						onClick={onClose}
-						className="ml-auto text-muted-foreground transition-colors hover:text-foreground"
-					>
-						✕
-					</button>
-</Hint>
-				</header>
-
+				header={
+					<DialogHeader
+						title="Set up your models"
+						endContent={
+							<Hint label="Close" binding="escape" side="left">
+								<IconButton label="Close setup" data-testid="setup-close" variant="ghost" icon={<XIcon className="size-4" />} onClick={onClose} />
+							</Hint>
+						}
+					/>
+				}
+				content={
+				<LayoutContent isScrollable>
 				{stage === "keys" ? (
 					<div className="flex flex-col px-6 py-5">
 						{failed ? (
-							<p className="text-sm text-foreground">
+							<p className="text-sm text-primary">
 								Model catalog could not be loaded. Check the connection and retry.
 							</p>
 						) : (
@@ -480,7 +474,7 @@ export function SetupDialog({
 					</div>
 				) : (
 					<div className="flex flex-col gap-4 overflow-y-auto px-6 py-5" data-testid="setup-stage-pickers">
-						<p className="text-xs text-muted-foreground">
+						<p className="text-xs text-secondary">
 							Pick the model for each tier. All three are required before chats can start.
 						</p>
 						{SLOT_ORDER.map((slot) => {
@@ -492,17 +486,17 @@ export function SetupDialog({
 							return (
 								<div key={slot} data-testid={`setup-slot-${slot}`} className="flex flex-col gap-1.5">
 									<span className="flex items-center gap-1.5">
-										<span className="font-ui text-sm text-foreground">{SLOT_META[slot].label}</span>
+										<span className="font-ui text-sm text-primary">{SLOT_META[slot].label}</span>
 										{!body?.slots?.[slot]?.model && !picked[slot] && (
 											<span
 												data-testid={`setup-needed-${slot}`}
-												className="rounded-sm border border-border px-1 py-0.5 text-[10px] font-normal tracking-wide text-muted-foreground"
+												className="rounded-sm border border-border px-1 py-0.5 text-[10px] font-normal tracking-wide text-secondary"
 											>
 												needed
 											</span>
 										)}
 									</span>
-									<span className="text-xs text-muted-foreground/70">{SLOT_META[slot].roster}</span>
+									<span className="text-xs text-secondary/70">{SLOT_META[slot].roster}</span>
 									{slot !== "strong" && <><ChatGPTBackgroundAccess provider={entry?.provider} /><NativeSubscriptionBackgroundAccess provider={entry?.provider} /></>}
 									<div className="flex items-center gap-2">
 										<div className="relative flex-1">
@@ -512,10 +506,10 @@ export function SetupDialog({
 												data-testid={`setup-trigger-${slot}`}
 												aria-expanded={openMenu?.slot === slot && openMenu.kind === "model"}
 												onClick={() => setOpenMenu(openMenu?.slot === slot && openMenu.kind === "model" ? null : { slot, kind: "model" })}
-												className="flex h-7 min-w-40 w-full items-center gap-1 rounded-sm border border-border bg-background px-1.5 font-ui text-xs text-foreground transition-colors hover:border-muted-foreground/50"
+												className={PICKER_TRIGGER + " w-full min-w-40"}
 											>
 												<span className="min-w-0 flex-1 truncate">{entry ? prettyModel(entry.id) : "Pick a model…"}</span>
-												<span aria-hidden className="text-muted-foreground">
+												<span aria-hidden className="text-secondary">
 													▾
 												</span>
 											</button>
@@ -567,12 +561,12 @@ export function SetupDialog({
 												aria-expanded={openMenu?.slot === slot && openMenu.kind === "thinking"}
 												disabled={!entry}
 												onClick={() => setOpenMenu(openMenu?.slot === slot && openMenu.kind === "thinking" ? null : { slot, kind: "thinking" })}
-												className="flex h-7 w-24 items-center gap-1 rounded-sm border border-border bg-background px-1.5 font-ui text-xs text-foreground transition-colors hover:border-muted-foreground/50 disabled:cursor-not-allowed disabled:opacity-40"
+												className={PICKER_TRIGGER + " w-24"}
 											>
 												<span className="min-w-0 flex-1 truncate text-left">
 													{entry ? (level ? THINKING_LABEL[level] ?? level : "…") : "—"}
 												</span>
-												<span aria-hidden className="text-muted-foreground">
+												<span aria-hidden className="text-secondary">
 													▾
 												</span>
 											</button>
@@ -600,21 +594,22 @@ export function SetupDialog({
 							);
 						})}
 						<div className="flex items-center gap-3">
-							<button
-								type="button"
+							<Button
 								data-testid="setup-save"
-								disabled={!allPicked || saving}
+								label="Save models"
+								variant="primary"
+								isDisabled={!allPicked}
+								isLoading={saving}
 								onClick={() => void save()}
-								className="rounded-sm border border-border bg-background px-3 py-1.5 font-ui text-xs text-foreground transition-colors hover:border-muted-foreground/50 disabled:cursor-not-allowed disabled:opacity-40"
-							>
-								{saving ? "Saving…" : "Save models"}
-							</button>
-							{error && <p className="text-xs text-red-400">{error}</p>}
+							/>
+							{error && <p className="text-sm text-error">{error}</p>}
 						</div>
 					</div>
 				)}
-			</div>
-		</div>,
-		document.body,
+				</LayoutContent>
+				}
+			/>
+			)}
+		</Dialog>
 	);
 }

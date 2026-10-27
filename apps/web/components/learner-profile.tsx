@@ -17,6 +17,11 @@ import {
 import { useCallback, useRef } from "react";
 import { DictationButton, DictationMeter, joinDictation, useDictation, useDictationTarget } from "@/components/dictation";
 import { cn } from "@/lib/utils";
+import { Button } from "@astryxdesign/core/Button";
+import { SelectableCard } from "@astryxdesign/core/SelectableCard";
+import { PlusIcon } from "lucide-react";
+import { Text } from "@astryxdesign/core/Text";
+import { VStack } from "@astryxdesign/core/VStack";
 
 /** Starting points for the notes box — one click appends the line. */
 export const NOTE_EXAMPLES = [
@@ -42,22 +47,12 @@ function OptionCard({
 	testid: string;
 }) {
 	return (
-		<button
-			type="button"
-			role="radio"
-			aria-checked={selected}
-			data-testid={testid}
-			onClick={onClick}
-			className={cn(
-				"flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left transition-colors",
-				selected
-					? "border-transparent bg-primary/15 ring-2 ring-primary ring-inset"
-					: "border-border bg-(--pill)/40 hover:border-muted-foreground/50 hover:bg-(--pill)",
-			)}
-		>
-			<span className="text-[15px] text-foreground">{label}</span>
-			<span className="text-[13px] leading-snug text-muted-foreground">{hint}</span>
-		</button>
+		<SelectableCard label={label} isSelected={selected} onChange={() => onClick()} padding={3} data-testid={testid}>
+			<VStack gap={0.5}>
+				<Text type="body">{label}</Text>
+				<Text type="supporting">{hint}</Text>
+			</VStack>
+		</SelectableCard>
 	);
 }
 
@@ -180,13 +175,13 @@ export function NotesField({
 				aria-label="Notes for your tutor"
 				data-testid="learner-notes"
 				placeholder="Type, or tap the mic and just talk. For example: I'm in 6th grade. Explain with everyday examples and keep the math simple."
-				className="w-full resize-y rounded-xl border border-border bg-(--pill)/40 px-4 pt-3 pb-12 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/70 focus:border-ring"
+				className="w-full resize-y rounded-lg border border-strong bg-surface px-4 pt-3 pb-12 text-[15px] leading-relaxed text-primary outline-none placeholder:text-secondary focus:border-accent-bg"
 			/>
 			<div className="absolute bottom-2 right-2 flex items-center gap-1">
 				{dictation.active ? (
-					<span className="text-[13px] text-muted-foreground">Listening… tap to stop</span>
+					<span className="text-[13px] text-secondary">Listening… tap to stop</span>
 				) : (
-					<span className="text-[13px] text-muted-foreground/70">Speak it out loud</span>
+					<span className="text-[13px] text-secondary/70">Speak it out loud</span>
 				)}
 				<DictationMeter dictation={dictation} />
 				<DictationButton dictation={dictation} />
@@ -194,17 +189,10 @@ export function NotesField({
 			</div>
 			<div className="flex flex-wrap gap-1.5">
 				{NOTE_EXAMPLES.filter((ex) => !value.includes(ex)).map((ex) => (
-					<button
-						key={ex}
-						type="button"
-						onClick={() => append(ex)}
-						className="rounded-full border border-border px-3 py-1 text-left text-[13px] text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground"
-					>
-						+ {ex}
-					</button>
+					<Button key={ex} label={ex} size="sm" variant="secondary" icon={<PlusIcon className="size-3.5" />} onClick={() => append(ex)} />
 				))}
 			</div>
-			<span className="self-end text-xs text-muted-foreground/70">
+			<span className="self-end text-xs text-secondary/70">
 				{value.length}/{LEARNER_NOTES_MAX}
 			</span>
 		</div>

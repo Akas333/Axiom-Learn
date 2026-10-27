@@ -6,6 +6,7 @@ import type { Usage } from "@earendil-works/pi-ai";
 import { PATHS } from "../../config.ts";
 import { APP_IDENTITY, piEngineFor, type PiEngine } from "./models.ts";
 import { effectivePromptSegments } from "./prompt-segments.ts";
+import { withLearnerContext } from "../core/learner.ts";
 import {
 	askUserQuestionTool,
 	createProberTools,
@@ -187,9 +188,7 @@ function baseAgentOptions(kind: AgentKind, opts: AgentBuildOptions, tools: Agent
 	const composed = opts.promptSwitches
 		? composeInstructions(kind, opts.promptSwitches)
 		: composedInstructions[kind]!;
-	const systemPrompt = opts.learnerContext?.trim()
-		? `${composed}\n\n---\n\n${opts.learnerContext.trim()}`
-		: composed;
+	const systemPrompt = withLearnerContext(composed, opts.learnerContext);
 	// Debug recorder (owner, 2026-10-04): raw provider events when
 	// LH_PROVIDER_EVENTS=1 and the caller handed a chatId; undefined is
 	// the normal no-observer path (tests, env-off).

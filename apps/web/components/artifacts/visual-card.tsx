@@ -1,4 +1,5 @@
 
+import { Button } from "@/components/ui/button";
 import { useContext, useState } from "react";
 import { ChatActionsContext } from "@/components/chat";
 import { DownloadIcon, MaximizeIcon } from "lucide-react";
@@ -70,7 +71,7 @@ export function VisualOutputCard({
 	const natural = result && typeof result.svg === "string" ? svgNaturalWidth(result.svg) : null;
 	if (!result || typeof result.svg !== "string") {
 		return (
-			<div className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
+			<div className="rounded-xl border bg-card p-4 text-sm text-secondary">
 				Figure completed, but the result could not be displayed.
 			</div>
 		);
@@ -78,12 +79,12 @@ export function VisualOutputCard({
 	const failed = result.svg.length === 0;
 	if (failed) {
 		return (
-			<div className="rounded-xl border bg-card p-4 text-card-foreground" data-testid="visual-card-failed">
-				<div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+			<div className="rounded-xl border bg-card p-4 text-primary" data-testid="visual-card-failed">
+				<div className="flex items-center gap-2 text-xs font-medium text-secondary">
 					Figure
 					<span className="rounded bg-red-500/15 px-1.5 py-0.5 text-red-500">failed</span>
 				</div>
-				<p className="mt-2 text-sm text-muted-foreground">{result.notes ?? "The figure could not be drawn."}</p>
+				<p className="mt-2 text-sm text-secondary">{result.notes ?? "The figure could not be drawn."}</p>
 			</div>
 		);
 	}
@@ -123,7 +124,7 @@ export function VisualOutputCard({
 				/>
 			</div>
 			<div className="mt-2 flex items-center justify-between gap-2">
-				<div className="text-xs font-medium text-muted-foreground">Figure</div>
+				<div className="text-xs font-medium text-secondary">Figure</div>
 				<div className="flex items-center gap-1.5">
 					{/* The invert affordance (owner round, 2026-10-07): the disc IS
 					    the half-filled contrast circle; the tooltip names it. */}
@@ -134,27 +135,9 @@ export function VisualOutputCard({
 						title="Invert colors"
 						discIcon={<InvertDiscIcon className="size-3" />}
 					/>
-					<button
-						type="button"
-						aria-label="Download figure as SVG"
-						title="Download as SVG"
-						onClick={() => downloadFile("figure.svg", result.svg, "image/svg+xml")}
-						data-testid="visual-download"
-						className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-					>
-						<DownloadIcon className="size-3.5" />
-					</button>
+					<Button size="icon-sm" variant="ghost" aria-label="Download figure as SVG" tooltip="Download as SVG" onClick={() => downloadFile("figure.svg", result.svg, "image/svg+xml")} data-testid="visual-download"><DownloadIcon className="size-4" /></Button>
 					{overlay && (
-						<button
-							type="button"
-							aria-label="Open figure fullscreen"
-							title="Open fullscreen"
-							onClick={() => overlay.openFigure(result.svg, inverted)}
-							data-testid="visual-open"
-							className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-						>
-							<MaximizeIcon className="size-3.5" />
-						</button>
+						<Button size="icon-sm" variant="ghost" aria-label="Open figure fullscreen" tooltip="Open fullscreen" onClick={() => overlay.openFigure(result.svg, inverted)} data-testid="visual-open"><MaximizeIcon className="size-4" /></Button>
 					)}
 				</div>
 			</div>

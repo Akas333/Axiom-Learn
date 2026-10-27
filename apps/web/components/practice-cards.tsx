@@ -63,7 +63,7 @@ export function ProblemCard({ part }: ArtifactPartProps) {
 	const statement = typeof input.statement === "string" ? input.statement : "";
 	return (
 		<div data-testid="problem-card" className="lh-card-enter my-1 rounded-xl border bg-card p-4">
-			<div className="mb-1 text-xs font-medium text-muted-foreground">Problem</div>
+			<div className="mb-1 text-xs font-medium text-secondary">Problem</div>
 			<div className="lh-prose text-[15px]">
 				<ToolContentResponse>{statement}</ToolContentResponse>
 			</div>
@@ -87,9 +87,9 @@ const OUTCOME_LABEL: Record<string, string> = {
 const OUTCOME_CHIP: Record<string, string> = {
 	solved: "bg-green-500/15 text-green-500",
 	solvedWithHints: "bg-amber-500/15 text-amber-500",
-	movedOn: "bg-muted text-muted-foreground",
+	movedOn: "bg-muted text-secondary",
 	surrendered: "bg-red-500/15 text-red-500",
-	dismissed: "bg-muted text-muted-foreground",
+	dismissed: "bg-muted text-secondary",
 };
 
 export function ConcludeCard({ part }: ArtifactPartProps) {
@@ -109,7 +109,7 @@ export function ConcludeCard({ part }: ArtifactPartProps) {
 	// learner clicked; the record needs only the fact).
 	if (outcome === "dismissed") {
 		return (
-			<div data-testid="conclude-card" className="my-1 px-1 text-sm text-muted-foreground/70">
+			<div data-testid="conclude-card" className="my-1 px-1 text-sm text-secondary/70">
 				Problem dismissed.
 			</div>
 		);
@@ -120,7 +120,7 @@ export function ConcludeCard({ part }: ArtifactPartProps) {
 			{/* The heading row (owner round 3, 2026-10-05): plain 'Concluded'
 			    eyebrow + the outcome in the quiz cards' EXACT chip register —
 			    no more two same-weight headings stacked. */}
-			<div className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+			<div className="mb-1 flex items-center gap-2 text-xs font-medium text-secondary">
 				Concluded
 				{(OUTCOME_LABEL[outcome] ?? "") !== "" && outcome !== "dismissed" && (
 					<span className={cn("rounded px-1.5 py-0.5", OUTCOME_CHIP[outcome] ?? OUTCOME_CHIP.movedOn)}>
@@ -131,7 +131,7 @@ export function ConcludeCard({ part }: ArtifactPartProps) {
 			{/* The verdict — plain prose under the heading, no 'Verdict:' label
 			    (owner round 3): the same quiet 50% register as quiz explanations. */}
 			{verdict.length > 0 && (
-				<div className="text-sm text-foreground/50">
+				<div className="text-sm text-primary/50">
 					<ToolContentResponse>{verdict}</ToolContentResponse>
 				</div>
 			)}
@@ -141,7 +141,7 @@ export function ConcludeCard({ part }: ArtifactPartProps) {
 				<>
 					<div className="my-3 border-t" />
 					<div>
-						<div className="mb-0.5 text-xs font-medium text-muted-foreground">Model solution</div>
+						<div className="mb-0.5 text-xs font-medium text-secondary">Model solution</div>
 						<div className="lh-prose text-[15px]">
 							<ToolContentResponse>{reveal}</ToolContentResponse>
 						</div>
@@ -236,7 +236,7 @@ function MetadataPopover({
 					});
 				}}
 				aria-expanded={open}
-				className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+				className="flex items-center gap-1 text-xs font-medium text-secondary transition-colors hover:text-primary"
 			>
 				Metadata
 			</button>
@@ -255,9 +255,9 @@ function MetadataPopover({
 						className="z-50 w-80 max-w-[calc(100vw-1rem)] rounded-xl border bg-card p-4 text-left shadow-lg"
 					>
 				<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
-						<dt className="text-muted-foreground">Mode</dt>
+						<dt className="text-secondary">Mode</dt>
 						<dd className="font-mono">{mode || "—"}</dd>
-						<dt className="text-muted-foreground">Targets</dt>
+						<dt className="text-secondary">Targets</dt>
 						<dd className="font-mono">
 							{targets.length === 0 ? (
 								"untagged"
@@ -272,13 +272,13 @@ function MetadataPopover({
 								</span>
 							)}
 						</dd>
-						<dt className="text-muted-foreground">Outcome</dt>
+						<dt className="text-secondary">Outcome</dt>
 						<dd className="font-mono">{outcome || "—"}</dd>
-						<dt className="text-muted-foreground">Hint rung</dt>
+						<dt className="text-secondary">Hint rung</dt>
 						<dd className="font-mono">{rung || "none"}</dd>
-						<dt className="text-muted-foreground">Miss class</dt>
+						<dt className="text-secondary">Miss class</dt>
 						<dd className="font-mono">{miss || "none"}</dd>
-						<dt className="text-muted-foreground">Retest</dt>
+						<dt className="text-secondary">Retest</dt>
 						<dd className="font-mono">{retest === undefined ? "—" : retest ? "yes" : "no"}</dd>
 					</dl>
 					</div>,

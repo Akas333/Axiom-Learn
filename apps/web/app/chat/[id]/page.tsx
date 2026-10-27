@@ -18,7 +18,7 @@ export default function ChatPage() {
 
 	if (chat.state === "error") {
 		return (
-			<div className="flex h-full items-center justify-center text-muted-foreground">
+			<div className="flex h-full items-center justify-center text-secondary">
 				{chat.status === 404 ? "This session doesn't exist." : "Couldn't load this session."}
 			</div>
 		);

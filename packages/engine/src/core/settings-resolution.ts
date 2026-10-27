@@ -27,6 +27,7 @@ import type { ModelRole } from "../../config.ts";
 import type { ChatSettings } from "./contracts/chat.ts";
 import type { SearchEngineId } from "./search.ts";
 import type { LearnerSettings } from "./learner.ts";
+import { resolveAnki, type ResolvedAnkiSettings } from "./anki.ts";
 import {
 	BACKGROUND_MODEL_ROLES,
 	FACTORY_SETTINGS,
@@ -96,6 +97,8 @@ export interface EffectiveSettings {
 	compaction: Required<CompactionSettings>;
 	/** The learner profile as stored ({} before onboarding). */
 	learner: LearnerSettings;
+	/** The Anki deck sync, defaults filled in (off until enabled). */
+	anki: ResolvedAnkiSettings;
 }
 
 /** The conversation pair's chain (BYOK, owner 2026-09-22): the chat's own
@@ -221,6 +224,7 @@ export function resolveSettings(record: UserSettings | null): EffectiveSettings 
 			thresholdTokens: record?.compaction?.thresholdTokens ?? FACTORY_SETTINGS.compaction.thresholdTokens,
 		},
 		learner: record?.learner ?? {},
+		anki: resolveAnki(record?.anki),
 	};
 }
 

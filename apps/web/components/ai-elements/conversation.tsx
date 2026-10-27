@@ -56,11 +56,11 @@ export const ConversationEmptyState = ({
   >
     {children ?? (
       <>
-        {icon && <div className="text-muted-foreground">{icon}</div>}
+        {icon && <div className="text-secondary">{icon}</div>}
         <div className="space-y-1">
           <h3 className="font-medium text-sm">{title}</h3>
           {description && (
-            <p className="text-muted-foreground text-sm">{description}</p>
+            <p className="text-secondary text-sm">{description}</p>
           )}
         </div>
       </>
@@ -84,7 +84,7 @@ export const ConversationScrollButton = ({
     !isAtBottom && (
       <Button
         className={cn(
-          "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full dark:bg-background dark:hover:bg-muted",
+          "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full dark:bg-body dark:hover:bg-muted",
           className
         )}
         onClick={handleScrollToBottom}
@@ -96,72 +96,5 @@ export const ConversationScrollButton = ({
         <ArrowDownIcon className="size-4" />
       </Button>
     )
-  );
-};
-
-const getMessageText = (message: LhViewMessage): string =>
-  message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("");
-
-export type ConversationDownloadProps = Omit<
-  ComponentProps<typeof Button>,
-  "onClick"
-> & {
-  messages: LhViewMessage[];
-  filename?: string;
-  formatMessage?: (message: LhViewMessage, index: number) => string;
-};
-
-const defaultFormatMessage = (message: LhViewMessage): string => {
-  const roleLabel =
-    message.role.charAt(0).toUpperCase() + message.role.slice(1);
-  return `**${roleLabel}:** ${getMessageText(message)}`;
-};
-
-export const messagesToMarkdown = (
-  messages: LhViewMessage[],
-  formatMessage: (
-    message: LhViewMessage,
-    index: number
-  ) => string = defaultFormatMessage
-): string => messages.map((msg, i) => formatMessage(msg, i)).join("\n\n");
-
-export const ConversationDownload = ({
-  messages,
-  filename = "conversation.md",
-  formatMessage = defaultFormatMessage,
-  className,
-  children,
-  ...props
-}: ConversationDownloadProps) => {
-  const handleDownload = useCallback(() => {
-    const markdown = messagesToMarkdown(messages, formatMessage);
-    const blob = new Blob([markdown], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  }, [messages, filename, formatMessage]);
-
-  return (
-    <Button
-      className={cn(
-        "absolute top-4 right-4 rounded-full dark:bg-background dark:hover:bg-muted",
-        className
-      )}
-      onClick={handleDownload}
-      size="icon"
-      type="button"
-      variant="outline"
-      {...props}
-    >
-      {children ?? <DownloadIcon className="size-4" />}
-    </Button>
   );
 };

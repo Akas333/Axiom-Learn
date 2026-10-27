@@ -1,4 +1,5 @@
 
+import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "@/lib/navigation";
 import { GraphView } from "@/components/graph-view";
@@ -227,14 +228,7 @@ export function Home({
 							<ZeroKeysPill inline onOpen={() => setSetupOpen(true)} />
 						) : (
 							!configured && (
-								<button
-									type="button"
-									data-testid="setup-cta"
-									onClick={() => setSetupOpen(true)}
-									className="rounded-sm border border-border bg-card px-3 py-1.5 font-ui text-xs text-foreground transition-colors hover:border-muted-foreground/50 hover:bg-accent cursor-pointer"
-								>
-									Set up your models
-								</button>
+								<Button size="sm" variant="secondary" data-testid="setup-cta" onClick={() => setSetupOpen(true)}>Set up your models</Button>
 							)
 						)}
 					/>

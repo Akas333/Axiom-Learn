@@ -1,4 +1,5 @@
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { MaximizeIcon, MinusIcon, PlusIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -446,22 +447,22 @@ const BOX: Record<PlanNodeStatus, string> = {
 	// 50%-opacity app background instead of true transparency: a routed
 	// edge passing behind the box composites UNDER the fill — dimmed to
 	// half, not shown straight through (owner, round 9).
-	visited: "fill-background/50 stroke-white",
-	current: "fill-background/50 stroke-white",
+	visited: "fill-body/50 stroke-white",
+	current: "fill-body/50 stroke-white",
 	// The grayed-out not-yet-visited look stays as-is (owner).
 	upcoming: "fill-card stroke-border",
 };
 const TEXT: Record<PlanNodeStatus, string> = {
 	visited: "fill-white text-xs",
 	current: "fill-white text-xs font-medium",
-	upcoming: "fill-muted-foreground/80 text-xs",
+	upcoming: "fill-secondary/80 text-xs",
 };
 // The in-chat block speaks the dock language now (owner, plan-hug
 // round 2026-10-07): boxes in the lighter background variant like
 // the composer/dock shells — but the outlines STAY white (owner
 // follow-up: the gray fill is good, white box edges).
 const MONO_BOX = "fill-card stroke-white";
-const MONO_TEXT = "fill-foreground text-xs";
+const MONO_TEXT = "fill-primary text-xs";
 
 /** The diagram itself: positioned nodes + bezier edges. Pure-ish render —
  *  every input is data, so SSR render tests pin the whole thing. The root
@@ -883,7 +884,7 @@ export function PlanPopup({ messages, onClose }: { messages: readonly PopupMessa
 			// SESSION-SCOPED (absolute, not fixed): the chat page mounts this
 			// INSIDE the session-area div — below the drag bar, right of the
 			// sidebar. 80% + blur: the transcript ghosts through.
-			className="absolute inset-0 z-40 flex flex-col bg-background/80 p-4 backdrop-blur-sm"
+			className="absolute inset-0 z-40 flex flex-col bg-body/80 p-4 backdrop-blur-sm"
 			role="dialog"
 			aria-modal="true"
 			aria-label="The full plan"
@@ -893,17 +894,9 @@ export function PlanPopup({ messages, onClose }: { messages: readonly PopupMessa
 		>
 			<div className="mb-2 flex items-center gap-2">
 				<span className="text-sm font-medium">The plan</span>
-				<span className="text-xs text-muted-foreground">live — statuses derive from your check outcomes</span>
+				<span className="text-xs text-secondary">live — statuses derive from your check outcomes</span>
 				<Hint label="Close" binding="escape" side="left">
-<button
-					type="button"
-					onClick={onClose}
-					aria-label="Close"
-					data-testid="plan-popup-close"
-					className="ml-auto rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-				>
-					<XIcon className="size-4" />
-				</button>
+<Button size="icon-sm" variant="ghost" onClick={onClose} aria-label="Close" data-testid="plan-popup-close" className="ml-auto"><XIcon className="size-4" /></Button>
 </Hint>
 			</div>
 			<div
@@ -946,44 +939,22 @@ export function PlanPopup({ messages, onClose }: { messages: readonly PopupMessa
 							/>
 						</div>
 						<div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between p-2">
-							<span className="text-xs text-muted-foreground/60">Drag to pan · scroll to zoom</span>
+							<span className="text-xs text-secondary/60">Drag to pan · scroll to zoom</span>
 							<div className="flex gap-1">
 								<Hint label="Zoom out" side="bottom">
-<button
-									type="button"
-									aria-label="Zoom out"
-									onClick={() => stepZoom(1 / 1.25)}
-									className="pointer-events-auto flex size-7 items-center justify-center rounded-md border border-border/70 bg-card/80 text-muted-foreground backdrop-blur transition-colors hover:bg-accent hover:text-foreground"
-								>
-									<MinusIcon className="size-3.5" />
-								</button>
+<Button size="icon-sm" variant="secondary" aria-label="Zoom out" onClick={() => stepZoom(1 / 1.25)} className="pointer-events-auto"><MinusIcon className="size-4" /></Button>
 </Hint>
 								<Hint label="Fit plan to screen" side="bottom">
-<button
-									type="button"
-									aria-label="Fit plan to screen"
-									onClick={fitView}
-									data-testid="plan-popup-fit"
-									className="pointer-events-auto flex size-7 items-center justify-center rounded-md border border-border/70 bg-card/80 text-muted-foreground backdrop-blur transition-colors hover:bg-accent hover:text-foreground"
-								>
-									<MaximizeIcon className="size-3.5" />
-								</button>
+<Button size="icon-sm" variant="secondary" aria-label="Fit plan to screen" onClick={fitView} data-testid="plan-popup-fit" className="pointer-events-auto"><MaximizeIcon className="size-4" /></Button>
 </Hint>
 								<Hint label="Zoom in" side="bottom">
-<button
-									type="button"
-									aria-label="Zoom in"
-									onClick={() => stepZoom(1.25)}
-									className="pointer-events-auto flex size-7 items-center justify-center rounded-md border border-border/70 bg-card/80 text-muted-foreground backdrop-blur transition-colors hover:bg-accent hover:text-foreground"
-								>
-									<PlusIcon className="size-3.5" />
-								</button>
+<Button size="icon-sm" variant="secondary" aria-label="Zoom in" onClick={() => stepZoom(1.25)} className="pointer-events-auto"><PlusIcon className="size-4" /></Button>
 </Hint>
 							</div>
 						</div>
 					</>
 				) : (
-					<div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+					<div className="flex h-full items-center justify-center text-sm text-secondary">
 						No plan in this session yet.
 					</div>
 				)}

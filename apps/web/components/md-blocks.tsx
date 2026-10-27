@@ -26,6 +26,7 @@
  * EXPAND icon (opens the session overlay) when a chat page is mounted.
  */
 
+import { Button } from "@/components/ui/button";
 import { cloneElement, isValidElement, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { CheckIcon, CopyIcon, MaximizeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -100,7 +101,7 @@ export function CopyCorner({
 				type="button"
 				aria-label={label}
 				data-testid="md-copy"
-				className="flex size-6 items-center justify-center rounded-md text-muted-foreground/70 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover/md:opacity-100"
+				className="flex size-6 items-center justify-center rounded-md text-secondary/70 opacity-0 transition-opacity hover:bg-overlay-hover hover:text-primary focus-visible:opacity-100 group-hover/md:opacity-100"
 				onClick={(e) => {
 					blurAfterPointerClick(e);
 					void copyText(getText()).then((ok) => {
@@ -180,7 +181,7 @@ function MermaidInline({ chart }: { chart: string }) {
 	if (incomplete || (svg === null && error === null)) {
 		return (
 			<div data-testid="md-mermaid" className="my-4 flex justify-center p-4" aria-busy="true">
-				<span className="inline-block size-4 animate-spin rounded-full border border-current border-b-2 text-muted-foreground" />
+				<span className="inline-block size-4 animate-spin rounded-full border border-current border-b-2 text-secondary" />
 			</div>
 		);
 	}
@@ -206,18 +207,10 @@ function MermaidInline({ chart }: { chart: string }) {
 					label="Open full-screen"
 					side="bottom"
 				>
-<button
-						type="button"
-						aria-label="Expand diagram"
-						data-testid="md-mermaid-expand"
-												className="flex size-6 items-center justify-center rounded-md text-muted-foreground/70 opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/md:opacity-100"
-						onClick={(e) => {
+<Button size="icon-sm" variant="ghost" aria-label="Expand diagram" data-testid="md-mermaid-expand" onClick={(e) => {
 							blurAfterPointerClick(e);
 							overlay.openMermaid(chart);
-						}}
-					>
-						<MaximizeIcon className="size-3.5" />
-					</button>
+						}} className="opacity-0 transition-opacity"><MaximizeIcon className="size-4" /></Button>
 				</Hint>
 				)}
 			</div>
@@ -347,7 +340,7 @@ export function MarkdownBlockquote(props: ComponentProps<"blockquote"> & ExtraPr
 		return (
 			<blockquote
 				{...rest}
-				className="my-4 border-l-4 border-muted-foreground/30 pl-4 text-muted-foreground italic"
+				className="my-4 border-l-4 border-secondary/30 pl-4 text-secondary italic"
 				data-streamdown="blockquote"
 			>
 				{children}
@@ -358,7 +351,7 @@ export function MarkdownBlockquote(props: ComponentProps<"blockquote"> & ExtraPr
 		<div
 			data-testid="md-callout"
 			data-alert-kind={alert.kind}
-			className="my-4 w-fit max-w-full rounded-2xl border border-primary/40 bg-primary/10 px-5 py-3.5 [&> :first-child]:mt-0 [&> :last-child]:mb-0"
+			className="my-4 w-fit max-w-full rounded-2xl border border-accent-bg/40 bg-accent-bg/10 px-5 py-3.5 [&> :first-child]:mt-0 [&> :last-child]:mb-0"
 		>
 			{alert.children}
 		</div>

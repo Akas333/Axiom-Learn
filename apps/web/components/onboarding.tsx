@@ -9,7 +9,10 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { Button } from "@astryxdesign/core/Button";
+import { Dialog } from "@astryxdesign/core/Dialog";
+import { HStack } from "@astryxdesign/core/HStack";
+import { Icon } from "@astryxdesign/core/Icon";
 import {
 	BrainCircuitIcon,
 	CheckIcon,
@@ -109,21 +112,17 @@ function Onboarding({ initial, onClose }: { initial: LearnerSettings; onClose: (
 	const next = () => (last ? void finish() : setStep(STEPS[index + 1]!));
 	const back = () => index > 0 && setStep(STEPS[index - 1]!);
 
-	return createPortal(
-		<div className="lh-modal-backdrop fixed inset-0 z-[60] flex items-center justify-center bg-background/85 p-4">
-			<div
-				role="dialog"
-				aria-modal="true"
-				aria-label="Welcome to Kapany"
-				data-testid="onboarding"
-				className="settings-dialog-pop flex h-[min(640px,92dvh)] w-[760px] max-w-full flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
-			>
+	// Astryx Dialog, purpose "required": Esc is handled above (skip for
+	// now), and a backdrop click never dismisses mid-onboarding.
+	return (
+		<Dialog isOpen onOpenChange={() => {}} purpose="required" width={760} maxHeight="92dvh" padding={0} aria-label="Welcome to Kapany">
+			<div data-testid="onboarding" className="flex h-[min(640px,92dvh)] flex-col">
 				{/* Progress */}
 				<div className="flex items-center gap-1.5 px-6 pt-5 sm:px-8" aria-label={`Step ${index + 1} of ${STEPS.length}`}>
 					{STEPS.map((s, i) => (
 						<span
 							key={s}
-							className={cn("h-1 flex-1 rounded-full transition-colors", i <= index ? "bg-primary" : "bg-(--pill)")}
+							className={cn("h-1 flex-1 rounded-full transition-colors", i <= index ? "bg-accent-bg" : "bg-overlay-hover")}
 						/>
 					))}
 				</div>
@@ -141,9 +140,9 @@ function Onboarding({ initial, onClose }: { initial: LearnerSettings; onClose: (
 					)}
 					{step === "style" && (
 						<StepFrame title="How do you like things explained?" lead="Pick what fits. You can change it any time in Settings.">
-							<h3 className="mb-2 text-sm text-muted-foreground">How much math</h3>
+							<h3 className="mb-2 text-sm text-secondary">How much math</h3>
 							<MathPicker value={profile.math} onChange={(math) => setProfile((p) => ({ ...p, math }))} />
-							<h3 className="mb-2 mt-6 text-sm text-muted-foreground">Explanation style</h3>
+							<h3 className="mb-2 mt-6 text-sm text-secondary">Explanation style</h3>
 							<StylePicker value={profile.style} onChange={(style) => setProfile((p) => ({ ...p, style }))} />
 						</StepFrame>
 					)}
@@ -158,53 +157,32 @@ function Onboarding({ initial, onClose }: { initial: LearnerSettings; onClose: (
 				</div>
 
 				<footer className="flex items-center gap-3 border-t border-border px-6 py-4 sm:px-8">
-					{index > 0 ? (
-						<button
-							type="button"
-							onClick={back}
-							className="rounded-lg px-3 py-2 text-[15px] text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
-						>
-							Back
-						</button>
-					) : (
-						<span />
-					)}
-					{error && <p className="text-sm text-red-400">{error}</p>}
-					<div className="ml-auto flex items-center gap-2">
+					{index > 0 ? <Button label="Back" variant="ghost" onClick={back} /> : <span />}
+					{error && <p className="text-sm text-error">{error}</p>}
+					<HStack gap={2} align="center" className="ml-auto">
 						{!last && (
-							<button
-								type="button"
-								data-testid="onboarding-skip"
-								onClick={() => void finish()}
-								disabled={saving}
-								className="rounded-lg px-3 py-2 text-[15px] text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
-							>
-								Skip for now
-							</button>
+							<Button data-testid="onboarding-skip" label="Skip for now" variant="ghost" isDisabled={saving} onClick={() => void finish()} />
 						)}
-						<button
-							type="button"
+						<Button
 							data-testid="onboarding-next"
+							variant="primary"
+							label={last ? "Start learning" : index === 0 ? "Get started" : "Continue"}
+							isLoading={saving}
+							endContent={last ? <Icon icon={CheckIcon} /> : undefined}
 							onClick={next}
-							disabled={saving}
-							className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-[15px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-						>
-							{last ? (saving ? "Saving…" : "Start learning") : index === 0 ? "Get started" : "Continue"}
-							{last && !saving && <CheckIcon className="size-4" aria-hidden />}
-						</button>
-					</div>
+						/>
+					</HStack>
 				</footer>
 			</div>
-		</div>,
-		document.body,
+		</Dialog>
 	);
 }
 
 function StepFrame({ title, lead, children }: { title: string; lead: string; children: React.ReactNode }) {
 	return (
 		<div>
-			<h2 className="font-title text-2xl tracking-tight text-foreground sm:text-3xl">{title}</h2>
-			<p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-muted-foreground">{lead}</p>
+			<h2 className="font-title text-2xl tracking-tight text-primary sm:text-3xl">{title}</h2>
+			<p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-secondary">{lead}</p>
 			<div className="mt-6">{children}</div>
 		</div>
 	);
@@ -213,15 +191,15 @@ function StepFrame({ title, lead, children }: { title: string; lead: string; chi
 function WelcomeStep() {
 	return (
 		<div className="flex flex-1 flex-col justify-center pb-6">
-			<span className="font-brand text-sm font-semibold tracking-wide text-muted-foreground">KAPANY</span>
-			<h2 className="mt-3 font-title text-3xl tracking-tight text-foreground sm:text-4xl">
+			<span className="font-brand text-sm font-semibold tracking-wide text-secondary">KAPANY</span>
+			<h2 className="mt-3 font-title text-3xl tracking-tight text-primary sm:text-4xl">
 				A tutor that finds where your understanding ends, and teaches from there.
 			</h2>
-			<p className="mt-4 max-w-[58ch] text-[16px] leading-relaxed text-muted-foreground">
+			<p className="mt-4 max-w-[58ch] text-[16px] leading-relaxed text-secondary">
 				Most AI tutors just explain. Kapany first checks what you already understand, plans a path from there to
 				your goal, and teaches one step at a time. Two people asking the same question get two different lessons.
 			</p>
-			<p className="mt-4 max-w-[58ch] text-[16px] leading-relaxed text-muted-foreground">
+			<p className="mt-4 max-w-[58ch] text-[16px] leading-relaxed text-secondary">
 				The next minute shows how a lesson works, then asks a little about you so lessons fit your level.
 			</p>
 		</div>
@@ -256,15 +234,15 @@ function LessonStep() {
 		<StepFrame title="How a lesson works" lead="Type what you want to learn on the home screen. From there, every lesson follows the same loop.">
 			<ol className="grid gap-3 sm:grid-cols-2">
 				{LESSON_STAGES.map(({ Icon, title, body }, i) => (
-					<li key={title} className="flex gap-3 rounded-xl border border-border bg-(--pill)/40 p-4">
-						<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-(--pill) text-foreground">
+					<li key={title} className="flex gap-3 rounded-xl border border-border bg-overlay-hover/40 p-4">
+						<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-overlay-hover text-primary">
 							<Icon className="size-[18px]" aria-hidden />
 						</span>
 						<span>
-							<span className="block text-[15px] text-foreground">
+							<span className="block text-[15px] text-primary">
 								{i + 1}. {title}
 							</span>
-							<span className="mt-1 block text-[14px] leading-relaxed text-muted-foreground">{body}</span>
+							<span className="mt-1 block text-[14px] leading-relaxed text-secondary">{body}</span>
 						</span>
 					</li>
 				))}
@@ -285,10 +263,10 @@ function LessonStep() {
 function Tip({ Icon, title, children }: { Icon: typeof TargetIcon; title: string; children: React.ReactNode }) {
 	return (
 		<div className="flex gap-3 rounded-xl p-1">
-			<Icon className="mt-0.5 size-[18px] shrink-0 text-muted-foreground" aria-hidden />
+			<Icon className="mt-0.5 size-[18px] shrink-0 text-secondary" aria-hidden />
 			<span>
-				<span className="block text-[15px] text-foreground">{title}</span>
-				<span className="mt-1 block text-[14px] leading-relaxed text-muted-foreground">{children}</span>
+				<span className="block text-[15px] text-primary">{title}</span>
+				<span className="mt-1 block text-[14px] leading-relaxed text-secondary">{children}</span>
 			</span>
 		</div>
 	);

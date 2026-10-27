@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { Dialog } from "@astryxdesign/core/Dialog";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { Kbd } from "@astryxdesign/core/Kbd";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { Spinner } from "@astryxdesign/core/Spinner";
+import { Text } from "@astryxdesign/core/Text";
 import {
 	CornerDownLeftIcon,
 	DumbbellIcon,
@@ -182,8 +187,6 @@ export function SearchPalette() {
 		listRef.current?.querySelector(`[data-index="${index}"]`)?.scrollIntoView({ block: "nearest" });
 	}, [index]);
 
-	if (!open) return null;
-
 	const loading = chats === null || (tab === "concepts" && concepts === null);
 	const onKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Escape") {
@@ -211,71 +214,63 @@ export function SearchPalette() {
 	// Group headers in render order.
 	let lastGroup: string | null = null;
 
-	return createPortal(
-		<div
-			className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-4 pt-[14vh] backdrop-blur-[2px]"
-			onMouseDown={(e) => {
-				if (e.target === e.currentTarget) close();
+	return (
+		<Dialog
+			isOpen={open}
+			onOpenChange={(next) => {
+				if (!next) close();
 			}}
-			data-testid="search-palette"
+			width={704}
+			maxHeight="72vh"
+			padding={0}
+			position={{ top: "14vh" }}
+			aria-label="Search"
 		>
-			<div
-				role="dialog"
-				aria-label="Search"
-				onKeyDown={onKeyDown}
-				className="settings-dialog-pop flex max-h-[72vh] w-full max-w-[44rem] flex-col overflow-hidden rounded-3xl border border-input/70 bg-card shadow-2xl"
-			>
+			{open && (
+			<div onKeyDown={onKeyDown} data-testid="search-palette" className="flex max-h-[72vh] flex-col">
 				{/* Search box */}
 				<div className="flex items-center gap-3 px-5 pt-4 pb-2">
-					<SearchIcon className="size-4 shrink-0 text-muted-foreground" />
+					<SearchIcon className="size-4 shrink-0 text-secondary" />
 					<input
 						ref={inputRef}
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
 						placeholder="Search sessions, concepts and actions"
 						aria-label="Search"
-						className="lh-input min-w-0 flex-1 bg-transparent py-1 text-lg outline-none placeholder:text-muted-foreground/70"
+						className="lh-input min-w-0 flex-1 bg-transparent py-1 text-lg text-primary outline-none placeholder:text-secondary"
 					/>
-					<button
-						type="button"
-						onClick={close}
-						aria-label="Close search"
-						className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
-					>
-						<XIcon className="size-4" />
-					</button>
+					<IconButton label="Close search" variant="ghost" size="sm" icon={<XIcon className="size-4" />} onClick={close} />
 				</div>
 
 				{/* Type tabs */}
-				<div role="tablist" aria-label="Result type" className="flex items-center gap-1 border-b border-border/60 px-4 pb-3">
-					{TABS.map((t) => (
-						<button
-							key={t.id}
-							type="button"
-							role="tab"
-							aria-selected={tab === t.id}
-							data-testid={`search-tab-${t.id}`}
-							onClick={() => {
-								setTab(t.id);
-								inputRef.current?.focus();
-							}}
-							className={cn(
-								"rounded-lg px-2.5 py-1 text-sm transition-colors",
-								tab === t.id ? "bg-(--pill) text-foreground" : "text-muted-foreground hover:text-foreground",
-							)}
-						>
-							{t.label}
-						</button>
-					))}
+				<div className="border-b border-border px-4 pb-3">
+					<SegmentedControl
+						label="Result type"
+						size="sm"
+						value={tab}
+						onChange={(next) => {
+							setTab(next as Tab);
+							inputRef.current?.focus();
+						}}
+					>
+						{TABS.map((t) => (
+							<SegmentedControlItem key={t.id} value={t.id} label={t.label} data-testid={`search-tab-${t.id}`} />
+						))}
+					</SegmentedControl>
 				</div>
 
 				{/* Results */}
 				<div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-2 py-2" role="listbox" aria-label="Results">
 					{loading && items.length === 0 ? (
-						<div className="px-3 py-6 text-sm text-muted-foreground">Loading…</div>
+						<div className="flex items-center gap-2 px-3 py-6">
+							<Spinner size="sm" />
+							<Text type="supporting">Loading…</Text>
+						</div>
 					) : items.length === 0 ? (
-						<div className="px-3 py-6 text-sm text-muted-foreground">
-							{query.trim() ? `Nothing matches “${query.trim()}”.` : tab === "concepts" ? "No concepts in your graph yet." : "Nothing here yet."}
+						<div className="px-3 py-6">
+							<Text type="supporting">
+								{query.trim() ? `Nothing matches “${query.trim()}”.` : tab === "concepts" ? "No concepts in your graph yet." : "Nothing here yet."}
+							</Text>
 						</div>
 					) : (
 						items.map((item, i) => {
@@ -285,7 +280,9 @@ export function SearchPalette() {
 							return (
 								<div key={item.key}>
 									{header && (
-										<div className="px-3 pt-3 pb-1.5 text-xs font-medium text-muted-foreground first:pt-1">{header}</div>
+										<div className="px-3 pt-3 pb-1.5 first:pt-1">
+											<Text type="label" color="secondary">{header}</Text>
+										</div>
 									)}
 									<button
 										type="button"
@@ -295,15 +292,15 @@ export function SearchPalette() {
 										onMouseMove={() => setIndex(i)}
 										onClick={item.run}
 										className={cn(
-											"flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-											selected ? "bg-(--pill) text-foreground" : "text-foreground/90",
+											"flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-primary transition-colors",
+											selected && "bg-overlay-hover",
 										)}
 									>
-										<span className="shrink-0 text-muted-foreground">{item.icon}</span>
+										<span className="shrink-0 text-secondary">{item.icon}</span>
 										<span className="min-w-0 flex-1 truncate">{item.title}</span>
-										{item.meta && <span className="shrink-0 text-xs text-muted-foreground">{item.meta}</span>}
+										{item.meta && <Text type="supporting" size="sm">{item.meta}</Text>}
 										<CornerDownLeftIcon
-											className={cn("size-4 shrink-0 text-muted-foreground", selected ? "opacity-100" : "opacity-0")}
+											className={cn("size-4 shrink-0 text-secondary", selected ? "opacity-100" : "opacity-0")}
 										/>
 									</button>
 								</div>
@@ -313,31 +310,26 @@ export function SearchPalette() {
 				</div>
 
 				{/* Keyboard footer */}
-				<div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border/60 px-5 py-3 text-xs text-muted-foreground">
-					<FooterKey label="Close" keys={["Esc"]} />
-					<FooterKey label="Move" keys={["↑", "↓"]} />
-					<FooterKey label="Change type" keys={["Tab", "←", "→"]} />
+				<div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border px-5 py-3">
+					<FooterKey label="Close" keys={["escape"]} />
+					<FooterKey label="Move" keys={["up", "down"]} />
+					<FooterKey label="Change type" keys={["tab", "left", "right"]} />
 					<span className="ml-auto">
-						<FooterKey label="Open" keys={["↵"]} />
+						<FooterKey label="Open" keys={["enter"]} />
 					</span>
 				</div>
 			</div>
-		</div>,
-		document.body,
+			)}
+		</Dialog>
 	);
 }
 
 function FooterKey({ label, keys }: { label: string; keys: string[] }) {
 	return (
 		<span className="flex items-center gap-1.5">
-			{label}
+			<Text type="supporting" size="sm">{label}</Text>
 			{keys.map((k) => (
-				<kbd
-					key={k}
-					className="flex h-5 min-w-5 items-center justify-center rounded-md border border-border px-1 font-sans text-[11px] text-muted-foreground"
-				>
-					{k}
-				</kbd>
+				<Kbd key={k} keys={k} />
 			))}
 		</span>
 	);

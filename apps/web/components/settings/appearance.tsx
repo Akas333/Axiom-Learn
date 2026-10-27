@@ -1,26 +1,16 @@
 /**
- * THE APPEARANCE APPLICATION (thin settings wave, 2026-09-19): the settings
- * record's appearance section actually DOES something — resolved against
- * the factory defaults and applied as RUNTIME CSS variables on <html>.
+ * Appearance: the settings record's appearance section, applied to the app.
  *
- * Why variables and not className swaps: every seam the settings touch was
- * built token-first (--font-prose, --lh-prose-size, --lh-ink-strong, …),
- * so application is setProperty and nothing re-renders. The ONE thing the
- * variables can't reach — the mode — is dark-only this wave (the light
- * palette is designed in the later design wave; <html class="dark"> is
- * static in app/layout.tsx).
- *
- * The provider is mounted at the ROOT LAYOUT level (like ActivityProvider):
- * every page picks appearance up on load. The settings page writes a
- * section, hands the new appearance here, and the vars move immediately.
- *
- * (The open-settings keyboard chord lives in components/keyboard-shortcuts.tsx
- * with the other navigations — mod+, pushes /settings from anywhere.)
+ * Colors and components come from Astryx (neutral theme). The provider
+ * wraps the app in Astryx's <Theme> and drives its light/dark `mode` from
+ * the record. Reading-type knobs (font, size, heading weight, emphasis
+ * inks) stay app CSS variables set on <html>.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FACTORY_SETTINGS, type AppearanceSettings } from "@/src/core";
-import { themeById, themeVars } from "./themes.ts";
+import { Theme } from "@astryxdesign/core/theme";
+import { themes, defaultThemeSlug } from "@/astryx-themes";
 
 /** Last-applied appearance, read by the inline boot script in index.html
  *  so a reload paints the chosen theme before React mounts (no flash). */
@@ -44,64 +34,19 @@ export function resolveAppearance(delta: AppearanceSettings | undefined) {
 	};
 }
 
-/** One channel clamped on the dark curve: additive offsets matching today's
- *  hand-picked palette (#141414 → card #1c1c1c (+8) → accent #2a2a2a (+22)
- *  → border #434343 (+47)) — the "per-mode derivation in code" the schema
- *  promises, as the thinnest curve that keeps the palette's relationships. */
-function raise(hex: string, add: number): string {
-	const n = hex.length === 4
-		? hex.slice(1).split("").map((c) => parseInt(c + c, 16))
-		: [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
-	return `#${n.map((c) => Math.max(0, Math.min(255, c + add)).toString(16).padStart(2, "0")).join("")}`;
-}
-
-/** The derived palette a chosen background implies (dark curve): background
- *  itself, the raised surfaces (card/popover/secondary/muted, +8), the
- *  accent (+22), the edges (border/input, +47), and primary-foreground
- *  (the inverted text on primary = the background's own color, as today). */
-export function derivedPalette(background: string, mode: "dark" | "light" = "dark"): Record<string, string> {
-	// Light themes step surfaces DARKER than the background, dark ones lighter.
-	const dir = mode === "light" ? -1 : 1;
-	const card = raise(background, 8 * dir);
-	const accent = raise(background, 22 * dir);
-	const border = raise(background, 47 * dir);
-	return {
-		"--background": background,
-		"--card": card,
-		"--popover": card,
-		"--secondary": card,
-		"--muted": card,
-		"--accent": accent,
-		"--border": border,
-		"--input": border,
-		"--primary-foreground": background,
-	};
-}
-
 /** THE mapping: resolved appearance → the CSS variables to set on <html>.
- *  Absent entries = leave the factory stylesheet value in place. Pure —
- *  exported for tests. */
+ *  Colors are not here: they come from the Astryx neutral theme, switched
+ *  by `mode` through <Theme>. These are the reading-type knobs only.
+ *  Pure — exported for tests. */
 export function appearanceVars(a: ReturnType<typeof resolveAppearance>): Record<string, string> {
-	const theme = themeById(a.theme);
-	const vars: Record<string, string> = { ...themeVars(theme) };
-	if (a.background !== null) {
-		const derived = derivedPalette(a.background, theme.mode);
-		// A theme brings its own text-on-primary color; keep it.
-		if (theme.id !== "kapany-dark") delete derived["--primary-foreground"];
-		Object.assign(vars, derived);
-	}
+	const vars: Record<string, string> = {};
 	if (a.fontFamily !== null) {
-		vars["--font-prose"] = `"${a.fontFamily}", var(--font-sans3), ui-sans-serif, system-ui, sans-serif`;
+		vars["--font-prose"] = `"${a.fontFamily}", var(--font-family-body)`;
 	}
-	// The ONE documented reading-size variable (typography round 4): prose,
-	// inputs, and session titles all read it, so one setProperty moves them.
+	// The one reading-size variable: prose, inputs, and session titles read it.
 	vars["--lh-prose-size"] = `${a.proseFontSize}px`;
-	// Session names: CMU Serif by default; the toggle swaps the title font
-	// to the prose family — covers chat.tsx + new-session.tsx titles with
-	// zero component edits (they use the .font-title utility).
+	// Session names: serif by default; the toggle swaps to the prose family.
 	if (!a.sessionNameSerif) vars["--font-title"] = "var(--font-prose)";
-	// Markdown rendering: heading weight + the emphasis inks (the vars
-	// were built "ready for the settings UI").
 	vars["--lh-heading-weight"] = String(a.mdRendering.headingWeight);
 	if (a.mdRendering.boldColor !== null) vars["--lh-ink-strong"] = a.mdRendering.boldColor;
 	if (a.mdRendering.italicColor !== null) vars["--lh-ink-italic"] = a.mdRendering.italicColor;
@@ -129,14 +74,10 @@ function bootVarNames(): string[] {
 	}
 }
 
-/** Dark/light switch on <html>: the class, the native color scheme
- *  (scrollbars, form controls) and the browser's theme color. */
-function applyMode(dark: boolean) {
-	const root = document.documentElement;
-	root.classList.toggle("dark", dark);
-	root.style.colorScheme = dark ? "dark" : "light";
-	const bg = getComputedStyle(root).getPropertyValue("--background").trim();
-	document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg || (dark ? "#141414" : "#ffffff"));
+/** The browser chrome color follows the Astryx body color. */
+function syncThemeColor() {
+	const bg = getComputedStyle(document.documentElement).getPropertyValue("--color-background-body").trim();
+	if (bg) document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg);
 }
 
 interface AppearanceContextValue {
@@ -186,11 +127,9 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 			root.style.setProperty(name, value);
 			appliedNamesRef.current.add(name);
 		}
-		// Light themes switch Tailwind's dark: variants off too.
-		const dark = themeById(resolveAppearance(delta).theme).mode === "dark";
-		applyMode(dark);
+		requestAnimationFrame(syncThemeColor);
 		try {
-			localStorage.setItem(BOOT_CACHE_KEY, JSON.stringify({ vars, dark }));
+			localStorage.setItem(BOOT_CACHE_KEY, JSON.stringify({ vars, mode: resolveAppearance(delta).mode }));
 		} catch {}
 	}, [key, vars, delta, loaded]);
 
@@ -226,5 +165,13 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 		() => ({ appearance: resolveAppearance(delta), onAppearanceChange }),
 		[delta, onAppearanceChange],
 	);
-	return <AppearanceContext.Provider value={value}>{children}</AppearanceContext.Provider>;
+	// The Astryx neutral theme for the whole app. The root Theme writes
+	// data-theme on <html>, so portaled overlays get the same tokens.
+	return (
+		<AppearanceContext.Provider value={value}>
+			<Theme theme={themes[defaultThemeSlug]} mode={value.appearance.mode}>
+				{children}
+			</Theme>
+		</AppearanceContext.Provider>
+	);
 }

@@ -94,15 +94,15 @@ export function ModelControl({
 }) {
 	const pillClass =
 		variant === "plain"
-			? "flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground [&>span:first-child]:text-inherit"
+			? "flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-secondary transition-colors hover:bg-overlay-hover hover:text-primary [&>span:first-child]:text-inherit"
 			: "flex items-center gap-1.5 rounded-full border bg-card/85 px-2.5 py-1 shadow-lg backdrop-blur transition-colors hover:border-border hover:bg-muted";
 	const modelClass =
 		variant === "combined"
-			? "flex min-w-0 items-center whitespace-nowrap py-1 pl-3 pr-1.5 text-sm transition-colors hover:text-foreground [&>span[aria-hidden]]:hidden [&>span:first-child]:text-foreground"
+			? "flex min-w-0 items-center whitespace-nowrap py-1 pl-3 pr-1.5 text-sm transition-colors hover:text-primary [&>span[aria-hidden]]:hidden [&>span:first-child]:text-primary"
 			: pillClass;
 	const levelClass =
 		variant === "combined"
-			? "flex items-center whitespace-nowrap py-1 pl-1.5 pr-3 text-sm text-muted-foreground transition-colors hover:text-foreground [&>span[aria-hidden]]:hidden [&>span:first-child]:text-inherit"
+			? "flex items-center whitespace-nowrap py-1 pl-1.5 pr-3 text-sm text-secondary transition-colors hover:text-primary [&>span[aria-hidden]]:hidden [&>span:first-child]:text-inherit"
 			: pillClass;
 	const { catalog, refresh } = useModelCatalog();
 	const [models, setModels] = useState<ModelsSettings | undefined>();
@@ -339,7 +339,7 @@ export function ModelControl({
 			<div
 				className={
 					variant === "combined"
-						? "flex items-center rounded-lg transition-colors hover:bg-(--pill)"
+						? "flex items-center rounded-lg transition-colors hover:bg-overlay-hover"
 						: "contents"
 				}
 			>
@@ -362,8 +362,8 @@ export function ModelControl({
 				// graph no longer bleeds through these pills.
 				className={modelClass}
 			>
-				<span className="truncate text-card-foreground max-sm:max-w-[9rem]">{effectiveId ? prettyModel(effectiveId) : "—"}</span>
-				<span aria-hidden className="text-xs text-muted-foreground">▾</span>
+				<span className="truncate text-primary max-sm:max-w-[9rem]">{effectiveId ? prettyModel(effectiveId) : "—"}</span>
+				<span aria-hidden className="text-xs text-secondary">▾</span>
 			</button>
 			</Hint>
 			<Hint
@@ -392,10 +392,10 @@ export function ModelControl({
 			>
 				{/* Just the level — the button reads like the model button reads
 				   the model name (owner, stats-control round 1). */}
-				<span className="text-card-foreground">
+				<span className="text-primary">
 					{effectiveLevel === undefined ? "—" : (THINKING_LABEL[effectiveLevel] ?? effectiveLevel)}
 				</span>
-				<span aria-hidden className="text-xs text-muted-foreground">▾</span>
+				<span aria-hidden className="text-xs text-secondary">▾</span>
 			</button>
 			</Hint>
 
@@ -410,7 +410,7 @@ export function ModelControl({
 					preferredSide="up"
 					menuClass="flex w-[22rem] flex-col rounded-xl border bg-card p-2 text-xs shadow-xl"
 				>
-					{error && <div className="mb-1.5 text-destructive">{error}</div>}
+					{error && <div className="mb-1.5 text-error">{error}</div>}
 					<ModelMenuList
 						models={catalog?.models}
 						effectiveId={effectiveId}
@@ -441,7 +441,7 @@ export function ModelControl({
 						empty={catalog ? (effectiveId ? `${prettyModel(effectiveId)} has no thinking levels.` : "Pick a model first.") : "Loading…"}
 						footer="Levels this model actually supports"
 					/>
-					{error && <div className="mt-1 text-destructive">{error}</div>}
+					{error && <div className="mt-1 text-error">{error}</div>}
 				</MenuShell>
 			)}
 		</div>

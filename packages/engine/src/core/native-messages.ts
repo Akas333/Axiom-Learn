@@ -281,6 +281,12 @@ export function newGraphContextMessage(
 			return `- [${p.id}] ${p.name}: ${p.statement}${note ? ` (${note})` : ""}`;
 		}),
 	];
+	if (memoryNotes && Object.keys(memoryNotes).length > 0) {
+		lines.push(
+			"",
+			"Memory notes come from the learner's practice problems and their Anki flashcard reviews. Give extra attention to propositions that are due, shaky, or often forgotten in Anki.",
+		);
+	}
 	if (chains.length > 0) {
 		lines.push("", "Reasoning chains among them (premises → conclusion):", ...chains.map((c) => `- ${c}`));
 	}

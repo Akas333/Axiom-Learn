@@ -1,4 +1,6 @@
 
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
+import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
 import { DumbbellIcon } from "lucide-react";
 
@@ -33,22 +35,15 @@ export function NodePickerControl({ count, onOpen, onClear }: {
 				className={
 					"flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 font-ui text-xs transition-colors " +
 					(count > 0
-						? "border-border bg-card text-foreground hover:bg-accent"
-						: "border-dashed border-border/80 bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground")
+						? "border-border bg-card text-primary hover:bg-overlay-hover"
+						: "border-dashed border-border/80 bg-transparent text-secondary hover:bg-overlay-hover hover:text-primary")
 				}
 			>
-				<DumbbellIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+				<DumbbellIcon aria-hidden="true" className="size-3.5 text-secondary" />
 				{count > 0 ? `${count} ${count === 1 ? "node" : "nodes"} selected` : "Pick nodes"}
 			</button>
 			{count > 0 && (
-				<button
-					type="button"
-					data-testid="practice-props-clear"
-					onClick={onClear}
-					className="cursor-pointer rounded-full px-2 py-1 font-ui text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-				>
-					Clear
-				</button>
+				<Button size="sm" variant="ghost" data-testid="practice-props-clear" onClick={onClear}>Clear</Button>
 			)}
 		</div>
 	);
@@ -67,22 +62,16 @@ export function SessionModeToggle({
 	testIdPrefix?: string;
 }) {
 	return (
-		<div role="radiogroup" aria-label="Session type" className="flex items-center gap-0.5" data-testid={`${testIdPrefix}-switch`}>
+		<SegmentedControl
+			label="Session type"
+			size="sm"
+			value={mode}
+			onChange={(next) => onChange(next === "practice" ? "practice" : "teach")}
+			data-testid={`${testIdPrefix}-switch`}
+		>
 			{(["teach", "practice"] as const).map((m) => (
-				<button
-					key={m}
-					type="button"
-					role="radio"
-					aria-checked={mode === m}
-					data-testid={`${testIdPrefix}-${m}`}
-					onClick={() => onChange(m)}
-					className={`rounded-lg px-2 py-1 text-sm transition-colors ${
-						mode === m ? "bg-(--pill) text-foreground" : "text-muted-foreground hover:text-foreground"
-					}`}
-				>
-					{m === "teach" ? "Teach" : "Practice"}
-				</button>
+				<SegmentedControlItem key={m} value={m} label={m === "teach" ? "Teach" : "Practice"} data-testid={`${testIdPrefix}-${m}`} />
 			))}
-		</div>
+		</SegmentedControl>
 	);
 }

@@ -1,4 +1,5 @@
 
+import { Button } from "@/components/ui/button";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIcon, BotIcon, FileTextIcon, PenToolIcon, PlayIcon, SearchIcon, SquareIcon, WaypointsIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -352,16 +353,16 @@ export function ActivitySection({
 	return (
 		<section
 			data-testid="activity-section"
-			className={variant === "card" ? "lh-panel-card" : "mx-2 border-t border-input pt-3"}
+			className={variant === "card" ? "lh-panel-card" : "mx-2 border-t border-strong pt-3"}
 		>
 			<div
 				className={
 					variant === "card"
-						? "flex h-7 items-center gap-2 text-sm font-medium text-foreground"
-						: "flex h-10 items-center gap-3 px-3 text-[15px] font-medium text-foreground"
+						? "flex h-7 items-center gap-2 text-sm font-medium text-primary"
+						: "flex h-10 items-center gap-3 px-3 text-[15px] font-medium text-primary"
 				}
 			>
-				<ActivityIcon className={variant === "card" ? "size-4 shrink-0 text-muted-foreground" : "size-5 shrink-0"} />
+				<ActivityIcon className={variant === "card" ? "size-4 shrink-0 text-secondary" : "size-5 shrink-0"} />
 				Background agents
 				{blobs.length > 0 && (
 					<span className="ml-auto tabular-nums" data-testid="activity-total-cost" title="Total running cost (inferred)">
@@ -370,7 +371,7 @@ export function ActivitySection({
 				)}
 			</div>
 			{variant === "card" && blobs.length === 0 && (
-				<p className="mt-1 text-xs text-muted-foreground">Nothing running right now.</p>
+				<p className="mt-1 text-xs text-secondary">Nothing running right now.</p>
 			)}
 			{blobs.length > 0 && (
 				<div className={cn("flex max-h-[40dvh] flex-col gap-1 overflow-y-auto", variant === "card" && "-mx-2 mt-1")}>
@@ -423,7 +424,7 @@ function ActivityBlobRow({
 	return (
 		<div
 			data-testid={`activity-blob-${blob.process}`}
-			className="relative rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-accent"
+			className="relative rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-overlay-hover"
 		>
 			<button
 				type="button"
@@ -431,18 +432,18 @@ function ActivityBlobRow({
 				aria-expanded={detailOpen}
 				className="flex w-full items-center gap-2 pr-7 text-left"
 			>
-				<Icon className="size-3.5 shrink-0 text-muted-foreground" />
+				<Icon className="size-3.5 shrink-0 text-secondary" />
 				<span className="min-w-0 flex-1">
-					<span className="block truncate font-medium text-card-foreground">{blob.title}</span>
+					<span className="block truncate font-medium text-primary">{blob.title}</span>
 					{blob.activity ? (
-						<span className="block truncate text-muted-foreground" title={blob.activity}>
+						<span className="block truncate text-secondary" title={blob.activity}>
 							{blob.activity}
 						</span>
 					) : (
-						<span className="block truncate text-muted-foreground/80">{label}</span>
+						<span className="block truncate text-secondary/80">{label}</span>
 					)}
 				</span>
-				<span className="flex shrink-0 items-center gap-2 tabular-nums text-muted-foreground">
+				<span className="flex shrink-0 items-center gap-2 tabular-nums text-secondary">
 					<span data-testid="activity-blob-cost">{planCostLabel(blob.cost, subscriptionLabel(blob.model))}</span>
 					<span data-testid="activity-blob-elapsed">{formatElapsed(now - blob.startedAt)}</span>
 				</span>
@@ -450,44 +451,34 @@ function ActivityBlobRow({
 			{/* The explicit END always on the blob's face (SCOPE) — the popover
 			    is for DETAIL, not the control. A failed abort locks the button and
 			    says why; a succeeded one just makes the blob vanish on refresh. */}
-			<button
-				type="button"
-				data-testid="activity-abort"
-				onClick={onAbort}
-				disabled={abortState !== undefined}
-				title={abortState === "failed" ? "Abort failed — try again" : "End this background process"}
-				aria-label={`End ${label} in ${blob.title}`}
-				className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-			>
-				<SquareIcon className="size-3" />
-			</button>
+			<Button size="icon-sm" variant="destructive" data-testid="activity-abort" onClick={onAbort} disabled={abortState !== undefined} tooltip={abortState === "failed" ? "Abort failed — try again" : "End this background process"} aria-label={`End ${label} in ${blob.title}`} className="absolute right-1 top-1/2"><SquareIcon className="size-4" /></Button>
 
 			{detailOpen && (
 				<div
 					data-testid="activity-blob-detail"
-					className="mt-1 flex flex-col gap-1 rounded-lg bg-accent/40 p-2 text-muted-foreground"
+					className="mt-1 flex flex-col gap-1 rounded-lg bg-overlay-hover/40 p-2 text-secondary"
 				>
 					<div className="mb-1.5 flex items-center gap-2">
-						<Icon className="size-3.5 text-muted-foreground" />
+						<Icon className="size-3.5 text-secondary" />
 						<span className="font-medium">{label}</span>
-						<span className="ml-auto tabular-nums text-muted-foreground">
+						<span className="ml-auto tabular-nums text-secondary">
 							{formatElapsed(now - blob.startedAt)}
 						</span>
 					</div>
-					<div className="flex flex-col gap-1 text-muted-foreground">
-						<div className="truncate text-card-foreground" title={blob.title}>
+					<div className="flex flex-col gap-1 text-secondary">
+						<div className="truncate text-primary" title={blob.title}>
 							{blob.title}
 						</div>
 						{blob.activity && <div className="break-words">{blob.activity}</div>}
 						<div className="flex justify-between gap-2">
 							<span>Cost</span>
-							<span className="tabular-nums text-card-foreground">
+							<span className="tabular-nums text-primary">
 								{planCostLabel(blob.cost, subscriptionLabel(blob.model))}
 							</span>
 						</div>
 						<div className="flex justify-between gap-2">
 							<span>Context</span>
-							<span className="tabular-nums text-card-foreground" data-testid="activity-blob-context">
+							<span className="tabular-nums text-primary" data-testid="activity-blob-context">
 								{blob.context === null
 									? "—"
 									: `${formatTokens(blob.context.used)} / ${formatTokens(blob.context.limit)}`}
@@ -496,20 +487,20 @@ function ActivityBlobRow({
 						{blob.model && (
 							<div className="flex justify-between gap-2">
 								<span>Model</span>
-								<span className="truncate text-card-foreground">{blob.model}</span>
+								<span className="truncate text-primary">{blob.model}</span>
 							</div>
 						)}
 						{blob.steps !== undefined && (
 							<div className="flex justify-between gap-2">
 								<span>Steps</span>
-								<span className="tabular-nums text-card-foreground">{blob.steps}</span>
+								<span className="tabular-nums text-primary">{blob.steps}</span>
 							</div>
 						)}
-						<a href={`/chat/${blob.chatId}`} className="text-primary hover:underline">
+						<a href={`/chat/${blob.chatId}`} className="text-accent hover:underline">
 							Open session →
 						</a>
 					</div>
-					<div className="mt-2 text-muted-foreground/80">
+					<div className="mt-2 text-secondary/80">
 					{abortState === "failed" && "Abort failed — try again"}
 					{abortState === "pending" && "Stopping…"}
 				</div>

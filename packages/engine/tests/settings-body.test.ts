@@ -234,13 +234,14 @@ describe("parseCompactionSettingsBody (owner round 14)", () => {
 });
 
 describe("SETTINGS_SECTIONS (the route's section map)", () => {
-	it("maps exactly the eight record sections", () => {
+	it("maps exactly the nine record sections", () => {
 		// compaction joined (owner round 14): its own section PUT — the
 		// threshold is engine behavior, not an agent-section key. learner
-		// joined with the onboarding (the learner profile).
+		// joined with the onboarding (the learner profile), anki with the
+		// Anki deck sync.
 		assert.deepEqual(
 			Object.keys(SETTINGS_SECTIONS),
-			["general", "chat", "agent", "appearance", "graph", "compaction", "models", "learner"],
+			["general", "chat", "agent", "appearance", "graph", "compaction", "models", "learner", "anki"],
 		);
 	});
 });

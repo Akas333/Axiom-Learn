@@ -48,8 +48,8 @@ describe("route mounting", () => {
 	}));
 	const app = createApp(echoRoutes);
 
-	it("mounts all 32 engine routes", () => {
-		assert.equal(API_ROUTES.length, 32);
+	it("mounts all 35 engine routes", () => {
+		assert.equal(API_ROUTES.length, 35);
 	});
 
 	for (const route of API_ROUTES) {

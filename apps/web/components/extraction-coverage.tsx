@@ -187,18 +187,18 @@ export function CoverageMenuBody({
 	return (
 		<div data-testid="ctx-coverage" className="flex flex-col gap-1 px-2.5 pt-1 pb-2">
 			{busy ? (
-				<span className="flex items-center gap-1.5 text-muted-foreground" data-testid="ctx-coverage-running">
-					<span className="size-1.5 animate-pulse rounded-full bg-foreground/70" aria-hidden />
+				<span className="flex items-center gap-1.5 text-secondary" data-testid="ctx-coverage-running">
+					<span className="size-1.5 animate-pulse rounded-full bg-inverted/70" aria-hidden />
 					extracting…
 				</span>
 			) : complete ? (
-				<span className="text-muted-foreground">fully extracted</span>
+				<span className="text-secondary">fully extracted</span>
 			) : (
 				<span className="flex flex-col">
-					<span className="tabular-nums text-foreground">
+					<span className="tabular-nums text-primary">
 						{formatTokens(coverage.uncoveredTokens)} tok uncovered
 					</span>
-					<span className="tabular-nums text-muted-foreground">
+					<span className="tabular-nums text-secondary">
 						{coverage.uncoveredCount} message{coverage.uncoveredCount === 1 ? "" : "s"} unextracted
 					</span>
 				</span>
@@ -208,7 +208,7 @@ export function CoverageMenuBody({
 				data-testid="ctx-extract"
 				onClick={onExtract}
 				disabled={busy || complete}
-				className="flex items-center justify-center rounded-lg border px-2 py-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+				className="flex items-center justify-center rounded-lg border px-2 py-1 text-secondary transition-colors hover:bg-overlay-hover hover:text-primary disabled:opacity-40 disabled:hover:bg-transparent"
 			>
 				{busy ? "Running" : "Extract"}
 			</button>
@@ -345,7 +345,7 @@ export function CoverageRingGlyph({ fill, running }: { fill: number; running: bo
 				r="6"
 				fill="none"
 				strokeWidth="2.5"
-				className="stroke-foreground/70"
+				className="stroke-primary/70"
 				strokeDasharray={`${fill * C} ${C}`}
 				strokeLinecap="round"
 				transform="rotate(-90 8 8)"
@@ -360,44 +360,44 @@ export function CoverageRingGlyph({ fill, running }: { fill: number; running: bo
 export function CoverageRingDetail({ coverage, chunkTokens }: { coverage: SessionCoverage; chunkTokens: number }) {
 	return (
 		<>
-			<div className="mb-2 text-xs font-medium text-muted-foreground">
+			<div className="mb-2 text-xs font-medium text-secondary">
 				Extraction coverage
 			</div>
-			<div className="flex flex-col gap-1 text-muted-foreground">
+			<div className="flex flex-col gap-1 text-secondary">
 				<div className="flex justify-between gap-2">
 					<span>Uncovered</span>
-					<span className="tabular-nums text-card-foreground">
+					<span className="tabular-nums text-primary">
 						{formatTokens(coverage.uncoveredTokens)} tokens
 					</span>
 				</div>
 				<div className="flex justify-between gap-2">
 					<span>Covered</span>
-					<span className="tabular-nums text-card-foreground">
+					<span className="tabular-nums text-primary">
 						{formatTokens(coverage.coveredTokens)} tokens
 					</span>
 				</div>
 				<div className="flex justify-between gap-2">
 					<span>Messages</span>
-					<span className="tabular-nums text-card-foreground">
+					<span className="tabular-nums text-primary">
 						{coverage.coveredCount} / {coverage.totalMessages}
 					</span>
 				</div>
 				<div className="flex justify-between gap-2">
 					<span>Chunk threshold</span>
-					<span className="tabular-nums text-card-foreground">
+					<span className="tabular-nums text-primary">
 						{formatTokens(chunkTokens)} tokens
 					</span>
 				</div>
 				<div className="flex justify-between gap-2">
 					<span>Last extraction</span>
-					<span className="tabular-nums text-card-foreground">
+					<span className="tabular-nums text-primary">
 						{coverage.lastFoldedAt ? timeAgo(coverage.lastFoldedAt) : "—"}
 					</span>
 				</div>
 				{coverage.running && (
 					<div className="flex justify-between gap-2" data-testid="coverage-ring-running">
 						<span>Status</span>
-						<span className="text-card-foreground">extracting…</span>
+						<span className="text-primary">extracting…</span>
 					</div>
 				)}
 			</div>

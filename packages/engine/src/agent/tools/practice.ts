@@ -58,13 +58,22 @@ export interface PracticeToolContext {
  *  this closure — the intra-turn truth the record cannot hold yet. */
 export interface PracticeGate {
 	problemActive: boolean;
+	/** The active problem's target ids — what conclude's missedTargets may
+	 *  name. Empty when nothing is active or the problem is untagged. */
+	activeTargets: string[];
+}
+
+function targetsOf(input: unknown): string[] {
+	const target = (input as { target?: unknown } | null | undefined)?.target;
+	return Array.isArray(target) ? target.filter((t): t is string => typeof t === "string") : [];
 }
 
 /** Seed the turn's gate from the record (result-aware activeProblemOf —
  *  only a cleanly-posed problem counts). */
 export function createPracticeGate(ctx: PracticeToolContext): PracticeGate {
 	const record = ctx.chatStore.getChat(ctx.chatId);
-	return { problemActive: record ? activeProblemOf(record.messages) !== null : false };
+	const active = record ? activeProblemOf(record.messages) : null;
+	return { problemActive: active !== null, activeTargets: targetsOf(active?.input) };
 }
 
 // ─── problem: the pose ───────────────────────────────────────────────────────
@@ -155,6 +164,7 @@ export function problemTool(
 				}
 			}
 			gate.problemActive = true;
+			gate.activeTargets = input.target ? [...input.target] : [];
 			return problemResult();
 		},
 	};
@@ -192,11 +202,23 @@ export const concludeInputObject = Type.Object({
 		{ description: "REQUIRED — the miss classification: cue, discrimination, execution, careless, or structural — or null = no miss (bare, no quotes)." },
 	),
 	retest: Type.Boolean({ description: "REQUIRED — true marks the problem for a fresh-surface retest before the session ends." }),
+	missedTargets: Type.Optional(
+		Type.Array(Type.String(), {
+			minItems: 1,
+			description:
+				"On a tagged problem with more than one target that was missed or needed hints: the target id(s) where it " +
+				"broke — a subset of the problem's target. OMIT when every target was missed, when nothing was missed, or " +
+				"on an untagged problem.",
+		}),
+	),
 });
 
 export type ConcludeInput = Static<typeof concludeInputObject>;
 
-export function concludeTool(gate: PracticeGate): AgentTool<typeof concludeInputObject> {
+export function concludeTool(
+	gate: PracticeGate,
+	graphNodes?: PracticeToolContext["graphNodes"],
+): AgentTool<typeof concludeInputObject> {
 	return {
 		name: "conclude",
 		label: "conclude",
@@ -207,13 +229,33 @@ export function concludeTool(gate: PracticeGate): AgentTool<typeof concludeInput
 			"explicit go-ahead (a *Next problem* message, or their own words asking for the next one). Between problems, " +
 			"answer their questions about the concluded one. Nothing may conclude unless a problem is active.",
 		parameters: concludeInputObject,
-		prepareArguments: (args: unknown) => healEncodedArguments(args, concludeInputObject) as never,
+		prepareArguments: (args: unknown) => {
+			const healed = healEncodedArguments(args, concludeInputObject) as Record<string, unknown>;
+			// Same canonical form as problem.target: names become ids, and an
+			// empty list is healed away (absent = no per-target blame).
+			const missed = healed.missedTargets;
+			if (!Array.isArray(missed)) return healed as never;
+			if (missed.length === 0) return { ...healed, missedTargets: undefined } as never;
+			if (!graphNodes) return healed as never;
+			const list = graphNodes();
+			const normalized = missed.map((t) => (typeof t === "string" ? (resolveTargetId(t, list) ?? t) : t));
+			return { ...healed, missedTargets: normalized } as never;
+		},
 		executionMode: "sequential",
-		execute: async (_toolCallId, _input) => {
+		execute: async (_toolCallId, input) => {
 			if (!gate.problemActive) {
 				return invalidInputResult("conclude", ["no active problem to conclude — pose one first"]);
 			}
+			if (input.missedTargets && input.missedTargets.length > 0) {
+				const stray = input.missedTargets.filter((t) => !gate.activeTargets.includes(t));
+				if (stray.length > 0) {
+					return invalidInputResult("conclude", [
+						`missedTargets ${JSON.stringify(stray)} are not targets of the active problem — name only ids from its target list, or omit missedTargets`,
+					]);
+				}
+			}
 			gate.problemActive = false;
+			gate.activeTargets = [];
 			return concludeResult();
 		},
 	};
@@ -237,7 +279,7 @@ export function practiceTools(ctx: PracticeToolContext): Record<string, AgentToo
 	// inner pass; the double heal is idempotent by construction.
 	return healToolRecord({
 		problem: problemTool(gate, ctx.graphNodes),
-		conclude: concludeTool(gate),
+		conclude: concludeTool(gate, ctx.graphNodes),
 		read: readTool,
 		ls: lsTool,
 		find: findTool,

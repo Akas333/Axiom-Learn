@@ -33,6 +33,7 @@ import type { ModelRole } from "../../config.ts";
 import type { ChatSettings } from "./contracts/chat.ts";
 import type { SearchEngineId } from "./search.ts";
 import { sanitizeLearner, type LearnerSettings } from "./learner.ts";
+import { sanitizeAnki, type AnkiSettings } from "./anki.ts";
 
 /** The schema version this code understands. Bump ONLY for breaking shape
  *  changes (a field renamed/meaning changed); pure additions never bump. */
@@ -389,6 +390,8 @@ export interface UserSettings {
 	compaction?: CompactionSettings;
 	/** The learner profile from onboarding (core/learner.ts). */
 	learner?: LearnerSettings;
+	/** The Anki deck sync (core/anki.ts). */
+	anki?: AnkiSettings;
 	[key: string]: unknown;
 }
 
@@ -661,6 +664,10 @@ export function sanitizeUserSettings(raw: unknown): UserSettings | null {
 	if (r.learner !== undefined) {
 		const learner = sanitizeLearner(r.learner);
 		if (learner) out.learner = learner;
+	}
+	if (r.anki !== undefined) {
+		const anki = sanitizeAnki(r.anki);
+		if (anki) out.anki = anki;
 	}
 	// Unknown top-level keys ride along untouched (forward-compat). One
 	// known-DEAD key is stripped instead of riding: `chat` (the old

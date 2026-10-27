@@ -1,4 +1,5 @@
 import { Type } from "typebox";
+import { withLearnerContext } from "../../core/learner.ts";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { Usage } from "@earendil-works/pi-ai";
 import { serverExecute } from "../tool-execute.ts";
@@ -44,6 +45,9 @@ export interface DemoBuilderOptions {
 	onUsage?: (usage: Usage) => void;
 	/** Debug: raw provider-event recording key (LH_PROVIDER_EVENTS=1). */
 	chatId?: string;
+	/** The learner-profile block (core/learner.ts), appended to the
+	 *  instructions so what the learner sees fits their level. */
+	learnerContext?: string;
 }
 
 const INSTRUCTIONS = `You are a demo builder — a specialist sub-agent inside a learning application. You
@@ -207,7 +211,7 @@ export async function runDemoBuilder(input: DemoBuilderInput, opts: DemoBuilderO
 		const result = await runSubagent(Object.values(createDemoBuilderTools(state, headless, opts.onActivity)), {
 			role: "demoBuilder",
 			engine: opts.engine,
-			systemPrompt: INSTRUCTIONS,
+			systemPrompt: withLearnerContext(INSTRUCTIONS, opts.learnerContext),
 			prompt,
 			maxTurns: opts.maxSteps ?? 24,
 			abortSignal: opts.abortSignal,
