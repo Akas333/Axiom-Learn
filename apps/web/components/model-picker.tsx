@@ -98,11 +98,11 @@ export function ModelControl({
 			: "flex items-center gap-1.5 rounded-full border bg-card/85 px-2.5 py-1 shadow-lg backdrop-blur transition-colors hover:border-border hover:bg-muted";
 	const modelClass =
 		variant === "combined"
-			? "flex items-center py-1 pl-3 pr-1.5 text-sm transition-colors hover:text-foreground [&>span[aria-hidden]]:hidden [&>span:first-child]:text-foreground"
+			? "flex min-w-0 items-center whitespace-nowrap py-1 pl-3 pr-1.5 text-sm transition-colors hover:text-foreground [&>span[aria-hidden]]:hidden [&>span:first-child]:text-foreground"
 			: pillClass;
 	const levelClass =
 		variant === "combined"
-			? "flex items-center py-1 pl-1.5 pr-3 text-sm text-muted-foreground transition-colors hover:text-foreground [&>span[aria-hidden]]:hidden [&>span:first-child]:text-inherit"
+			? "flex items-center whitespace-nowrap py-1 pl-1.5 pr-3 text-sm text-muted-foreground transition-colors hover:text-foreground [&>span[aria-hidden]]:hidden [&>span:first-child]:text-inherit"
 			: pillClass;
 	const { catalog, refresh } = useModelCatalog();
 	const [models, setModels] = useState<ModelsSettings | undefined>();
@@ -362,7 +362,7 @@ export function ModelControl({
 				// graph no longer bleeds through these pills.
 				className={modelClass}
 			>
-				<span className="text-card-foreground">{effectiveId ? prettyModel(effectiveId) : "—"}</span>
+				<span className="truncate text-card-foreground max-sm:max-w-[9rem]">{effectiveId ? prettyModel(effectiveId) : "—"}</span>
 				<span aria-hidden className="text-xs text-muted-foreground">▾</span>
 			</button>
 			</Hint>

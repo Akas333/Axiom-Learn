@@ -122,7 +122,7 @@ export function StatsBar({
 			// (so its transparent gradient area never blocks scrolling) — this row
 			// must re-enable events or every control on it is dead (the model-
 			// control wave caught this live: buttons rendered, clicks never landed).
-			className="pointer-events-auto relative flex items-center justify-between gap-3 px-4 pt-2.5 text-sm text-muted-foreground"
+			className="pointer-events-auto relative flex items-center justify-between gap-2 px-2 pt-2.5 sm:gap-3 sm:px-4 text-sm text-muted-foreground"
 		>
 			{/* The summary button + its popover: the popover anchors to this
 			    wrapper, CENTERED over the button itself (owner, stats round 2)
@@ -144,7 +144,7 @@ export function StatsBar({
 				onClick={() => setOpen((o) => !o)}
 				aria-expanded={open}
 				data-testid="stats-summary"
-				className="flex items-center gap-1.5 tabular-nums transition-colors hover:text-foreground"
+				className="flex items-center gap-1.5 whitespace-nowrap tabular-nums transition-colors hover:text-foreground"
 			>
 				<span data-testid="stats-context">
 					{contextLabel}
@@ -155,7 +155,7 @@ export function StatsBar({
 				{open && (
 					<div
 						data-testid="stats-detail"
-						className="absolute bottom-full left-1/2 z-40 mb-1.5 w-72 -translate-x-1/2 rounded-xl border bg-card p-3 text-xs shadow-xl"
+						className="absolute bottom-full left-0 z-40 mb-1.5 w-72 max-w-[calc(100vw-1.5rem)] sm:left-1/2 sm:-translate-x-1/2 rounded-xl border bg-card p-3 text-xs shadow-xl"
 					>
 						<div className="mb-2 text-xs font-medium text-muted-foreground">
 							Session stats
@@ -212,7 +212,7 @@ export function StatsBar({
 			{/* The model + thinking control — one controller for the conversation
 			    agents (prober/teacher); the record's `turns` above still folds
 			    the ACTUAL models billed, regardless of what the picker says. */}
-			<div className="flex items-center gap-2.5">
+			<div className="flex min-w-0 items-center gap-2.5">
 				<ModelControl chatId={chatId} onModelChange={setSelectedModel} variant="combined" />
 				{(chatId || turns.length > 0) && <ContextRing tokens={contextTokens} limit={limit} label={contextLabel} />}
 			</div>

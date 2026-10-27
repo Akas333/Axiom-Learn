@@ -18,7 +18,7 @@ export default function UpdateBanner() {
 	return (
 		<div
 			data-testid="update-banner"
-			className="fixed right-4 bottom-4 z-50 flex items-center gap-3 rounded-lg border border-border bg-popover px-4 py-3 shadow-lg"
+			className="fixed right-[max(1rem,var(--safe-right))] bottom-[max(1rem,var(--safe-bottom))] left-[max(1rem,var(--safe-left))] z-50 flex items-center gap-3 sm:left-auto rounded-lg border border-border bg-popover px-4 py-3 shadow-lg"
 		>
 			<div className="text-sm">
 				<span className="font-medium">Kapany {ready.version ?? "update"} is ready</span>

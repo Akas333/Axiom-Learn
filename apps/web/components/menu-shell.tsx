@@ -18,7 +18,7 @@ import { createPortal } from "react-dom";
  *    honest-fitting behavior, generalized).
  *  - Cap: max-height = min(60vh, the chosen side's available room); the
  *    menu scrolls internally instead of stretching the page or escaping
- *    the viewport (graph-view's max-h-[60vh] pattern).
+ *    the viewport (graph-view's max-h-[60dvh] pattern).
  *  - Re-placement: capture-phase scroll + window resize — the settings
  *    menus' discipline (the settings dialog's inner content scroll
  *    included).

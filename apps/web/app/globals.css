@@ -208,6 +208,35 @@ body {
 	background: var(--color-background);
 	color: var(--color-foreground);
 	font-family: var(--font-ui);
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* Safe areas (notch, rounded corners, home indicator). The viewport is
+   viewport-fit=cover, so the page draws edge to edge and the app shell
+   pads itself in by the device insets. Everything inside the shell is
+   clear of the hardware; fixed layers (drawer, dialogs, banners) use
+   the same variables. On desktop every inset is 0. */
+:root {
+	--safe-top: env(safe-area-inset-top, 0px);
+	--safe-right: env(safe-area-inset-right, 0px);
+	--safe-bottom: env(safe-area-inset-bottom, 0px);
+	--safe-left: env(safe-area-inset-left, 0px);
+}
+.lh-safe-shell {
+	padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+
+/* iOS zooms the page when a focused field's text is under 16px. Keep
+   every text field at 16px on touch phones so focusing never zooms. */
+@media (max-width: 767px) and (pointer: coarse) {
+	input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+	textarea,
+	select,
+	[contenteditable="true"] {
+		font-size: max(16px, 1em) !important;
+	}
 }
 
 /* Teaching prose (the markdown renderer's container gets .lh-prose):
@@ -633,5 +662,19 @@ body {
 @supports not (-webkit-text-stroke: 1px black) {
 	.lh-outline-text {
 		color: var(--foreground);
+	}
+}
+
+/* Modal backdrops: keep the panel clear of notches and the home
+   indicator, and never taller than the visible screen (the panel
+   scrolls inside instead). */
+.lh-modal-backdrop {
+	padding: max(var(--safe-top), 0.75rem) max(var(--safe-right), 0.75rem) max(var(--safe-bottom), 0.75rem)
+		max(var(--safe-left), 0.75rem);
+}
+@layer base {
+	.lh-modal-backdrop > * {
+		max-height: 100%;
+		max-width: 100%;
 	}
 }

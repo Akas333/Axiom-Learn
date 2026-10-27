@@ -93,8 +93,8 @@ import { useSettingsSaved } from "@/components/settings-signal";
  * deliberately narrower (~46rem centered) per the reference. Same ELEMENT,
  * same place — width polish only.
  */
-const COLUMN = "mx-auto w-full max-w-none px-6";
-const DOCK = "mx-auto w-full max-w-[46rem] px-4";
+const COLUMN = "mx-auto w-full max-w-none px-4 sm:px-6";
+const DOCK = "mx-auto w-full max-w-[46rem] px-3 sm:px-4";
 // The DOCK container's fixed width (46rem) and the plan marginalia's
 // geometry (owner, plan-placement round): the bare diagram sits in the
 // dock band's RIGHT flank — MARGIN_GAP from the DOCK container's edge and
@@ -1307,7 +1307,7 @@ export function Chat({
 								spellCheck={false}
 								aria-label="Session title"
 								title="Rename this session"
-								className="lh-no-drag min-w-[8ch] max-w-[70%] shrink-0 bg-transparent font-title text-3xl tracking-tight caret-current outline-none [field-sizing:content]"
+								className="lh-no-drag min-w-[8ch] max-w-[70%] shrink-0 bg-transparent font-title text-xl tracking-tight caret-current sm:text-3xl outline-none [field-sizing:content]"
 							/>
 							{/* flex-1 spacer during rename too, so the chips stay at
 							    the right edge; clicks here commit via the header
@@ -1328,7 +1328,7 @@ export function Chat({
 								setTitleDraft(titleText);
 								setRenaming(true);
 							}}
-							className="lh-no-drag -mx-1.5 min-w-4 shrink cursor-text truncate rounded-md px-1.5 text-left font-title text-3xl tracking-tight transition-colors hover:bg-accent"
+							className="lh-no-drag -mx-1.5 min-w-4 shrink cursor-text truncate rounded-md px-1.5 text-left font-title text-xl tracking-tight transition-colors sm:text-3xl hover:bg-accent"
 						>
 							{titleText}
 							</button>
@@ -1493,8 +1493,10 @@ export function Chat({
 									) : (
 									<div data-testid="assistant-message" className="flex w-full gap-3">
 										{/* The teacher's avatar opens each run of assistant
-										    messages; follow-on messages keep the indent only. */}
-										<div className="w-7 shrink-0 pt-0.5">
+										    messages; follow-on messages keep the indent only.
+										    Phones drop the gutter — the name line still marks
+										    the speaker, and the prose gets the width. */}
+										<div className="w-7 shrink-0 pt-0.5 max-sm:hidden">
 											{messages[mi - 1]?.role !== "assistant" && (
 												<span className="flex size-7 items-center justify-center rounded-full border border-input bg-card">
 													<LhMark className="size-4" />
