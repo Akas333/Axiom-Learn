@@ -187,9 +187,8 @@ function PlanCard({
 									data-viewing={viewing || undefined}
 									onClick={() => onJump(id)}
 									className={cn(
-										"w-full rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-accent/60",
-										p === "current" && "bg-primary/10 ring-1 ring-primary/40 hover:bg-primary/15",
-										viewing && p !== "current" && "bg-accent ring-1 ring-foreground/25",
+										"w-full rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-(--pill)",
+										(p === "current" || viewing) && "bg-(--pill)",
 									)}
 								>
 									<div className="flex items-start gap-3">
