@@ -8,7 +8,12 @@
  * control together) and the control itself locks — the row owns the dim.
  */
 
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
+
+/** The settings dialog's roomier skin: larger blue switches, taller
+ *  selects/inputs. Off (the default) outside the dialog — the figure
+ *  cards keep their compact toggle. */
+export const SettingsSkinContext = createContext(false);
 import { cn } from "@/lib/utils";
 
 /** A section block: pronounced mono heading + content. */
@@ -25,10 +30,10 @@ export function SettingsSection({
 	testid?: string;
 }) {
 	return (
-		<section data-testid={testid} className="px-6 py-5">
-			<h2 className="text-sm text-foreground">{title}</h2>
-			{hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-			<div className="mt-4 flex flex-col gap-3">{children}</div>
+		<section data-testid={testid} className="px-5 py-6 sm:px-8">
+			<h2 className="text-lg font-medium text-foreground">{title}</h2>
+			{hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
+			<div className="mt-4 flex flex-col">{children}</div>
 		</section>
 	);
 }
@@ -45,9 +50,9 @@ export function SettingsGroup({
 	testid?: string;
 }) {
 	return (
-		<div data-testid={testid} className="mt-5 border-t border-border/60 pt-4 first:mt-0 first:border-t-0 first:pt-0">
-			<p className="mb-2 text-xs text-muted-foreground">{label}</p>
-			<div className="flex flex-col gap-2">{children}</div>
+		<div data-testid={testid} className="mt-10 first:mt-2">
+			<h3 className="mb-1 text-base font-medium text-foreground">{label}</h3>
+			<div className="flex flex-col">{children}</div>
 		</div>
 	);
 }
@@ -70,12 +75,18 @@ export function SettingsRow({
 	dimmed?: boolean;
 }) {
 	return (
-		<div data-testid={testid} className={cn("flex items-center justify-between gap-4 py-1", dimmed && "opacity-40")}>
+		<div
+			data-testid={testid}
+			className={cn(
+				"flex items-center justify-between gap-6 border-b border-border/60 py-4 last:border-b-0",
+				dimmed && "opacity-40",
+			)}
+		>
 			<span className="min-w-0">
-				<span className="block font-prose text-(length:--lh-prose-size)">{label}</span>
-				{hint && <span className="block text-xs text-muted-foreground/70">{hint}</span>}
+				<span className="block text-[15px] text-foreground">{label}</span>
+				{hint && <span className="mt-1 block max-w-[62ch] text-sm leading-relaxed text-muted-foreground">{hint}</span>}
 			</span>
-			{children}
+			<span className="flex shrink-0 items-center">{children}</span>
 		</div>
 	);
 }
@@ -101,6 +112,34 @@ export function Toggle({
 	/** Optional native tooltip on the switch. */
 	title?: string;
 }) {
+	const roomy = useContext(SettingsSkinContext);
+	if (roomy && !discIcon) {
+		// Dialog skin: a blue track when on, white knob — the standard switch.
+		return (
+			<button
+				type="button"
+				role="switch"
+				aria-checked={checked}
+				aria-label={label}
+				{...(title ? { title } : {})}
+				disabled={disabled}
+				data-testid={`toggle-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+				onClick={() => onChange(!checked)}
+				className={cn(
+					"relative h-6 w-10 shrink-0 rounded-full transition-colors",
+					checked ? "bg-primary" : "bg-muted-foreground/30",
+					disabled && "cursor-not-allowed",
+				)}
+			>
+				<span
+					className={cn(
+						"absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform",
+						checked ? "translate-x-4" : "translate-x-0",
+					)}
+				/>
+			</button>
+		);
+	}
 	return (
 		<button
 			type="button"
@@ -160,6 +199,7 @@ export function ThinSelect({
 	testid?: string;
 	disabled?: boolean;
 }) {
+	const roomy = useContext(SettingsSkinContext);
 	return (
 		<select
 			value={value}
@@ -168,7 +208,9 @@ export function ThinSelect({
 			disabled={disabled}
 			onChange={(e) => onChange(e.target.value)}
 			className={cn(
-				"h-7 rounded-sm border border-border bg-background px-1.5 font-ui text-xs text-foreground outline-none",
+				roomy
+					? "h-9 min-w-40 rounded-lg border border-border bg-(--pill) px-3 font-ui text-sm text-foreground outline-none"
+					: "h-7 rounded-sm border border-border bg-background px-1.5 font-ui text-xs text-foreground outline-none",
 				disabled && "cursor-not-allowed",
 			)}
 		>
@@ -201,6 +243,7 @@ export function CommitInput({
 	// The draft exists only while editing; a blur shows the record's value
 	// again — commit-on-blur/Enter (owner ruling), the field honest about
 	// what landed.
+	const roomy = useContext(SettingsSkinContext);
 	const [draft, setDraft] = useState(value);
 	const [editing, setEditing] = useState(false);
 	return (
@@ -227,7 +270,11 @@ export function CommitInput({
 					e.currentTarget.blur();
 				}
 			}}
-			className="h-7 w-40 rounded-sm border border-border bg-background px-2 font-ui text-xs text-foreground outline-none placeholder:text-muted-foreground/60"
+			className={
+				roomy
+					? "h-9 w-48 rounded-lg border border-border bg-(--pill) px-3 font-ui text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-ring"
+					: "h-7 w-40 rounded-sm border border-border bg-background px-2 font-ui text-xs text-foreground outline-none placeholder:text-muted-foreground/60"
+			}
 		/>
 	);
 }

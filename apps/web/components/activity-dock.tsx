@@ -287,7 +287,14 @@ const KIND_ICON: Record<JobKind, typeof SearchIcon> = {
 /** Abort states per blob id: pending (fired) / failed (backend absent). */
 type AbortState = "pending" | "failed";
 
-export function ActivitySection({ feed: feedProp }: { feed?: ActivityFeed }) {
+export function ActivitySection({
+	feed: feedProp,
+	variant = "sidebar",
+}: {
+	feed?: ActivityFeed;
+	/** "card": the side panel's rounded card skin (session pages). */
+	variant?: "sidebar" | "card";
+}) {
 	const ctx = useContext(ActivityContext);
 	const feed = feedProp ?? ctx.feed;
 	const refresh = ctx.refresh;
@@ -343,9 +350,18 @@ export function ActivitySection({ feed: feedProp }: { feed?: ActivityFeed }) {
 	// rows match the session rows' hover. Empty means empty: the header sits
 	// alone (the cost span is population, not decoration).
 	return (
-		<section data-testid="activity-section" className="mx-2 border-t border-input pt-3">
-			<div className="flex h-10 items-center gap-3 px-3 text-[15px] font-medium text-foreground">
-				<ActivityIcon className="size-5 shrink-0" />
+		<section
+			data-testid="activity-section"
+			className={variant === "card" ? "lh-panel-card" : "mx-2 border-t border-input pt-3"}
+		>
+			<div
+				className={
+					variant === "card"
+						? "flex h-7 items-center gap-2 text-sm font-medium text-foreground"
+						: "flex h-10 items-center gap-3 px-3 text-[15px] font-medium text-foreground"
+				}
+			>
+				<ActivityIcon className={variant === "card" ? "size-4 shrink-0 text-muted-foreground" : "size-5 shrink-0"} />
 				Background agents
 				{blobs.length > 0 && (
 					<span className="ml-auto tabular-nums" data-testid="activity-total-cost" title="Total running cost (inferred)">
@@ -353,8 +369,11 @@ export function ActivitySection({ feed: feedProp }: { feed?: ActivityFeed }) {
 				</span>
 				)}
 			</div>
+			{variant === "card" && blobs.length === 0 && (
+				<p className="mt-1 text-xs text-muted-foreground">Nothing running right now.</p>
+			)}
 			{blobs.length > 0 && (
-				<div className="flex max-h-[40dvh] flex-col gap-1 overflow-y-auto">
+				<div className={cn("flex max-h-[40dvh] flex-col gap-1 overflow-y-auto", variant === "card" && "-mx-2 mt-1")}>
 					{blobs.map((blob) => (
 						<ActivityBlobRow
 							key={blob.id}

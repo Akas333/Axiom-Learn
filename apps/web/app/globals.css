@@ -135,6 +135,8 @@
 	--font-prose: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
 	--font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
 	--font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+	/* The Kapany wordmark only (sidebar band). Loaded in index.html. */
+	--font-brand: "Unbounded", var(--font-figtree), ui-sans-serif, sans-serif;
 	/* The modular type ladder — each size carries its own line-height.
 	   Component sizes must pull from this ladder. (owner, typography
 	   round 4: the 10px rung is merged into 11 — one pixel apart was a
@@ -190,9 +192,21 @@
 
 * {
 	border-color: var(--color-border);
-	/* No rubber-band bounce and no scroll chaining: a scroll area stops
-	   dead at its end instead of stretching or dragging the page. */
-	overscroll-behavior: none;
+}
+
+/* No rubber-band bounce and no scroll chaining: a vertical scroll area
+   stops dead at its end instead of stretching or dragging what's behind.
+   Only on real vertical scrollers — never on `*`: Chrome treats every
+   overflow:hidden / overflow-x:auto box as a scroll container, so a
+   blanket rule made the wheel die over messages, math and code blocks
+   instead of reaching the transcript. */
+:where(
+		[class*="overflow-auto"],
+		[class*="overflow-y-auto"],
+		[class*="overflow-scroll"],
+		[class*="overflow-y-scroll"]
+	) {
+	overscroll-behavior-y: none;
 }
 
 /* The app shell fills the window and owns all scrolling, so the page
@@ -676,5 +690,16 @@ body {
 	.lh-modal-backdrop > * {
 		max-height: 100%;
 		max-width: 100%;
+	}
+}
+
+/* Side-panel card (session page right column): a quiet rounded tile,
+   the stacked-card pattern. */
+@layer components {
+	.lh-panel-card {
+		border: 1px solid var(--border);
+		border-radius: 1rem;
+		background: color-mix(in oklab, var(--card) 55%, transparent);
+		padding: 0.75rem 1rem;
 	}
 }

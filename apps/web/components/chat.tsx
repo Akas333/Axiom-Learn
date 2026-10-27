@@ -51,7 +51,7 @@ import { ConceptOpener, conceptAnchorId, conceptOpenings, openingKey } from "@/c
 import { ConceptDoneCard, continueMessage, type ConceptDoneInputView, type ConceptDoneOutputView } from "@/components/concept-done-card";
 import { MermaidOverlay, SessionMermaidContext } from "@/components/session-overlay";
 import { AbortTurnDialog, type AbortMode } from "@/components/abort-turn-dialog";
-import { ArrowRightIcon, DumbbellIcon, WaypointsIcon } from "lucide-react";
+import { ArrowRightIcon, ChevronDownIcon, DownloadIcon, DumbbellIcon, NotebookPenIcon, PanelRightCloseIcon, PanelRightOpenIcon, PencilIcon } from "lucide-react";
 import type { PlanBlockData } from "@/src/core";
 import { QuestionDock } from "@/components/question-dock";
 import { SessionFind } from "@/components/session-find";
@@ -62,6 +62,7 @@ import { GraphContextCard, type GraphContextData } from "@/components/graph-cont
 import { TopBar } from "@/components/top-bar";
 import { LhMark } from "@/components/lh-mark";
 import { PLAN_CONFIRM_MESSAGE, PlanConfirmBar } from "@/components/plan-confirm-bar";
+import { SUMMARY_MESSAGE, SummaryOfferBar, lastSummaryRequest, planComplete } from "@/components/summary-offer";
 import type { ArtifactPartProps, JobRecord, Phase3, QuestionAnswerData, QuestionFormDraft, TurnUsage, SessionPricing } from "@/src/core";
 import type { LhViewMessage } from "@/src/core";
 import { PhaseChip, PhaseDivider } from "@/components/phase-divider";
@@ -94,6 +95,9 @@ import { useSettingsSaved } from "@/components/settings-signal";
  * same place — width polish only.
  */
 const COLUMN = "mx-auto w-full max-w-none px-4 sm:px-6";
+/** Ghost icon button for the session top bar's right-edge toolbar. */
+const TOPBAR_ICON =
+	"lh-no-drag flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground";
 const DOCK = "mx-auto w-full max-w-[46rem] px-3 sm:px-4";
 // The DOCK container's fixed width (46rem) and the plan marginalia's
 // geometry (owner, plan-placement round): the bare diagram sits in the
@@ -280,6 +284,7 @@ export function Chat({
 	// its 2.5s poll is only a backstop.
 	const [titleText, setTitleText] = useState(title);
 	const [renaming, setRenaming] = useState(false);
+	const [titleMenu, setTitleMenu] = useState(false);
 	const [titleDraft, setTitleDraft] = useState("");
 	const titleInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -867,6 +872,36 @@ export function Chat({
 	// The session's live plan (drives the top-bar chip; the marginalia
 	// derives its own from the same transcript).
 	const planTree = useMemo(() => latestTree(messages), [messages]);
+	/* SUMMARY: once every concept is done, offer a short summary note —
+	 * unless one was already asked for after the last concept closed, or
+	 * the learner said no (remembered per session). */
+	const planDone = useMemo(() => planComplete(planTree, messages), [planTree, messages]);
+	const lastConceptDoneAt = useMemo(() => {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			if (messages[i]?.parts.some((p) => p.type === "tool-concept_done")) return i;
+		}
+		return -1;
+	}, [messages]);
+	const summaryAskedAfterEnd = useMemo(
+		() => lastSummaryRequest(messages) > lastConceptDoneAt,
+		[messages, lastConceptDoneAt],
+	);
+	const summaryDismissKey = `kapany.summaryOfferDismissed.${chatId}`;
+	const [summaryDismissed, setSummaryDismissed] = useState<boolean>(() => {
+		try {
+			return localStorage.getItem(summaryDismissKey) === "1";
+		} catch {
+			return false;
+		}
+	});
+	const dismissSummaryOffer = useCallback(() => {
+		setSummaryDismissed(true);
+		try {
+			localStorage.setItem(summaryDismissKey, "1");
+		} catch {
+			/* storage unavailable: the offer just comes back next visit */
+		}
+	}, [summaryDismissKey]);
 	// Concept boundaries in the transcript: where each concept opens (the
 	// close is its concept_done card), numbered like the plan sidebar.
 	const planNumbers = useMemo(() => {
@@ -1226,6 +1261,12 @@ export function Chat({
 	 * own stream AND foreign/wake turns — both have a live agent by the
 	 * time the send's POST resolved, so the steer lands. Idle takes the
 	 * plain send; a raced settle 409s and falls back to exactly that. */
+	/** The Summarize chip / offer: steer a running turn, else send. */
+	const requestSummary = () => {
+		if (pending || compacting) return;
+		if (busy) void steer(SUMMARY_MESSAGE);
+		else void send({ type: "text", text: SUMMARY_MESSAGE });
+	};
 	const doSteerOrSend = () => {
 		if (pending || compacting) return;
 		const t = textRef.current.trim();
@@ -1307,7 +1348,7 @@ export function Chat({
 								spellCheck={false}
 								aria-label="Session title"
 								title="Rename this session"
-								className="lh-no-drag min-w-[8ch] max-w-[70%] shrink-0 bg-transparent font-title text-xl tracking-tight caret-current sm:text-3xl outline-none [field-sizing:content]"
+								className="lh-no-drag min-w-[8ch] max-w-[70%] shrink-0 bg-transparent text-[15px] font-medium caret-current outline-none [field-sizing:content]"
 							/>
 							{/* flex-1 spacer during rename too, so the chips stay at
 							    the right edge; clicks here commit via the header
@@ -1316,47 +1357,55 @@ export function Chat({
 						</>
 					) : (
 					<>
-						<Hint
-							// F2 renames (registry) — surfaced on the hover.
-							label="Rename session"
-							action="rename-session"
-							side="bottom"
-						>
-<button
-							type="button"
-														onClick={() => {
-								setTitleDraft(titleText);
-								setRenaming(true);
-							}}
-							className="lh-no-drag -mx-1.5 min-w-4 shrink cursor-text truncate rounded-md px-1.5 text-left font-title text-xl tracking-tight transition-colors sm:text-3xl hover:bg-accent"
-						>
-							{titleText}
+						{/* Title + ▾: one control that opens the session menu
+						    (Rename — also F2 — and Export). */}
+						<div className="relative min-w-0 shrink">
+							<button
+								type="button"
+								data-testid="session-title-menu"
+								aria-expanded={titleMenu}
+								onClick={() => setTitleMenu((v) => !v)}
+								className="lh-no-drag flex min-w-0 max-w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left text-[15px] font-medium text-foreground transition-colors hover:bg-(--pill)"
+							>
+								<span className="truncate">{titleText}</span>
+								<ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
 							</button>
-						</Hint>
+							{titleMenu && (
+								<>
+									<div className="lh-no-drag fixed inset-0 z-40" aria-hidden="true" onClick={() => setTitleMenu(false)} />
+									<div className="lh-no-drag absolute left-0 top-full z-50 mt-1 flex w-52 flex-col rounded-xl border bg-popover p-1 text-sm shadow-xl">
+										<button
+											type="button"
+											data-testid="title-menu-rename"
+											onClick={() => {
+												setTitleMenu(false);
+												setTitleDraft(titleText);
+												setRenaming(true);
+											}}
+											className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground transition-colors hover:bg-accent"
+										>
+											<PencilIcon className="size-3.5 text-muted-foreground" />
+											Rename
+											<span className="ml-auto text-xs text-muted-foreground">F2</span>
+										</button>
+										<a
+											href={`/api/chats/${chatId}/markdown`}
+											download=""
+											data-testid="title-menu-export"
+											onClick={() => setTitleMenu(false)}
+											className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground transition-colors hover:bg-accent"
+										>
+											<DownloadIcon className="size-3.5 text-muted-foreground" />
+											Export as Markdown
+										</a>
+									</div>
+								</>
+							)}
+						</div>
 							{/* flex-1 spacer: keeps the chips at the right edge AND stays a
 							    drag surface (no carve-out) — the freed bar is grippable. */}
 							<div className="min-w-4 flex-1" aria-hidden="true" />
 					</>
-					)}
-					{/* The plan chip (owner, plan-placement round): session-level
-					    structure beside the phase chip — access to the full-DAG popup
-					    at every width; the marginalia is the wide-screen glance view. */}
-					{planTree && (
-						<Hint label={planSidebar ? "Hide the plan" : "Show the plan"} side="bottom">
-<button
-							type="button"
-							data-testid="plan-chip"
-							aria-pressed={planSidebar}
-							onClick={(e) => {
-								blurAfterPointerClick(e);
-								setPlanSidebar(!planSidebar);
-							}}
-							className="lh-no-drag flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-border/80 px-2 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-						>
-							<WaypointsIcon className="size-3.5 text-primary" aria-hidden />
-							Plan
-						</button>
-</Hint>
 					)}
 					{/* The extraction ring (owner-locked redesign, 2026-09-24): fills
 					    with uncovered vs the chunk threshold, pulses while a run is in
@@ -1381,6 +1430,43 @@ export function Chat({
 					) : (
 						<PhaseChip phase={phases.at(-1) ?? "probe"} />
 					)}
+					{/* Icon toolbar (right edge): Summarize, then the side
+					    panel toggle — the panel holds the plan and the
+					    background agents. */}
+					<div className="flex shrink-0 items-center gap-0.5">
+						{planTree && (
+							<Hint label="Summarize what you've learned" side="bottom">
+								<button
+									type="button"
+									data-testid="summarize-chip"
+									aria-label="Summarize"
+									disabled={!!pending || compacting}
+									onClick={(e) => {
+										blurAfterPointerClick(e);
+										requestSummary();
+									}}
+									className={`${TOPBAR_ICON} disabled:cursor-not-allowed disabled:opacity-40`}
+								>
+									<NotebookPenIcon className="size-[18px]" aria-hidden />
+								</button>
+							</Hint>
+						)}
+						<Hint label={planSidebar ? "Hide the side panel" : "Show the side panel"} side="bottom">
+							<button
+								type="button"
+								data-testid="plan-chip"
+								aria-label={planSidebar ? "Hide the side panel" : "Show the side panel"}
+								aria-pressed={planSidebar}
+								onClick={(e) => {
+									blurAfterPointerClick(e);
+									setPlanSidebar(!planSidebar);
+								}}
+								className={`${TOPBAR_ICON} ${planSidebar ? "bg-(--pill) text-foreground" : ""}`}
+							>
+								{planSidebar ? <PanelRightCloseIcon className="size-[18px]" aria-hidden /> : <PanelRightOpenIcon className="size-[18px]" aria-hidden />}
+							</button>
+						</Hint>
+					</div>
 				</TopBar>
 
 				<SessionFind scopeRef={sessionFindScopeRef} scrollContextRef={scrollContextRef} />
@@ -1651,6 +1737,9 @@ export function Chat({
 									onChange={() => composerInputRef.current?.focus()}
 								/>
 							)}
+							{planDone && !summaryAskedAfterEnd && !summaryDismissed && !busy && !pending && !compacting && !error && (
+								<SummaryOfferBar onSummarize={requestSummary} onDismiss={dismissSummaryOffer} />
+							)}
 							{compacting && (
 								<span className="flex items-center gap-2 font-ui text-xs font-medium text-muted-foreground">
 									<BrailleSpinner label="Compacting context" />
@@ -1785,7 +1874,7 @@ export function Chat({
 				<AbortTurnDialog mode={abortAsk} onClose={() => setAbortAsk(null)} onConfirm={confirmAbort} busy={busy} />
 				</div>
 			</div>
-			{hasPlan && planSidebar && (
+			{planSidebar && (
 				<PlanSidebar
 					messages={messages}
 					viewingId={viewingConcept}
@@ -2515,6 +2604,8 @@ const PLAN_SIDEBAR_KEY = "lh:plan-sidebar";
 
 /** The saved sidebar choice; without one, open when the window is wide. */
 function readPlanSidebarPref(): boolean {
+	// Below 1280px the panel is a slide-over: always start closed there.
+	if (typeof window !== "undefined" && window.innerWidth < 1280) return false;
 	try {
 		const saved = localStorage.getItem(PLAN_SIDEBAR_KEY);
 		if (saved === "open") return true;

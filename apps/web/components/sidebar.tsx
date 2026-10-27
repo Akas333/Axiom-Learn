@@ -6,13 +6,16 @@ import { useSearchParams } from "react-router";
 import { MenuShell } from "@/components/menu-shell";
 import { DeleteSessionDialog } from "@/components/delete-session-dialog";
 import type { ChatDeleteMode } from "@/src/core";
-import { DumbbellIcon, NetworkIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, DumbbellIcon, NetworkIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
 
 /** Sidebar navigation rows (after the Meta Model API console): icon +
  *  label, grey hover, blue-tinted when active. */
+/** Square ghost icon button for the chrome rows (top row, bottom row). */
+const CHROME_ICON =
+	"lh-no-drag flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground";
 const NAV_ROW =
-	"flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-[15px] font-medium text-foreground transition-colors hover:bg-(--pill) focus-visible:outline-2 focus-visible:outline-primary";
-const NAV_ROW_ACTIVE = "bg-primary/20 text-(--primary-soft) hover:bg-primary/25";
+	"flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[15px] text-foreground transition-colors hover:bg-(--pill) focus-visible:outline-2 focus-visible:outline-primary";
+const NAV_ROW_ACTIVE = "bg-(--pill) hover:bg-(--pill)";
 import { ActivitySection } from "@/components/activity-dock";
 import { CoverageMenuBlock } from "@/components/extraction-coverage";
 import { LhMark } from "@/components/lh-mark";
@@ -362,25 +365,22 @@ export function SessionRow({
 			onClick={onOpen}
 			onContextMenu={onContextMenu}
 			data-testid={kbdSelected ? "session-row-kbd" : "session-row"}
+			// One line per session; the state + age ride the tooltip.
+			title={sessionMeta(chat)}
 			className={cn(
-				"relative mb-0.5 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-(--pill)",
-				active && "bg-primary/20 hover:bg-primary/25",
+				"relative mb-0.5 flex h-9 w-full items-center gap-2 rounded-lg px-3 text-left transition-colors hover:bg-(--pill)",
+				active && "bg-(--pill) hover:bg-(--pill)",
 				kbdSelected && !active && "bg-accent/60 ring-1 ring-border",
 			)}
 		>
+			<span className={cn("min-w-0 flex-1 truncate text-[15px]", active ? "text-foreground" : "text-foreground/90")}>{chat.title}</span>
+			<span className="sr-only">{sessionMeta(chat)}</span>
+			{/* Right-edge state: the spinner while working, a dot while the
+			    session waits on the learner, the dumbbell for practice. */}
 			<SessionStatus busy={chat.busy || chat.compacting} />
-			<span className="min-w-0 flex-1">
-				{/* Titles are the learner's/teacher's WORDS — Source Sans 3, the
-				    same voice the words were typed in (every input is lh-prose);
-				    the meta line below stays JetBrains Mono (machine data). One
-				    rule, finally applied to the picker too (owner, typography
-				    round): mono = chrome, Source Sans = human words. */}
-				<span className={cn("block truncate font-prose text-(length:--lh-prose-size)", active && "text-(--primary-soft)")}>{chat.title}</span>
-				<span className="block text-xs text-muted-foreground">{sessionMeta(chat)}</span>
-			</span>
-			{/* The dumbbell rides the FAR RIGHT (owner round 6, 2026-10-05) —
-			    was left of the name; right-aligned keeps the titles flush with
-			    the teaching rows and reads cleaner. */}
+			{!(chat.busy || chat.compacting) && (chat.pendingQuestion || ((chat.kind ?? "teach") === "practice" && chat.pendingProblem)) && (
+				<span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" aria-hidden="true" />
+			)}
 			{(chat.kind ?? "teach") === "practice" && (
 				<DumbbellIcon className="size-3.5 shrink-0 text-muted-foreground/70" aria-label="Practice session" />
 			)}
@@ -405,7 +405,7 @@ export function RenameRow({ chat, onCommit, onCancel }: { chat: ChatListItem; on
 	return (
 		<div
 			data-testid="session-rename-row"
-			className="relative mb-0.5 flex w-full items-center rounded-lg bg-accent px-3 py-2"
+			className="relative mb-0.5 flex h-9 w-full items-center rounded-lg bg-accent px-3"
 		>
 			{/* NOTHING MOVES (owner, polish round): an idle row renders no
 			    status spacer (SessionStatus is null when not busy), so the
@@ -432,7 +432,6 @@ export function RenameRow({ chat, onCommit, onCancel }: { chat: ChatListItem; on
 					data-testid="session-rename-input"
 					className="lh-input w-full min-w-0 truncate border-0 border-b border-border bg-transparent px-0 text-foreground outline-none"
 				/>
-				<span className="block truncate text-xs text-muted-foreground">{sessionMeta(chat)}</span>
 			</span>
 		</div>
 	);
@@ -597,6 +596,8 @@ function SessionsSidebar() {
 	   coexist: hovering doesn't claim, a click or an open clears the
 	   selection. */
 	const [kbdIndex, setKbdIndex] = useState<number | null>(null);
+	const [searchOpen, setSearchOpen] = useState(false);
+	const [filterMenu, setFilterMenu] = useState(false);
 	const searchRef = useRef<HTMLInputElement>(null);
 	const listRef = useRef<HTMLDivElement>(null);
 
@@ -687,6 +688,7 @@ function SessionsSidebar() {
 			if (!open) toggle();
 			// A clipped (overflow-hidden) input still focuses — the sidebar's
 			// slide-in doesn't gate the keystroke.
+			setSearchOpen(true);
 			requestAnimationFrame(() => searchRef.current?.focus());
 		};
 		window.addEventListener("lh:kbd-sessions-search", onFocusSearch);
@@ -749,43 +751,25 @@ function SessionsSidebar() {
 				    Merged chrome (2026-09-17): in Electron this band is the
 				    window's drag surface and starts after the traffic lights
 				    (.lh-lights-gutter); in the browser those classes are inert. */}
-				<div className="lh-drag lh-lights-gutter flex items-center justify-between px-4 py-3">
-					{/* The owner's mark (2026-09-17) replaces the "LH" text — still the
-					    home link, still vertically centered by the band's items-center.
-					    The 92px .lh-lights-gutter keeps it clear of the traffic lights
-					    with the lights' own edge-inset as the gap. */}
-					{/* Hover mirrors the ghost toggle buttons (owner ask, 2026-09-17):
-					    same size-9 chip geometry, same hover:bg-accent treatment. */}
-					<Hint
-						// Kept (owner, subtlety round 2026-09-25) but to the RIGHT
-						// of the logo, carrying its real shortcut: ⌘G jumps to
-						// the graph view (keyboard-shortcuts routes it to "/",
-						// the same destination as this logo).
-						label="Home"
-						action="jump-graph"
-						side="right"
-					>
-						<Link
-							href="/"
-							aria-label="Home"
-							className="lh-no-drag flex size-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-(--pill)"
-						>
-							<LhMark className="size-6" />
-						</Link>
-					</Hint>
-					<span className="mr-auto ml-2 select-none text-lg font-semibold tracking-tight text-foreground">
-						Kapany
-					</span>
+				{/* Top icon row: close, back, forward — the app's window chrome.
+				    In Electron this band is the drag surface and starts after the
+				    traffic lights (.lh-lights-gutter); in the browser those
+				    classes are inert. */}
+				<div className="lh-drag lh-lights-gutter flex h-15 shrink-0 items-center gap-0.5 px-3">
 					<Hint label="Close sidebar" action="toggle-sidebar">
-						<Button
-							variant="ghost"
-							size="icon"
-							aria-label="Close sidebar"
-							onClick={toggle}
-							className="lh-no-drag rounded-full hover:bg-(--pill) dark:hover:bg-(--pill)"
-						>
+						<button type="button" aria-label="Close sidebar" onClick={toggle} className={CHROME_ICON}>
 							<PanelLeftCloseIcon className="size-4" />
-						</Button>
+						</button>
+					</Hint>
+					<Hint label="Back" side="bottom">
+						<button type="button" aria-label="Back" onClick={() => window.history.back()} className={CHROME_ICON}>
+							<ChevronLeftIcon className="size-4" />
+						</button>
+					</Hint>
+					<Hint label="Forward" side="bottom">
+						<button type="button" aria-label="Forward" onClick={() => window.history.forward()} className={CHROME_ICON}>
+							<ChevronRightIcon className="size-4" />
+						</button>
 					</Hint>
 				</div>
 
@@ -794,22 +778,13 @@ function SessionsSidebar() {
 				    labels room; teaching keeps the original draft route,
 				    practice carries its mode. */}
 				<nav className="mx-2 flex flex-col gap-0.5" aria-label="Main">
-					<Link
-						href="/"
-						data-testid="nav-graph"
-						aria-current={pathname === "/" ? "page" : undefined}
-						className={cn(NAV_ROW, pathname === "/" && NAV_ROW_ACTIVE)}
-					>
-						<NetworkIcon className="size-5 shrink-0" />
-						Knowledge graph
-					</Link>
 					<button
 						type="button"
 						data-testid="new-session"
 						onClick={() => void newSession()}
 						className={cn(NAV_ROW, pathname === "/chat/new" && !draftPractice && NAV_ROW_ACTIVE)}
 					>
-						<PlusIcon className="size-5 shrink-0" />
+						<PlusIcon className="size-[18px] shrink-0" />
 						New teaching
 						<span className="sr-only">create a new teaching session</span>
 					</button>
@@ -819,18 +794,76 @@ function SessionsSidebar() {
 						onClick={() => router.push("/chat/new?mode=practice")}
 						className={cn(NAV_ROW, pathname === "/chat/new" && draftPractice && NAV_ROW_ACTIVE)}
 					>
-						<DumbbellIcon className="size-5 shrink-0" />
+						<DumbbellIcon className="size-[18px] shrink-0" />
 						New practice
 						<span className="sr-only">create a new practice session</span>
 					</button>
+					<Hint label="Search sessions" action="sessions-search" side="right">
+						<button
+							type="button"
+							data-testid="nav-search"
+							aria-expanded={searchOpen}
+							onClick={() => {
+								setSearchOpen(true);
+								requestAnimationFrame(() => searchRef.current?.focus());
+							}}
+							className={cn(NAV_ROW, searchOpen && "bg-(--pill)")}
+						>
+							<SearchIcon className="size-[18px] shrink-0" />
+							Search
+						</button>
+					</Hint>
+					<Link
+						href="/"
+						data-testid="nav-graph"
+						aria-current={pathname === "/" ? "page" : undefined}
+						className={cn(NAV_ROW, pathname === "/" && NAV_ROW_ACTIVE)}
+					>
+						<NetworkIcon className="size-[18px] shrink-0" />
+						Knowledge graph
+					</Link>
 				</nav>
 
-				<div className="mx-2 my-3 border-t border-input" aria-hidden="true" />
+				{/* Section heading — the list's scope, as a quiet dropdown
+				    ("All sessions ▾"), the project-heading pattern. */}
+				<div className="relative mx-2 mt-5 mb-1 flex items-center px-3" data-testid="session-kind-filter">
+					<button
+						type="button"
+						data-testid="kind-filter-menu"
+						aria-expanded={filterMenu}
+						onClick={() => setFilterMenu((v) => !v)}
+						className="-mx-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground"
+					>
+						{kindFilter === "teach" ? "Teaching sessions" : kindFilter === "practice" ? "Practice sessions" : "All sessions"}
+						<ChevronDownIcon className="size-3.5" />
+					</button>
+					{filterMenu && (
+						<>
+							<div className="fixed inset-0 z-40" aria-hidden="true" onClick={() => setFilterMenu(false)} />
+							<div className="absolute left-2 top-full z-50 mt-1 flex w-44 flex-col rounded-xl border bg-popover p-1 text-sm shadow-xl">
+								{(["all", "teach", "practice"] as const).map((f) => (
+									<button
+										key={f}
+										type="button"
+										data-testid={`kind-filter-${f}`}
+										onClick={() => {
+											setFilter(f);
+											setFilterMenu(false);
+										}}
+										className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-foreground transition-colors hover:bg-accent"
+									>
+										{f === "teach" ? "Teaching" : f === "all" ? "All" : "Practice"}
+										{kindFilter === f && <CheckIcon className="size-3.5 text-muted-foreground" />}
+									</button>
+								))}
+							</div>
+						</>
+					)}
+				</div>
 
-				<div className="mx-3 mb-2 flex items-center gap-2">
-					<span className="text-sm font-medium text-muted-foreground">Sessions</span>
-					<Hint label="Search sessions" action="sessions-search" side="bottom">
-					<span className="relative flex-1">
+				{(searchOpen || query) && (
+					<div className="mx-2 mb-1 px-1">
+						<span className="relative block">
 						<Input
 							ref={searchRef}
 							data-testid="session-search"
@@ -854,6 +887,8 @@ function SessionsSidebar() {
 							onKeyDown={(e) => {
 								if (e.key === "Escape") {
 									e.stopPropagation();
+									setQuery("");
+									setSearchOpen(false);
 									e.currentTarget.blur();
 									return;
 								}
@@ -881,40 +916,17 @@ function SessionsSidebar() {
 							}}
 							placeholder="Search…"
 							aria-label="Search sessions"
-							className="h-8 rounded-full border-transparent bg-(--pill) pl-8 text-sm placeholder:text-muted-foreground focus-visible:border-primary"
+							onBlur={() => {
+								if (!query.trim()) setSearchOpen(false);
+							}}
+							className="h-9 rounded-lg border-transparent bg-(--pill) pl-9 text-sm placeholder:text-muted-foreground focus-visible:border-primary"
 						/>
-						<SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-					</span>
-					</Hint>
-				</div>
+							<SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+						</span>
+					</div>
+				)}
 
-				{/* The three-way filter, HEADING THE LIST (owner round 8b,
-				    2026-10-05 — moved below the search): it scopes what the
-				    list shows, so it sits directly above it as a caption row;
-				    search stays the top muscle-memory target. Order: Teaching /
-				    Practice / All — the real modes first, "All" as the escape
-				    hatch on the right, mirroring the create-buttons above.
-				    Persisted client-side. */}
-				<div className="mx-3 flex items-center gap-0.5 rounded-lg bg-(--pill) p-0.5" data-testid="session-kind-filter">
-					{(["teach", "practice", "all"] as const).map((f) => (
-						<button
-							key={f}
-							type="button"
-							data-testid={`kind-filter-${f}`}
-							onClick={() => setFilter(f)}
-							className={cn(
-								"h-7 flex-1 rounded-md px-3 text-[13px] transition-colors",
-								kindFilter === f
-									? "bg-card font-semibold text-foreground"
-									: "font-medium text-muted-foreground hover:text-foreground",
-							)}
-						>
-							{f === "teach" ? "Teaching" : f === "all" ? "All" : "Practice"}
-						</button>
-					))}
-				</div>
-
-				<div ref={listRef} className="flex-1 overflow-y-auto p-2">
+				<div ref={listRef} className="flex-1 overflow-y-auto px-2 pb-2">
 					{shown === null ? (
 						<div className="px-2 py-4 text-xs text-muted-foreground">Loading…</div>
 					) : shown.length === 0 ? (
@@ -952,13 +964,27 @@ function SessionsSidebar() {
 					    populates and grows when processes run. The session list is
 					    flex-1, so this pins to the bottom. Sidebar closed = the
 					    learner opted out (no ambient signal, user decision). */}
-					<ActivitySection />
+					{!pathname.startsWith("/chat/") || pathname === "/chat/new" ? <ActivitySection /> : null}
 
 					{/* Settings entry (settings-app wave): same row language as
 					    New session — quiet, bottom-pinned, opens the centered
 					    dialog (also mod+, in the keyboard registry). */}
-					<div className="px-2 pb-3 pt-0.5">
-						<Hint label="Settings" action="open-settings" side="right">
+					{/* Bottom row: the app's identity on the left (home), settings
+					    on the right — the account-row pattern. */}
+					<div className="mx-2 flex items-center gap-1 border-t border-input px-1 pb-3 pt-2">
+						<Hint label="Home" action="jump-graph" side="top">
+							<Link
+								href="/"
+								aria-label="Home"
+								className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-(--pill)"
+							>
+								<span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-input bg-card">
+									<LhMark className="size-4" />
+								</span>
+								<span className="truncate font-brand text-[15px] font-semibold text-foreground">Kapany</span>
+							</Link>
+						</Hint>
+						<Hint label="Settings" action="open-settings" side="top">
 							<button
 								type="button"
 								onClick={() => {
@@ -966,10 +992,10 @@ function SessionsSidebar() {
 									openSettings();
 								}}
 								data-testid="settings-entry"
-								className={NAV_ROW}
+								aria-label="Settings"
+								className={CHROME_ICON}
 							>
-								<SettingsIcon className="size-5 shrink-0" />
-								Settings
+								<SettingsIcon className="size-[18px]" />
 							</button>
 						</Hint>
 					</div>
