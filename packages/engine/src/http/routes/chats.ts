@@ -1,6 +1,6 @@
 import { chainsForSelection, formatChainLine } from "../../core/index.ts";
-import { newGraphContextMessage, type GraphContextPick } from "../../core/index.ts";
-import { compactionInFlight, createChat, isTurnRunning, listChats, readSettingsRecord, stores, titleFromPrompt } from "../../server/index.ts";
+import { memoryNote, newGraphContextMessage, type GraphContextPick } from "../../core/index.ts";
+import { compactionInFlight, createChat, reviewStateMap, isTurnRunning, listChats, readSettingsRecord, stores, titleFromPrompt } from "../../server/index.ts";
 import type { ChatListItem } from "../../core/index.ts";
 
 /** The session picker's list: record-derived summaries (phase, pending
@@ -65,7 +65,16 @@ export async function POST(req: Request) {
 		const chainLines = chainsForSelection(pickedNodes, stores.graphStore.readChains()).map((c) =>
 			formatChainLine(c, Object.fromEntries(byId)),
 		);
-		stores.chatStore.saveMessages(chat.id, [newGraphContextMessage(picks, chainLines)]);
+		// SPACED REVIEW: a practice session's picks carry each node's memory
+		// state (last practiced, estimated recall, due) so the agent can
+		// weigh decay when it picks targets and difficulty.
+		let notes: Record<string, string> | undefined;
+		if (kind === "practice") {
+			const now = Date.now();
+			const states = reviewStateMap(now);
+			notes = Object.fromEntries(picks.map((p) => [p.id, memoryNote(states.get(p.id), now)]));
+		}
+		stores.chatStore.saveMessages(chat.id, [newGraphContextMessage(picks, chainLines, notes)]);
 	}
 	return Response.json({ id: chat.id, title: chat.title });
 }

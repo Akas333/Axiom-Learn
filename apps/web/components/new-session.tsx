@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useRouter } from "@/lib/navigation";
 import { Composer, COMPOSER_SHELL } from "@/components/composer";
 import { joinDictation, useDictation } from "@/components/dictation";
-import { PlusIcon, XIcon } from "lucide-react";
+import { HistoryIcon, PlusIcon, XIcon } from "lucide-react";
 import { LhMark } from "@/components/lh-mark";
 import { SphereBackdrop } from "@/components/sphere-backdrop";
 import { Hint } from "@/components/ui/hint";
@@ -19,6 +19,14 @@ import type { ChatSettings, GraphSnapshot } from "@/src/core";
 /** The draft's pick set (owner round 10): the SAME shape the home pick
  *  bar lifts — resolved nodes as the learner SAW them at pick time. */
 export type DraftPick = { id: string; name: string; statement: string };
+
+/** SPACED REVIEW: at most this many due nodes seed one review session. */
+const REVIEW_PICK_CAP = 8;
+/** The draft text a review session starts with (editable before send). */
+export const REVIEW_DRAFT_TEXT = "Review what's due";
+
+/** GET /api/review's due list — only the fields the draft needs. */
+type DueNode = { nodeId: string; name: string; statement: string; recall: number };
 
 /**
  * The sessionless draft view at /chat/new (owner, 2026-09-13): "+ New
@@ -86,6 +94,8 @@ export function DraftShell({
 	onClearPicks,
 	overlay,
 	onModeChange,
+	dueCount = 0,
+	onPickDue,
 }: {
 	busy: boolean;
 	text: string;
@@ -114,6 +124,10 @@ export function DraftShell({
 	overlay?: ReactNode;
 	/** The in-card Teach | Practice switch. */
 	onModeChange?: (mode: "teach" | "practice") => void;
+	/** SPACED REVIEW: how many practiced nodes are due, and the one-click
+	 *  fill that picks them (practice drafts only). */
+	dueCount?: number;
+	onPickDue?: () => void;
 }) {
 	// Voice dictation (STT wave, 2026-09-17): finals append at the end of the
 	// draft text (via the parent's onChange — the truth lives there); the
@@ -219,6 +233,19 @@ export function DraftShell({
 								leadingSlot={
 									<div className="flex items-center gap-2">
 										<SessionModeToggle mode={mode} onChange={(m) => onModeChange?.(m)} testIdPrefix="draft-mode" />
+										{mode === "practice" && picks.length === 0 && dueCount > 0 && onPickDue && (
+											<Hint label="Pick the nodes you're starting to forget" side="bottom">
+												<button
+													type="button"
+													data-testid="practice-review-due"
+													onClick={onPickDue}
+													className="flex items-center gap-1.5 rounded-full bg-(--pill) px-2.5 py-0.5 text-sm text-foreground transition-colors hover:bg-(--pill-hover)"
+												>
+													<HistoryIcon className="size-3.5 text-muted-foreground" />
+													Review {dueCount} due
+												</button>
+											</Hint>
+										)}
 										{picks.length > 0 && (
 											<span className="flex items-center gap-1 rounded-full bg-(--pill) py-0.5 pl-2.5 pr-0.5 text-sm text-foreground">
 												{picks.length} {picks.length === 1 ? "node" : "nodes"}
@@ -276,6 +303,26 @@ export function NewSession({ initialConfigured, mode = "teach" }: { initialConfi
 		setPicks(next);
 	};
 	const [pickerOpen, setPickerOpen] = useState(false);
+	// SPACED REVIEW: the due list, fetched once per practice draft. A
+	// failed fetch just hides the button.
+	const [due, setDue] = useState<DueNode[]>([]);
+	useEffect(() => {
+		if (mode !== "practice") return;
+		let live = true;
+		void fetch("/api/review")
+			.then((r) => (r.ok ? (r.json() as Promise<{ due?: DueNode[] }>) : { due: [] }))
+			.then((v) => {
+				if (live) setDue(Array.isArray(v.due) ? v.due : []);
+			})
+			.catch(() => {});
+		return () => {
+			live = false;
+		};
+	}, [mode]);
+	const pickDue = () => {
+		applyPicks(due.slice(0, REVIEW_PICK_CAP).map((n) => ({ id: n.nodeId, name: n.name, statement: n.statement })));
+		if (textRef.current.trim().length === 0) applyText(REVIEW_DRAFT_TEXT);
+	};
 	const [snapshot, setSnapshot] = useState<GraphSnapshot | null>(null);
 	const openPicker = () => {
 		if (snapshot) {
@@ -345,6 +392,8 @@ export function NewSession({ initialConfigured, mode = "teach" }: { initialConfi
 				picks={picks}
 				onOpenPicker={openPicker}
 				onClearPicks={() => applyPicks([])}
+				dueCount={due.length}
+				onPickDue={pickDue}
 				overlay={
 					// THE PICKER (owner round 10b): hosted INSIDE the content
 					// column — absolute inset-0 resolves to the column's relative

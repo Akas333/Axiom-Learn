@@ -27,6 +27,7 @@ import * as jobs from "./routes/jobs.ts";
 import * as keysId from "./routes/keys-id.ts";
 import * as keys from "./routes/keys.ts";
 import * as models from "./routes/models.ts";
+import * as review from "./routes/review.ts";
 import * as search from "./routes/search.ts";
 import * as settingsSection from "./routes/settings-section.ts";
 import * as settingsPromptsSegment from "./routes/settings-prompts-segment.ts";
@@ -61,6 +62,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 	{ path: "/api/chats", handlers: { GET: chats.GET as RouteHandler, POST: chats.POST as RouteHandler } },
 	{ path: "/api/events", handlers: { GET: events.GET as RouteHandler } },
 	{ path: "/api/graph/costs", handlers: { GET: graphCosts.GET as RouteHandler } },
+	{ path: "/api/review", handlers: { GET: review.GET as RouteHandler } },
 	{ path: "/api/graph/coverage/extract", handlers: { POST: graphCoverageExtract.POST as RouteHandler } },
 	{ path: "/api/graph/import", handlers: { POST: graphImport.POST as RouteHandler } },
 	{ path: "/api/graph/nodes/:id", handlers: { DELETE: graphNodesId.DELETE as RouteHandler } },
