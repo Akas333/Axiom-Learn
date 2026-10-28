@@ -28,7 +28,7 @@ IGNORE = [
     "**/auth.json",
     "**/*credentials.json*",
     "**/.env*",
-    "mobile",
+    "apps/mobile",
     "docs",
     "deploy",
     "apps/legacy/build",

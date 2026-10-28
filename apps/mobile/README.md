@@ -1,49 +1,40 @@
-# OptiMind (Mobile App)
+# Petrov (Android app)
 
-**OptiMind** is the cross-platform React Native mobile app for Kapany / Axiom Learn, built with Meta's **Astryx** design system architecture.
+The phone app for the Kapany tutor, built with Expo and React Native. It talks to the same backend as the web app (`apps/server`), locally or on Modal.
 
-## Overview
+## Run it on your phone
 
-- **Astryx UI System:** Built directly from the design token specifications and components of Meta's open-source Astryx design system (`https://astryx.atmeta.com`), including the centerpiece [ChatLayoutScrollButton](https://astryx.atmeta.com/components/ChatLayoutScrollButton).
-- **Backend Integration:** Connects seamlessly to `@axiom/server` (Hono API running on port 8787).
-- **Meta AI Models:** Supports interactive sessions powered by Meta's Muse models (Spark 1.3, Wonder, Contributor, and Voice Transcribe).
+1. Install **Expo Go** from the Play Store.
+2. Install from the repo root (Petrov is an npm workspace), then start the dev server:
 
-## Key Components
+   ```bash
+   npm install
+   cd apps/mobile
+   npx expo start
+   ```
 
-### 1. `ChatLayoutScrollButton` (`src/components/astryx/ChatLayoutScrollButton.tsx`)
-Conforms to the exact Astryx component specification:
-- **`isVisible: boolean`**: Tracks scroll position within `ChatMessageList` to only display when the user scrolls away from the bottom.
-- **`label?: string`**: Smoothly expands into a wide pill (e.g. `"New messages"`) when new turns or tokens land while scrolled up.
-- **`onClick: () => void`**: Springs or smoothly scrolls the chat list to the latest message and dismisses the unread indicator.
-- **Design:** Floating dock elevation (`shadows.med`), rounded pill (`radius.full`), ChevronDown icon, and Astryx token colors.
+   If your phone can't load the app, Expo may have put the wrong network address in the QR code. Set it yourself: `REACT_NATIVE_PACKAGER_HOSTNAME=<your-computer's-LAN-IP> npx expo start`.
 
-### 2. Full Astryx Chat Layout
-- `ChatLayout`: Root container managing header, message viewport, floating dock, and composer.
-- `ChatMessageList`: FlatList with real-time scroll offset detection and unread message tracking.
-- `ChatMessage` & `ChatMessageBubble`: Role-aligned message cards (User, AI Tutor, System).
-- `ChatComposer`: Input bar with "Think Out Loud" toggle and dictation action.
+3. Scan the QR code with Expo Go. The phone and the computer must be on the same Wi-Fi.
+4. On the connect screen, enter:
+   - **Server URL:** the Modal URL (see `deploy/modal/README.md`), or `http://<your-computer's-LAN-IP>:8787` for a local server. A local server must listen on the network, so start it with `HOST=0.0.0.0 AXIOM_ACCESS_TOKEN=<token> npm run dev:server`.
+   - **Access token:** the shared `AXIOM_ACCESS_TOKEN`.
 
-### 3. Interactive Tutoring Features
-- **QuestionCard**: Renders understanding probes with options, a 1–5 confidence rating, and the reasoning thinking field.
-- **Knowledge Graph**: Explores claims and reasoning chains from previous lessons.
-- **Daily Practice**: Spaced repetition flashcards with self-assessment grading.
-- **Settings & Connectivity**: Dynamic host switcher (`localhost:8787` for iOS simulator, `10.0.2.2:8787` for Android emulator, or custom LAN IP for physical phones).
+The URL and token are saved in the phone's secure storage. Change them later under Settings.
 
-## Getting Started
+## How it's built
 
-### 1. Start the Backend Server (from root monorepo)
+- **UI:** Astryx components (https://astryx.atmeta.com/components), implemented natively in `src/components/astryx/` and `src/components/ui.tsx` with the same names and props as the Astryx specs (`npx astryx component <Name>`). Colors, spacing and radius come from the Astryx neutral theme (`src/theme.ts`). Astryx's own package renders HTML and CSS, which Android can't display, so it's installed only for its CLI docs and theme values.
+- **Sessions:** the web app's session state machine (`apps/web/components/session-core.ts`) and the engine's browser-safe core (`packages/engine/src/core`) are imported directly, not copied (see `metro.config.js`). Live tutor replies stream over `expo/fetch`.
+- **Server events:** `src/lib/events.tsx` listens to `/api/events` and reconnects when the phone wakes up or changes networks.
+
+## Not in this version yet
+
+Knowledge graph view, voice dictation, model and key management (use the web app's Settings), and full research, demo and visual artifacts (shown as status cards). Math renders as readable text, not typeset formulas.
+
+## Checks
+
 ```bash
-npm run dev:server
+npm run typecheck
+npx expo export --platform android
 ```
-*(The server listens on `http://127.0.0.1:8787` by default).*
-
-### 2. Start the OptiMind Mobile App
-```bash
-cd apps/mobile
-npm run start
-```
-From Expo CLI:
-- Press `i` to open in iOS Simulator
-- Press `a` to open in Android Emulator
-- Press `w` to open in Web Browser
-- Scan the QR code with the Expo Go app on your physical iOS or Android device

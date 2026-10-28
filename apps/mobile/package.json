@@ -1,32 +1,44 @@
 {
-  "name": "optimind",
+  "name": "petrov",
   "version": "1.0.0",
-  "description": "OptiMind mobile app for Kapany AI Tutor, built with React Native and Astryx design system",
   "main": "index.ts",
   "dependencies": {
     "@astryxdesign/core": "^0.7.4",
-    "@astryxdesign/theme-gothic": "^0.7.4",
-    "@astryxdesign/theme-matcha": "^0.7.4",
     "@astryxdesign/theme-neutral": "^0.7.4",
-    "@astryxdesign/theme-stone": "^0.7.4",
-    "@expo/vector-icons": "^15.1.1",
+    "@expo-google-fonts/figtree": "^0.4.1",
+    "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@stylexjs/stylex": "^0.19.1",
     "expo": "~58.0.20",
+    "expo-constants": "~58.0.13",
+    "expo-crypto": "~58.0.7",
+    "expo-font": "~58.0.10",
+    "expo-linking": "~58.0.14",
+    "expo-router": "~58.0.27",
+    "expo-secure-store": "~58.0.2",
     "expo-status-bar": "~58.0.4",
+    "lucide-react-native": "^1.63.0",
+    "mdast-util-from-markdown": "^2.0.3",
+    "mdast-util-math": "^3.0.0",
+    "micromark-extension-math": "^3.1.0",
     "react": "19.3.0",
+    "react-dom": "19.3.0",
     "react-native": "0.88.0",
-    "react-native-safe-area-context": "^5.10.1"
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0",
+    "react-native-svg": "15.16.0",
+    "react-native-web": "^0.21.4"
   },
   "devDependencies": {
     "@astryxdesign/cli": "^0.7.4",
+    "@types/mdast": "^4.0.4",
     "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "typecheck": "tsc --noEmit",
+    "lint": "expo lint"
   },
   "private": true
 }
