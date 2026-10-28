@@ -7,6 +7,11 @@ const port = Number(process.env.PORT ?? 8787);
 // Loopback by default: the API holds keys and spends credits. Set HOST=0.0.0.0
 // only behind the hosted deployment's own access control.
 const hostname = process.env.HOST ?? "127.0.0.1";
+const loopback = hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1";
+if (!loopback && !process.env.AXIOM_ACCESS_TOKEN) {
+	console.error("[axiom-server] refusing to listen on a public address without AXIOM_ACCESS_TOKEN set.");
+	process.exit(1);
+}
 
 const app = createApp();
 const injectWebSocket = mountDictation(app);
