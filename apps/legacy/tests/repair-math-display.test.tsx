@@ -57,9 +57,9 @@ describe("repairMathForDisplay — the existing composition, unchanged", () => {
 		String.raw`$a \\\\\nabla b$`,
 		String.raw`$a \\ 2 \\& 3 \\[6pt] 4$`,
 		"$$\na \\\\\\\\ 2\nb\n$$", // four real row-break slashes survive too.
-		"`" + doubled + "`",
+		"`x = " + doubled + "`",
 		"```tex\n" + doubled + "\n```",
-		"`" + debris + "`",
+		"`x = " + debris + "`",
 		"```tex\n" + debris + "\n```",
 		String.raw`$\\nabla`,
 		"$$A = \\\\begin{pmatrix}\n1 & 2\n\\\\end{pmatrix}$$", // unsupported midline display close.
@@ -76,6 +76,11 @@ describe("repairMathForDisplay — the existing composition, unchanged", () => {
 		assert.equal(repairMathForDisplay(quadrupled), clean);
 		assert.equal(repairMathForDisplay(debris), `$${repairedDebris}$`);
 		assert.equal(repairMathForDisplay(matrix), `$$\n${repairedMatrix}\n$$`);
+	});
+	it("drops math dollars only when they wrap a whole inline code span", () => {
+		assert.equal(repairMathForDisplay("`" + clean + "`"), "`" + tex + "`");
+		assert.equal(repairMathForDisplay("`x = " + clean + "`"), "`x = " + clean + "`");
+		assert.equal(repairMathForDisplay("```tex\n" + clean + "\n```"), "```tex\n" + clean + "\n```");
 	});
 });
 
@@ -106,7 +111,7 @@ describe("upgraded KaTeX rendering on real question and practice surfaces", () =
 		});
 	}
 	it("preserves escaped currency and code on both dock surfaces", () => {
-		const raw = "Costs \\$5 and \\$10. `" + clean + "`\n\n```text\n" + doubled + "\n```";
+		const raw = "Costs \\$5 and \\$10. `f = " + clean + "`\n\n```text\n" + doubled + "\n```";
 		for (const element of [dock({ statement: raw }), <QuestionDock toolName="ask_user_question" toolCallId="security_code" input={{ question: raw }} expanded onExpand={() => {}} onSubmit={() => {}} />]) {
 			const html = renderToStaticMarkup(element);
 			assert.deepEqual(math(html).annotations, []);
@@ -184,7 +189,7 @@ describe("practice display surfaces", () => {
 	});
 
 	it("preserves code spans/fences across every repaired display surface", () => {
-		const raw = "`" + doubled + "`\n\n```text\n" + doubled + "\n```";
+		const raw = "`f = " + doubled + "`\n\n```text\n" + doubled + "\n```";
 		for (const element of [dock({ statement: raw }), <ProblemCard part={part({ statement: raw })} />,
 			<ConcludeCard part={part({ outcome: "solved", verdict: raw }, { reveal: raw })} />]) {
 			const html = renderToStaticMarkup(element);

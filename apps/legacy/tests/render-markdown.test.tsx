@@ -141,9 +141,15 @@ describe("render — standard dollar math + legacy compatibility (streamdown + K
 	});
 
 	it("keeps dollar examples in inline code and code fences literal", () => {
-		const html = render("Use `$x$` here.\n\n```text\n$$\ny = x^2\n$$\n```");
+		const html = render("Use `cost = $x$` here.\n\n```text\n$$\ny = x^2\n$$\n```");
 		assert.ok(!html.includes("katex"), "code examples are not math");
-		assert.ok(html.includes("$x$"), "inline code retains its delimiters");
+		assert.ok(html.includes("cost = $x$"), "inline code retains its delimiters");
+	});
+
+	it("drops math dollars that wrap a whole inline code span (display only)", () => {
+		const html = render("Type `$A .* B$` in MATLAB.");
+		assert.ok(!html.includes("katex"), "still code, not math");
+		assert.ok(html.includes("A .* B") && !html.includes("$A .* B$"), "the stray dollars are gone");
 	});
 
 	it("keeps \\(...\\) inside a code fence literal", () => {
