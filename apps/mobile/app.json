@@ -1,27 +1,36 @@
 {
   "expo": {
-    "name": "OptiMind",
-    "slug": "optimind",
+    "name": "Petrov",
+    "slug": "petrov",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.optimind.app"
+      "supportsTablet": true
     },
     "android": {
-      "package": "com.optimind.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0064E0",
+        "backgroundColor": "#111112",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.petrov.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font"
+    ],
+    "scheme": "petrov",
+    "backgroundColor": "#111112",
+    "experiments": {
+      "typedRoutes": false
     }
   }
 }

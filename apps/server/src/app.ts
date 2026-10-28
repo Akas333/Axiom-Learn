@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { corsOrigins, hostedAccessAllowed } from "./access.ts";
 import { API_ROUTES, type ApiRoute, type HttpMethod } from "@axiom/engine/src/http/index.ts";
 import { desktopAPIAuthorized } from "@axiom/engine/src/server/desktop-access.ts";
 
@@ -9,6 +11,25 @@ import { desktopAPIAuthorized } from "@axiom/engine/src/server/desktop-access.ts
  */
 export function createApp(routes: readonly ApiRoute[] = API_ROUTES): Hono {
 	const app = new Hono();
+
+	// Liveness for the hosting platform (no secrets, no engine work).
+	app.get("/health", (c) => c.json({ ok: true }));
+
+	// A browser front end on another origin (hosted web) needs CORS; native
+	// clients (the Expo app) don't. Off unless origins are listed.
+	const origins = corsOrigins();
+	if (origins.length > 0) {
+		app.use("/api/*", cors({ origin: origins, allowHeaders: ["Authorization", "Content-Type"], credentials: false }));
+	}
+
+	// Hosted deployment: the shared access token (see access.ts). Runs before
+	// the desktop gate so an unauthenticated caller learns nothing more.
+	app.use("/api/*", async (c, next) => {
+		if (!hostedAccessAllowed(c.req.raw.headers, c.req.url)) {
+			return c.json({ error: "Missing or wrong access token." }, 401, { "Cache-Control": "no-store" });
+		}
+		await next();
+	});
 
 	// Same gate the legacy Next app applies (proxy.ts): open in plain dev,
 	// locked to the desktop window's secret when running as the desktop server.
