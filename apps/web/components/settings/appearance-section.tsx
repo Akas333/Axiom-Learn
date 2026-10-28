@@ -25,20 +25,37 @@
  * as text".
  */
 
-import { PICKER_TRIGGER } from "@/components/ui/picker-trigger";
+import { themes, type ThemeSlug } from "@/astryx-themes";
+import { VStack } from "@astryxdesign/core/VStack";
+import { Token } from "@astryxdesign/core/Token";
+import { Theme } from "@astryxdesign/core/theme";
+import { Text } from "@astryxdesign/core/Text";
+import { SelectableCard } from "@astryxdesign/core/SelectableCard";
+import { ProgressBar } from "@astryxdesign/core/ProgressBar";
+import { HStack } from "@astryxdesign/core/HStack";
+import { Heading } from "@astryxdesign/core/Heading";
 import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
 	EXTRACTION_CHUNK_TOKENS_FLOOR,
 	resolveSettings,
 	type AppearanceSettings,
 	type GraphSettings,
 } from "@/src/core";
-import { MenuShell } from "@/components/menu-shell";
-import { Hint } from "@/components/ui/hint";
-import { useAppearance } from "./appearance.tsx";
-import { FontMenuList } from "./model-menu";
+import { themeSlug, useAppearance } from "./appearance.tsx";
+import { FontSelector } from "./model-menu";
 import { CommitInput, SettingsRow, Toggle } from "./controls.tsx";
+
+/** Every Astryx theme, in the order the Astryx site lists them. */
+const THEME_CHOICES: readonly { slug: ThemeSlug; name: string; description: string }[] = [
+	{ slug: "neutral", name: "Neutral", description: "Muted and minimal, with Figtree type." },
+	{ slug: "stone", name: "Stone", description: "Warm stone and slate tones." },
+	{ slug: "gothic", name: "Gothic", description: "Deep blue-grays and a display serif. Dark only." },
+	{ slug: "matcha", name: "Matcha", description: "Earthy greens with a calm, organic feel." },
+	{ slug: "y2k", name: "Y2K", description: "Playful pop: periwinkle body, holographic accents." },
+	{ slug: "butter", name: "Butter", description: "Golden, buttery surfaces with blue accents." },
+	{ slug: "chocolate", name: "Chocolate", description: "Rich browns and cozy beige." },
+];
 
 /** The factory reading family — the DEFAULT row's identity (unset =
  *  this). Exported for tests. */
@@ -104,86 +121,65 @@ export function AppearanceSection({
 	// grant passes and the enumeration still yields zero fonts,
 	// reproduced 2026-09-26) → the curated fallback; a list = the deduped
 	// families. enumEmpty distinguishes WHY it fell back, for the footer.
-	const [fontMenuOpen, setFontMenuOpen] = useState(false);
 	const [localFonts, setLocalFonts] = useState<string[] | null | undefined>(undefined);
 	const [enumEmpty, setEnumEmpty] = useState(false);
-	const menuAnchorRef = useRef<HTMLSpanElement>(null);
 
-	// The enumeration runs INSIDE the trigger click — queryLocalFonts
-	// requires user activation, so it cannot be a mount effect. First
-	// open only: the families are cached for the section's life (font
-	// installs mid-dialog are not a case); ANY unavailable enumeration
-	// (absent / rejected / empty) falls back to the curated list rather
-	// than an empty picker.
-	const openFontMenu = () => {
-		setFontMenuOpen((open) => {
-			if (!open && localFonts === undefined) {
-				const api = localFontsApi();
-				if (api === null) {
+	// queryLocalFonts needs a user gesture, so the enumeration runs on the
+	// picker's first click. Unavailable (absent, rejected or empty) falls
+	// back to the curated list.
+	const enumerateFonts = () => {
+		if (localFonts !== undefined) return;
+		const api = localFontsApi();
+		if (api === null) {
+			setLocalFonts(null);
+			return;
+		}
+		void api()
+			.then((fonts) => {
+				const families = [...new Set(fonts.map((f) => f.family))]
+					.filter((f) => f !== DEFAULT_READING_FONT)
+					.sort((a, b) => a.localeCompare(b));
+				if (families.length === 0) {
 					setLocalFonts(null);
-					setEnumEmpty(false);
-				} else {
-					void api()
-						.then((fonts) => {
-							const families = [...new Set(fonts.map((f) => f.family))]
-								.filter((f) => f !== DEFAULT_READING_FONT)
-								.sort((a, b) => a.localeCompare(b));
-							if (families.length === 0) {
-								// Resolved-but-empty: not a failure the catch sees —
-								// an honest unavailable (this Electron 44 build
-								// enumerates nothing even granted).
-								setLocalFonts(null);
-								setEnumEmpty(true);
-							} else {
-								setLocalFonts(families);
-							}
-						})
-						.catch(() => {
-							setLocalFonts(null);
-							setEnumEmpty(false);
-						});
-				}
-			}
-			return !open;
-		});
+					setEnumEmpty(true);
+				} else setLocalFonts(families);
+			})
+			.catch(() => setLocalFonts(null));
 	};
-
-	const pickFont = (family: string | null) => {
-		setFontMenuOpen(false);
-		onSectionChange(composeFontFamily(appearance, family));
-	};
-
-	// The dropdown contract (agent-section's, mirrored): any click
-	// outside the open menu — or an Esc — closes it. Esc is CLAIMED with
-	// stopPropagation so the settings dialog behind does NOT also close.
-	useEffect(() => {
-		if (!fontMenuOpen) return;
-		const onPointerDown = (e: PointerEvent) => {
-			const target = e.target as Node;
-			if (menuAnchorRef.current?.contains(target)) return;
-			if (target instanceof Element && target.closest("[data-lh-menu]")) return;
-			if (target instanceof Element && target.closest('[role="dialog"]')) {
-				setFontMenuOpen(false);
-			}
-			// else: outside the dialog — the dialog's own close handles it.
-		};
-		const onKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				e.stopPropagation();
-				setFontMenuOpen(false);
-			}
-		};
-		document.addEventListener("pointerdown", onPointerDown);
-		document.addEventListener("keydown", onKeyDown);
-		return () => {
-			document.removeEventListener("pointerdown", onPointerDown);
-			document.removeEventListener("keydown", onKeyDown);
-		};
-	}, [fontMenuOpen]);
 
 	return (
 		<>
-			<SettingsRow label="Mode" hint="Astryx neutral theme, light or dark." testid="row-mode">
+			<VStack gap={3} paddingBlock={4} data-testid="row-theme" className="border-b border-border">
+				<VStack gap={1}>
+					<Text type="body">Theme</Text>
+					<Text type="supporting">Astryx themes — colors, type and shape for the whole app.</Text>
+				</VStack>
+				<div role="radiogroup" aria-label="Theme" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+					{THEME_CHOICES.map((t) => (
+						<SelectableCard
+							key={t.slug}
+							label={t.name}
+							padding={0}
+							data-testid={`theme-${t.slug}`}
+							isSelected={themeSlug(appearance?.theme) === t.slug}
+							onChange={() => onSectionChange({ ...appearance, theme: t.slug === "neutral" ? null : t.slug })}
+						>
+							{/* A live sample: the theme itself, in the current mode. */}
+							<Theme theme={themes[t.slug]} mode={t.slug === "gothic" ? "dark" : resolved.mode}>
+								<VStack gap={2} padding={3} className="h-full rounded-[inherit] bg-body">
+									<HStack gap={2} align="center" justify="between">
+										<Heading level={5}>{t.name}</Heading>
+										<Token size="sm" label="Aa" color="blue" />
+									</HStack>
+									<Text type="supporting" maxLines={2}>{t.description}</Text>
+									<ProgressBar label={`${t.name} accent`} isLabelHidden value={62} />
+								</VStack>
+							</Theme>
+						</SelectableCard>
+					))}
+				</div>
+			</VStack>
+			<SettingsRow label="Mode" hint="Light or dark. Gothic is always dark." testid="row-mode">
 				<SegmentedControl
 					label="Color mode"
 					size="sm"
@@ -199,63 +195,23 @@ export function AppearanceSection({
 				hint={`Empty = ${DEFAULT_READING_FONT}`}
 				testid="row-font"
 			>
-				<span ref={fontMenuOpen ? menuAnchorRef : undefined} className="relative flex items-center gap-2">
-					{/* The MenuTrigger look (agent-section's collapsed
-					    select — it lives unexported there, so the
-					    classes ride inline; the searchable machine is
-					    the shared part). The tooltip rides the CLOSED
-					    button ONLY (owner ruling 2026-09-26: never while
-					    the dropdown is out — it popped over the open
-					    menu when the wrap covered the whole anchor
-					    span). */}
-					{(() => {
-						const triggerButton = (
-							<button
-								type="button"
-								aria-label="Reading font"
-								aria-expanded={fontMenuOpen}
-								data-testid="font-trigger"
-								onClick={openFontMenu}
-								className={PICKER_TRIGGER + " min-w-40"}
-							>
-								<span className="min-w-0 flex-1 truncate">{appearance?.fontFamily || DEFAULT_READING_FONT}</span>
-								<span aria-hidden className="text-secondary">
-									▾
-								</span>
-							</button>
-						);
-						return fontMenuOpen ? (
-							triggerButton
-						) : (
-							<Hint label="Choose from your installed fonts" side="left">
-								{triggerButton}
-							</Hint>
-						);
-					})()}
-					{fontMenuOpen && (
-						<MenuShell
-							preferredSide="down"
-							anchorTestid="font-trigger"
-							testid="font-menu"
-							menuClass="flex w-[18rem] flex-col gap-0.5 rounded-xl border border-border bg-card p-2 text-xs shadow-xl"
-						>
-							<FontMenuList
-								families={localFonts === undefined ? undefined : (localFonts ?? [...CURATED_FALLBACK_FONTS])}
-								effectiveFamily={appearance?.fontFamily ?? null}
-								onPick={pickFont}
-								footer={
-									localFonts === undefined
-										? undefined
-										: localFonts === null
-											? enumEmpty
-												? "Common families — installed fonts could not be read"
-												: "Common families — your installed list needs the desktop app"
-											: "Your installed fonts"
-								}
-							/>
-						</MenuShell>
-					)}
-				</span>
+				<FontSelector
+					label="Reading font"
+					testid="font-trigger"
+					defaultFamily={DEFAULT_READING_FONT}
+					width={208}
+					families={localFonts === undefined ? [...CURATED_FALLBACK_FONTS] : (localFonts ?? [...CURATED_FALLBACK_FONTS])}
+					description={
+						localFonts
+							? "Your installed fonts"
+							: enumEmpty
+								? "Common fonts — installed fonts could not be read"
+								: "Common fonts"
+					}
+					value={appearance?.fontFamily ?? null}
+					onOpen={enumerateFonts}
+					onChange={(family) => onSectionChange(composeFontFamily(appearance, family))}
+				/>
 			</SettingsRow>
 			<SettingsRow label="Reading font size" hint={`${resolved.proseFontSize}px`} testid="row-prose-size">
 				<CommitInput

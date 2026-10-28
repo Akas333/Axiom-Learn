@@ -36,7 +36,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
 	if (!getChat(id)) return Response.json({ error: "Not found" }, { status: 404 });
-	const body = (await req.json().catch(() => null)) as { title?: unknown } | null;
+	const body = (await req.json().catch(() => null)) as { title?: unknown; folderId?: unknown } | null;
+	// Move to a folder: { folderId: "<id>" }, or { folderId: null } to take
+	// the session out of its folder.
+	if (body && "folderId" in body) {
+		const folderId = body.folderId;
+		if (folderId !== null && (typeof folderId !== "string" || !stores.chatStore.listFolders().some((f) => f.id === folderId))) {
+			return Response.json({ error: "folderId must be an existing folder id or null" }, { status: 400 });
+		}
+		const record = stores.chatStore.setChatFolder(id, folderId);
+		return Response.json({ folderId: record.folderId ?? null });
+	}
 	if (typeof body?.title !== "string" || body.title.trim() === "") {
 		return Response.json({ error: "title must be a non-empty string" }, { status: 400 });
 	}

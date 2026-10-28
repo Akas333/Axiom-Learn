@@ -1,13 +1,13 @@
 
+import { Button } from "@astryxdesign/core/Button";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@/lib/navigation";
 import { usePathname, useRouter } from "@/lib/navigation";
 import { OnboardingGate } from "@/components/onboarding";
 import { useSearchParams } from "react-router";
-import { MenuShell } from "@/components/menu-shell";
 import { DeleteSessionDialog } from "@/components/delete-session-dialog";
 import type { ChatDeleteMode } from "@/src/core";
-import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, DumbbellIcon, NetworkIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, FolderIcon, FolderInputIcon, FolderMinusIcon, FolderPlusIcon, MoreHorizontalIcon, ChevronLeftIcon, ChevronRightIcon, DumbbellIcon, NetworkIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon, DownloadIcon, PencilIcon, SparklesIcon, Trash2Icon } from "lucide-react";
 
 /** Sidebar navigation rows (after the Meta Model API console): icon +
  *  label, grey hover, blue-tinted when active. */
@@ -18,16 +18,18 @@ const NAV_ROW =
 	"flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[15px] text-primary transition-colors hover:bg-overlay-hover focus-visible:outline-2 focus-visible:outline-accent-bg";
 const NAV_ROW_ACTIVE = "bg-overlay-hover hover:bg-overlay-hover";
 import { ActivitySection } from "@/components/activity-dock";
-import { CoverageMenuBlock } from "@/components/extraction-coverage";
+import { useSessionCoverage } from "@/components/extraction-coverage";
 import { LhMark } from "@/components/lh-mark";
-import { BrailleSpinner } from "@/components/braille-spinner";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { SettingsDialogProvider, useSettingsDialog } from "@/components/settings/settings-dialog.tsx";
-import { Hint } from "@/components/ui/hint";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { hintText, TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 import { IconButton } from "@astryxdesign/core/IconButton";
+import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
+import { ContextMenu } from "@astryxdesign/core/ContextMenu";
+import { Icon } from "@astryxdesign/core/Icon";
 import { SideNav, SideNavItem } from "@astryxdesign/core/SideNav";
+import { StatusDot } from "@astryxdesign/core/StatusDot";
 import { Spinner } from "@astryxdesign/core/Spinner";
 import { Text } from "@astryxdesign/core/Text";
 import { TextInput } from "@astryxdesign/core/TextInput";
@@ -35,7 +37,7 @@ import { cn } from "@/lib/utils";
 import { fuzzyScore } from "@/src/core";
 import { useServerEvent, useServerResync } from "@/components/server-events";
 import { openSearchPalette, SearchPalette } from "@/components/search-palette";
-import type { ChatListItem } from "@/src/core";
+import type { ChatFolder, ChatListItem } from "@/src/core";
 import { kbdEventForAction } from "@/src/core";
 import { notifySettingsSaved } from "@/components/settings-signal";
 
@@ -272,40 +274,11 @@ export function SidebarToggle() {
 				open ? "w-0 -mr-3" : "w-9 mr-0 lh-closed-toggle",
 			)}
 		>
-			<Hint label="Open sidebar" action="toggle-sidebar">
-			<Button
-				variant="ghost"
-				size="icon"
-				aria-label="Open sidebar"
-				aria-hidden={open}
-				tabIndex={open ? -1 : 0}
-				onClick={toggle}
-				className={cn("sidebar-motion duration-200", open ? "pointer-events-none opacity-0" : "opacity-100")}
-			>
-				{/* Owner, round 6: size-4, SAME as the close glyph — the toggle
-				    must not grow when the sidebar is closed (it did: size-5 here).
-				    The small look is the standard, both directions. */}
-				<PanelLeftOpenIcon className="size-4" />
-			</Button>
-			</Hint>
+			<Tooltip content={hintText("Open sidebar", "toggle-sidebar", undefined)} placement="above" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+			<IconButton variant="ghost" size="md" label="Open sidebar" icon={<PanelLeftOpenIcon className="size-4" />} className={cn("sidebar-motion duration-200", open ? "pointer-events-none opacity-0" : "opacity-100")} aria-hidden={open} tabIndex={open ? -1 : 0} onClick={toggle} />
+			</Tooltip>
 		</span>
 	);
-}
-
-/**
- * The row's status indicator (owner, minimal-color round): the braille
- * spinner, ONLY while a teach turn is in flight — monochrome motion, the
- * terminal's own glyph, existing exactly as long as the work does and
- * vanishing the moment it ends. Every other state renders NOTHING:
- * phases only advance (all sessions end in Teaching — phase-as-signal was
- * decoration, now retired app-wide), and question-pending is the dominant
- * RESTING state of real sessions — a resting state has no scan value, so
- * the meta line's "Waiting for input" text carries it. Idle is the
- * absence of a signal, by design.
- */
-function SessionStatus({ busy }: { busy: boolean }) {
-	if (!busy) return null;
-	return <BrailleSpinner />;
 }
 
 /** Compact "how long ago": "just now", "5m ago", "3h ago", "2d ago",
@@ -346,101 +319,95 @@ function sessionMeta(chat: ChatListItem): string {
 }
 
 /**
- * One session row: the status spinner (only while working), then title +
- * state-aware meta. Exported for render tests — pure function of the
- * list item.
+ * One session row (Astryx SideNavItem): the title, then the state on the
+ * right — a spinner while working, a dot while it waits on the learner,
+ * a dumbbell for practice. The state + age ride the tooltip.
  */
 export function SessionRow({
 	chat,
 	active,
 	onOpen,
 	kbdSelected = false,
-	onContextMenu,
+	onDragStart,
 }: {
 	chat: ChatListItem;
 	active: boolean;
 	onOpen: () => void;
-	/** Keyboard-cycle highlight (shortcut wave A: Alt+↑/↓ + Alt+Enter) —
-	 *  visually distinct from the active session, which stays filled. */
+	/** Set to make the row draggable (the sidebar's drag-to-folder). */
+	onDragStart?: (e: React.DragEvent<HTMLElement>) => void;
+	/** Keyboard-walk highlight from the sidebar search (↑/↓). */
 	kbdSelected?: boolean;
-	/** Right-click opens the context menu (wave 6: Rename / Delete). */
-	onContextMenu?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
+	const waiting =
+		!(chat.busy || chat.compacting) &&
+		(chat.pendingQuestion || ((chat.kind ?? "teach") === "practice" && chat.pendingProblem));
 	return (
-		<button
-			type="button"
-			onClick={onOpen}
-			onContextMenu={onContextMenu}
-			data-testid={kbdSelected ? "session-row-kbd" : "session-row"}
-			// One line per session; the state + age ride the tooltip.
-			title={sessionMeta(chat)}
-			className={cn(
-				"relative mb-0.5 flex h-9 w-full items-center gap-2 rounded-lg px-3 text-left transition-colors hover:bg-overlay-hover",
-				active && "bg-overlay-hover hover:bg-overlay-hover",
-				kbdSelected && !active && "bg-overlay-hover/60 ring-1 ring-border",
-			)}
-		>
-			<span className={cn("min-w-0 flex-1 truncate text-[15px]", active ? "text-primary" : "text-primary/90")}>{chat.title}</span>
-			<span className="sr-only">{sessionMeta(chat)}</span>
-			{/* Right-edge state: the spinner while working, a dot while the
-			    session waits on the learner, the dumbbell for practice. */}
-			<SessionStatus busy={chat.busy || chat.compacting} />
-			{!(chat.busy || chat.compacting) && (chat.pendingQuestion || ((chat.kind ?? "teach") === "practice" && chat.pendingProblem)) && (
-				<span className="size-1.5 shrink-0 rounded-full bg-secondary" aria-hidden="true" />
-			)}
-			{(chat.kind ?? "teach") === "practice" && (
-				<DumbbellIcon className="size-3.5 shrink-0 text-secondary/70" aria-label="Practice session" />
-			)}
-		</button>
+		<Tooltip content={sessionMeta(chat)} placement="end" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+			<SideNavItem
+				label={chat.title}
+				isSelected={active || kbdSelected}
+				onClick={onOpen}
+				data-testid={kbdSelected ? "session-row-kbd" : "session-row"}
+				{...(onDragStart
+					? {
+							draggable: true,
+							onDragStart,
+							// Dropping on this chat files the dragged one beside it.
+							"data-folder-drop": chat.folderId ?? "",
+						}
+					: {})}
+				endContent={
+					chat.busy || chat.compacting ? (
+						<Spinner size="sm" label="Working" />
+					) : waiting ? (
+						<StatusDot variant="neutral" label="Waiting for you" />
+					) : (chat.kind ?? "teach") === "practice" ? (
+						<Icon icon={DumbbellIcon} size="sm" color="secondary" />
+					) : undefined
+				}
+			/>
+		</Tooltip>
 	);
 }
 
-/** The inline-rename row (wave 6): same geometry as SessionRow, but the
- *  title line becomes a text input — select-all on entry (the click means
- *  "replace", the header rename's rule), Enter/blur commits, Esc discards.
- *  The meta line stays so the row never changes height mid-edit. */
-export function RenameRow({ chat, onCommit, onCancel }: { chat: ChatListItem; onCommit: (next: string) => void; onCancel: () => void }) {
+/** The inline-rename row: an Astryx TextInput with the title selected;
+ *  Enter/blur commits, Esc discards. */
+export function RenameRow({
+	chat,
+	label = "Rename session",
+	onCommit,
+	onCancel,
+}: {
+	chat: { title: string };
+	label?: string;
+	onCommit: (next: string) => void;
+	onCancel: () => void;
+}) {
 	const [draft, setDraft] = useState(chat.title);
 	const inputRef = useRef<HTMLInputElement | null>(null);
 	useEffect(() => {
-		const el = inputRef.current;
-		if (el) {
-			el.focus();
-			el.select();
-		}
+		inputRef.current?.select();
 	}, []);
 	return (
-		<div
-			data-testid="session-rename-row"
-			className="relative mb-0.5 flex h-9 w-full items-center rounded-lg bg-overlay-hover px-3"
-		>
-			{/* NOTHING MOVES (owner, polish round): an idle row renders no
-			    status spacer (SessionStatus is null when not busy), so the
-			    title starts at the row's own px-3 — 12px in. The old rename
-			    row always carried a 14px spacer + gap + the input's border
-			    and padding, landing the text ~41px in (and the meta with
-			    it). The input here is borderless and padding-free at the
-			    exact title x; the underline is the only editing cue. */}
-			<span className="flex min-w-0 w-full flex-col">
-				<input
-					ref={inputRef}
-					value={draft}
-					spellCheck={false}
-					onChange={(e) => setDraft(e.target.value)}
-					onBlur={() => onCommit(draft)}
-					onKeyDown={(e) => {
-						if (e.key === "Enter") e.currentTarget.blur();
-						if (e.key === "Escape") {
-							e.stopPropagation(); // discard, not also the sidebar/chat chains
-							onCancel();
-						}
-					}}
-					aria-label="Rename session"
-					data-testid="session-rename-input"
-					className="lh-input w-full min-w-0 truncate border-0 border-b border-border bg-transparent px-0 text-primary outline-none"
-				/>
-			</span>
-		</div>
+		<TextInput
+			ref={inputRef}
+			label={label}
+			isLabelHidden
+			size="sm"
+			width="100%"
+			hasAutoFocus
+			value={draft}
+			data-testid="session-rename-input"
+			onChange={setDraft}
+			onBlur={() => onCommit(draft)}
+			onKeyDown={(e) => {
+				if (e.key === "Enter") e.currentTarget.blur();
+				if (e.key === "Escape") {
+					e.stopPropagation(); // discard, not also the sidebar/chat chains
+					onCancel();
+				}
+			}}
+		/>
 	);
 }
 
@@ -449,10 +416,35 @@ export function RenameRow({ chat, onCommit, onCancel }: { chat: ChatListItem; on
  *  snapshot, persisted in localStorage, defaulting to All. */
 export type SessionKindFilter = "teach" | "all" | "practice";
 const KIND_FILTER_KEY = "lh:session-kind-filter";
+/** Folder ids the user collapsed in the sidebar (per browser). */
+const COLLAPSED_FOLDERS_KEY = "lh:collapsed-folders";
 
 function SessionsSidebar() {
 	const { open, toggle, mobile, close } = useSidebar();
 	const [chats, setChats] = useState<ChatListItem[] | null>(null);
+	const [folders, setFolders] = useState<ChatFolder[]>([]);
+	const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
+	useEffect(() => {
+		try {
+			const stored = JSON.parse(window.localStorage.getItem(COLLAPSED_FOLDERS_KEY) ?? "[]") as unknown;
+			if (Array.isArray(stored)) setCollapsedFolders(new Set(stored.filter((x): x is string => typeof x === "string")));
+		} catch {
+			// a bad stored value just means every folder starts open
+		}
+	}, []);
+	const setFolderCollapsed = useCallback((id: string, collapsed: boolean) => {
+		setCollapsedFolders((prev) => {
+			const next = new Set(prev);
+			if (collapsed) next.add(id);
+			else next.delete(id);
+			try {
+				window.localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify([...next]));
+			} catch {
+				// storage unavailable: the state still holds for this visit
+			}
+			return next;
+		});
+	}, []);
 	const [query, setQuery] = useState("");
 	const [kindFilter, setKindFilter] = useState<SessionKindFilter>("all");
 	useEffect(() => {
@@ -507,9 +499,13 @@ function SessionsSidebar() {
 		if (refreshInFlightRef.current) return;
 		refreshInFlightRef.current = true;
 		try {
-			const res = await fetch("/api/chats", { cache: "no-store" });
-			const d = (await res.json()) as { chats: ChatListItem[] };
+			const [chatsRes, foldersRes] = await Promise.all([
+				fetch("/api/chats", { cache: "no-store" }),
+				fetch("/api/folders", { cache: "no-store" }),
+			]);
+			const d = (await chatsRes.json()) as { chats: ChatListItem[] };
 			setChats(d.chats);
+			if (foldersRes.ok) setFolders(((await foldersRes.json()) as { folders: ChatFolder[] }).folders);
 		} catch {
 			// a transient failure keeps the last snapshot
 			setChats((prev) => prev ?? []);
@@ -616,41 +612,9 @@ function SessionsSidebar() {
 	   right-clicked — assigned into a ref before the state flip so the
 	   shell measures it on its first (hidden) pass. */
 	const [ctxChatId, setCtxChatId] = useState<string | null>(null);
-	const ctxAnchorRef = useRef<HTMLElement | null>(null);
+	const coverage = useSessionCoverage(ctxChatId);
 	const [renamingId, setRenamingId] = useState<string | null>(null);
 	const [deleting, setDeleting] = useState<ChatListItem | null>(null);
-
-	const openContext = (e: React.MouseEvent<HTMLButtonElement>, chat: ChatListItem) => {
-		e.preventDefault(); // suppress the native menu
-		ctxAnchorRef.current = e.currentTarget;
-		setCtxChatId(chat.id);
-	};
-
-	// The menu contract (agent-section's): any pointerdown outside the menu
-	// or its row closes it; Esc is CLAIMED so it never also aborts a turn
-	// or folds the sidebar. Right-clicking another row re-anchors: its
-	// pointerdown closes this menu, its contextmenu opens the next.
-	useEffect(() => {
-		if (ctxChatId === null) return;
-		const onPointerDown = (e: PointerEvent) => {
-			const target = e.target as Node;
-			if (target instanceof Element && target.closest("[data-lh-menu]")) return;
-			if (ctxAnchorRef.current?.contains(target)) return;
-			setCtxChatId(null);
-		};
-		const onKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				e.stopPropagation();
-				setCtxChatId(null);
-			}
-		};
-		document.addEventListener("pointerdown", onPointerDown);
-		document.addEventListener("keydown", onKeyDown);
-		return () => {
-			document.removeEventListener("pointerdown", onPointerDown);
-			document.removeEventListener("keydown", onKeyDown);
-		};
-	}, [ctxChatId]);
 
 	// Inline rename (owner ruling, wave 6): the row swaps to a text input;
 	// commit rides the SAME plumbing as the header rename — PUT the title,
@@ -671,6 +635,106 @@ function SessionsSidebar() {
 			window.dispatchEvent(new CustomEvent("lh:chat-renamed", { detail: { id, title: t } }));
 		} catch (err) {
 			console.error("rename failed:", err); // keep the old title
+		}
+	}, []);
+
+	/* ── Folders: group sessions in the sidebar. A new folder opens straight
+	   into rename; a chat moves through its right-click "Move to folder". */
+	const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+	const [folderMenuId, setFolderMenuId] = useState<string | null>(null);
+
+	/* Drag a chat onto a folder to save it there; drop it on a chat outside
+	   folders, or on empty list space, to take it out. Drop targets carry
+	   data-folder-drop (the folder id, "" = no folder). */
+	const draggingIdRef = useRef<string | null>(null);
+	const [dropFolderId, setDropFolderId] = useState<string | null>(null);
+	const dropTargetOf = (e: React.DragEvent): string => {
+		const el = (e.target as HTMLElement).closest<HTMLElement>("[data-folder-drop]");
+		return el?.dataset.folderDrop ?? "";
+	};
+	const onListDragOver = (e: React.DragEvent) => {
+		if (!draggingIdRef.current) return;
+		e.preventDefault();
+		e.dataTransfer.dropEffect = "move";
+		const target = dropTargetOf(e);
+		setDropFolderId((prev) => (prev === target ? prev : target));
+	};
+	const endDrag = () => {
+		draggingIdRef.current = null;
+		setDropFolderId(null);
+	};
+	const onListDrop = (e: React.DragEvent) => {
+		const chatId = draggingIdRef.current;
+		endDrag();
+		if (!chatId) return;
+		e.preventDefault();
+		const target = dropTargetOf(e) || null;
+		const chat = chatsRef.current?.find((c) => c.id === chatId);
+		if (chat && (chat.folderId ?? null) !== target) void moveToFolder(chatId, target);
+	};
+
+	const moveToFolder = useCallback(async (chatId: string, folderId: string | null) => {
+		setChats((prev) => (prev ? prev.map((c) => (c.id === chatId ? { ...c, folderId: folderId ?? undefined } : c)) : prev));
+		if (folderId) setFolderCollapsed(folderId, false);
+		try {
+			const res = await fetch(`/api/chats/${chatId}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ folderId }),
+			});
+			if (!res.ok) throw new Error(`move failed: ${res.status}`);
+		} catch (err) {
+			console.error("move to folder failed:", err);
+			void refreshRef.current();
+		}
+	}, [setFolderCollapsed]);
+
+	const createFolder = useCallback(async (moveChatId?: string) => {
+		try {
+			const res = await fetch("/api/folders", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ name: "New folder" }),
+			});
+			if (!res.ok) throw new Error(`create folder failed: ${res.status}`);
+			const { folder } = (await res.json()) as { folder: ChatFolder };
+			setFolders((prev) => [...prev, folder]);
+			setFolderCollapsed(folder.id, false);
+			setRenamingFolderId(folder.id);
+			if (moveChatId) await moveToFolder(moveChatId, folder.id);
+		} catch (err) {
+			console.error("create folder failed:", err);
+		}
+	}, [setFolderCollapsed, moveToFolder]);
+
+	const commitFolderRename = useCallback(async (id: string, next: string) => {
+		setRenamingFolderId(null);
+		const name = next.trim();
+		if (name === "") return;
+		setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
+		try {
+			const res = await fetch(`/api/folders/${id}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ name }),
+			});
+			if (!res.ok) throw new Error(`rename folder failed: ${res.status}`);
+		} catch (err) {
+			console.error("rename folder failed:", err);
+			void refreshRef.current();
+		}
+	}, []);
+
+	const deleteFolder = useCallback(async (id: string) => {
+		// The sessions stay; they just leave the folder.
+		setFolders((prev) => prev.filter((f) => f.id !== id));
+		setChats((prev) => (prev ? prev.map((c) => (c.folderId === id ? { ...c, folderId: undefined } : c)) : prev));
+		try {
+			const res = await fetch(`/api/folders/${id}`, { method: "DELETE" });
+			if (!res.ok) throw new Error(`delete folder failed: ${res.status}`);
+		} catch (err) {
+			console.error("delete folder failed:", err);
+			void refreshRef.current();
 		}
 	}, []);
 
@@ -698,6 +762,85 @@ function SessionsSidebar() {
 		if (kbdIndex === null) return;
 		listRef.current?.querySelectorAll("button")[kbdIndex]?.scrollIntoView({ block: "nearest" });
 	}, [kbdIndex]);
+
+	/** One session row with its right-click menu (or the inline rename).
+	 *  `i` is the row's index in the flat search list; -1 when grouped. */
+	const renderChat = (c: ChatListItem, i: number) =>
+		renamingId === c.id ? (
+			<RenameRow
+				key={c.id}
+				chat={c}
+				onCommit={(next) => void commitRename(c.id, next)}
+				onCancel={() => setRenamingId(null)}
+			/>
+		) : (
+			<ContextMenu
+				key={c.id}
+				label={`${c.title} actions`}
+				menuWidth={240}
+				onOpenChange={(open) => setCtxChatId(open ? c.id : null)}
+				items={[
+					{ label: "Rename", icon: PencilIcon, onClick: () => setRenamingId(c.id) },
+					{
+						label: "Move to folder",
+						icon: FolderInputIcon,
+						items: [
+							...folders.map((f) => ({
+								id: f.id,
+								label: f.name,
+								icon: FolderIcon,
+								isDisabled: c.folderId === f.id,
+								endContent: c.folderId === f.id ? <CheckIcon className="size-3.5" /> : undefined,
+								onClick: () => void moveToFolder(c.id, f.id),
+							})),
+							...(folders.length > 0 ? [{ type: "divider" as const }] : []),
+							{ id: "new-folder", label: "New folder", icon: FolderPlusIcon, onClick: () => void createFolder(c.id) },
+						],
+					},
+					...(c.folderId && folders.some((f) => f.id === c.folderId)
+						? [{ label: "Remove from folder", icon: FolderMinusIcon, onClick: () => void moveToFolder(c.id, null) }]
+						: []),
+					{
+						label: "Export as Markdown",
+						icon: DownloadIcon,
+						onClick: () => {
+							const a = document.createElement("a");
+							a.href = `/api/chats/${c.id}/markdown`;
+							a.download = ""; // the route's filename wins
+							a.click();
+						},
+					},
+					{ label: "Delete…", icon: Trash2Icon, variant: "destructive", onClick: () => setDeleting(c) },
+					...(ctxChatId === c.id && coverage.summary
+						? [
+								{ type: "divider" as const },
+								{
+									label: coverage.busy ? "Extracting…" : "Extract now",
+									description: coverage.summary,
+									icon: SparklesIcon,
+									isDisabled: coverage.busy || coverage.complete,
+									onClick: () => void coverage.extract(),
+								},
+							]
+						: []),
+				]}
+			>
+				<SessionRow
+					chat={c}
+					active={pathname === `/chat/${c.id}`}
+					kbdSelected={i === kbdIndex}
+					onDragStart={(e) => {
+						draggingIdRef.current = c.id;
+						e.dataTransfer.effectAllowed = "move";
+						e.dataTransfer.setData("text/plain", c.title);
+					}}
+					onOpen={() => {
+						setKbdIndex(null);
+						router.push(`/chat/${c.id}`);
+					}}
+				/>
+			</ContextMenu>
+		);
 
 	useEffect(() => {
 		if (!open) return;
@@ -748,15 +891,15 @@ function SessionsSidebar() {
 					/* Window chrome: close, back, forward. In Electron this band is
 					   the drag surface and starts after the traffic lights. */
 					<div className="lh-drag lh-lights-gutter flex h-15 shrink-0 items-center gap-0.5 px-1">
-						<Hint label="Close sidebar" action="toggle-sidebar">
+						<Tooltip content={hintText("Close sidebar", "toggle-sidebar", undefined)} placement="above" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
 							<IconButton label="Close sidebar" variant="ghost" size="sm" className="lh-no-drag" icon={<PanelLeftCloseIcon className="size-4" />} onClick={toggle} />
-						</Hint>
-						<Hint label="Back" side="bottom">
+						</Tooltip>
+						<Tooltip content="Back" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
 							<IconButton label="Back" variant="ghost" size="sm" className="lh-no-drag" icon={<ChevronLeftIcon className="size-4" />} onClick={() => window.history.back()} />
-						</Hint>
-						<Hint label="Forward" side="bottom">
+						</Tooltip>
+						<Tooltip content="Forward" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
 							<IconButton label="Forward" variant="ghost" size="sm" className="lh-no-drag" icon={<ChevronRightIcon className="size-4" />} onClick={() => window.history.forward()} />
-						</Hint>
+						</Tooltip>
 					</div>
 				}
 				topContent={
@@ -765,12 +908,12 @@ function SessionsSidebar() {
 							data-testid="new-session"
 							label="New session"
 							icon={PlusIcon}
-							isSelected={pathname === "/chat/new"}
+							isSelected={pathname === "/chat/new" && !searchParams.get("folder")}
 							onClick={() => void newSession()}
 						/>
-						<Hint label="Search" action="sessions-search" side="right">
+						<Tooltip content={hintText("Search", "sessions-search", undefined)} placement="end" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
 							<SideNavItem data-testid="nav-search" label="Search" icon={SearchIcon} onClick={openSearchPalette} />
-						</Hint>
+						</Tooltip>
 						<SideNavItem
 							data-testid="nav-graph"
 							label="Knowledge graph"
@@ -786,7 +929,7 @@ function SessionsSidebar() {
 						{!pathname.startsWith("/chat/") || pathname === "/chat/new" ? <ActivitySection /> : null}
 						{/* Bottom row: identity (home) left, settings right. */}
 						<div className="flex items-center gap-1 border-t border-border pt-2">
-							<Hint label="Home" action="jump-graph" side="top">
+							<Tooltip content={hintText("Home", "jump-graph", undefined)} placement="above" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
 								<Link
 									href="/"
 									aria-label="Home"
@@ -797,8 +940,8 @@ function SessionsSidebar() {
 									</span>
 									<span className="truncate font-brand text-[15px] font-semibold text-primary">Kapany</span>
 								</Link>
-							</Hint>
-							<Hint label="Settings" action="open-settings" side="top">
+							</Tooltip>
+							<Tooltip content={hintText("Settings", "open-settings", undefined)} placement="above" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
 								<IconButton
 									label="Settings"
 									data-testid="settings-entry"
@@ -809,7 +952,7 @@ function SessionsSidebar() {
 										openSettings();
 									}}
 								/>
-							</Hint>
+							</Tooltip>
 						</div>
 					</>
 				}
@@ -822,15 +965,14 @@ function SessionsSidebar() {
 						onOpenChange={setFilterMenu}
 						menuWidth={176}
 						renderTrigger={(trigger) => (
-							<button
+							<Button
 								{...trigger}
-								type="button"
 								data-testid="kind-filter-menu"
-								className="-mx-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[13px] font-medium text-secondary transition-colors hover:bg-overlay-hover hover:text-primary"
-							>
-								{kindFilter === "teach" ? "Teaching sessions" : kindFilter === "practice" ? "Practice sessions" : "All sessions"}
-								<ChevronDownIcon className="size-3.5" />
-							</button>
+								variant="ghost"
+								size="sm"
+								label={kindFilter === "teach" ? "Teaching sessions" : kindFilter === "practice" ? "Practice sessions" : "All sessions"}
+								endContent={<Icon icon={ChevronDownIcon} />}
+							/>
 						)}
 						items={(["all", "teach", "practice"] as const).map((f) => ({
 							id: f,
@@ -839,6 +981,17 @@ function SessionsSidebar() {
 							onClick: () => setFilter(f),
 						}))}
 					/>
+					<Tooltip content="New folder" placement="above" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+						<IconButton
+							label="New folder"
+							data-testid="new-folder"
+							variant="ghost"
+							size="sm"
+							className="ml-auto"
+							icon={<FolderPlusIcon className="size-4" />}
+							onClick={() => void createFolder()}
+						/>
+					</Tooltip>
 				</div>
 
 				{(searchOpen || query) && (
@@ -905,107 +1058,101 @@ function SessionsSidebar() {
 					</div>
 				)}
 
-				<div ref={listRef} className="pb-2">
+				<div
+					ref={listRef}
+					className="min-h-24 pb-2 [&_[role=group]]:grid-cols-1 [&_[role=group]>div]:min-w-0"
+					onDragOver={onListDragOver}
+					onDragLeave={(e) => {
+						if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropFolderId(null);
+					}}
+					onDrop={onListDrop}
+					onDragEnd={endDrag}
+				>
 					{shown === null ? (
 						<div className="flex items-center gap-2 px-3 py-4"><Spinner size="sm" /><Text type="supporting">Loading…</Text></div>
-					) : shown.length === 0 ? (
+					) : shown.length === 0 && (query.trim() || folders.length === 0) ? (
 						<div className="px-3 py-4">
 							<Text type="supporting">{query.trim() ? "No sessions match." : "No sessions yet."}</Text>
 						</div>
+					) : query.trim() ? (
+						// Searching: one flat ranked list, no folders.
+						shown.map((c, i) => renderChat(c, i))
 					) : (
-						shown.map((c, i) =>
-							renamingId === c.id ? (
-								<RenameRow
-									key={c.id}
-									chat={c}
-									onCommit={(next) => void commitRename(c.id, next)}
-									onCancel={() => setRenamingId(null)}
-								/>
-							) : (
-								<SessionRow
-									key={c.id}
-									chat={c}
-									active={pathname === `/chat/${c.id}`}
-									kbdSelected={i === kbdIndex}
-									onOpen={() => {
-										setKbdIndex(null);
-										router.push(`/chat/${c.id}`);
-									}}
-									onContextMenu={(e) => openContext(e, c)}
-								/>
-							),
-						)
+						<>
+							{folders.map((folder) => {
+								const inside = shown.filter((c) => c.folderId === folder.id);
+								if (renamingFolderId === folder.id) {
+									return (
+										<RenameRow
+											key={folder.id}
+											chat={{ title: folder.name }}
+											label="Rename folder"
+											onCommit={(next) => void commitFolderRename(folder.id, next)}
+											onCancel={() => setRenamingFolderId(null)}
+										/>
+									);
+								}
+								return (
+									<SideNavItem
+										key={folder.id}
+										data-testid="folder-row"
+										data-folder-drop={folder.id}
+										label={folder.name}
+										icon={FolderIcon}
+										isSelected={dropFolderId === folder.id || (pathname === "/chat/new" && searchParams.get("folder") === folder.id)}
+										collapsible={{
+											isCollapsed: collapsedFolders.has(folder.id),
+											onCollapsedChange: (c) => setFolderCollapsed(folder.id, c),
+										}}
+										onClick={() => setFolderCollapsed(folder.id, !collapsedFolders.has(folder.id))}
+										actions={
+											<>
+											<Tooltip content="New chat in folder" placement="above" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+												<IconButton
+													label={`New chat in ${folder.name}`}
+													data-testid="folder-new-chat"
+													variant="ghost"
+													icon={<PlusIcon className="size-4" />}
+													onClick={() => router.push(`/chat/new?folder=${folder.id}`)}
+												/>
+											</Tooltip>
+											<DropdownMenu
+												isMenuOpen={folderMenuId === folder.id}
+												onOpenChange={(o) => setFolderMenuId(o ? folder.id : null)}
+												menuWidth={180}
+												renderTrigger={(trigger) => (
+													<IconButton
+														{...trigger}
+														label={`${folder.name} actions`}
+														variant="ghost"
+														icon={<MoreHorizontalIcon className="size-4" />}
+													/>
+												)}
+												items={[
+													{ id: "new-chat", label: "New chat in folder", icon: PlusIcon, onClick: () => router.push(`/chat/new?folder=${folder.id}`) },
+													{ id: "rename", label: "Rename", icon: PencilIcon, onClick: () => setRenamingFolderId(folder.id) },
+													{ id: "delete", label: "Delete folder", icon: Trash2Icon, variant: "destructive", onClick: () => void deleteFolder(folder.id) },
+												]}
+											/>
+											</>
+										}
+									>
+										{inside.length === 0 ? (
+											<SideNavItem label="Empty — drag a chat here" isDisabled data-folder-drop={folder.id} />
+										) : (
+											inside.map((c) => renderChat(c, -1))
+										)}
+									</SideNavItem>
+								);
+							})}
+							{shown
+								.filter((c) => !c.folderId || !folders.some((f) => f.id === c.folderId))
+								.map((c) => renderChat(c, -1))}
+						</>
 					)}
 				</div>
 
 			</SideNav>
-
-				{/* The context menu (wave 6 + the extraction-UX redesign): the
-				    coverage block above, then exactly two management actions
-				    (owner ruling — no more). MenuShell owns placement/focus/arrow
-				    cycling; the dismissal effect above owns the contract. */}
-				{ctxChatId !== null && (
-					<MenuShell
-						anchorRef={ctxAnchorRef}
-						testid="session-context-menu"
-						preferredSide="down"
-						menuClass="flex w-52 flex-col gap-0.5 rounded-xl border bg-card p-2 text-xs shadow-xl"
-					>
-						{/* The two management actions first, then the extraction block
-						    (owner refinement round, 2026-09-24): Rename/Delete stay at the
-						    top, the coverage numbers + Extract affordance sit below the
-						    hairline — the block is info + a stateful affordance, the
-						    actions above it. Fetched on menu open (the block mounts WITH
-						    the menu); 409 = benign. Renders nothing on a failed read. */}
-						<button
-							type="button"
-							data-testid="ctx-rename"
-							onClick={() => {
-								setRenamingId(ctxChatId);
-								setCtxChatId(null);
-							}}
-							className="flex items-center rounded-lg px-2.5 py-1.5 text-left text-primary transition-colors hover:bg-overlay-hover"
-						>
-							Rename
-						</button>
-						{/* Export as Markdown (owner, release polish 2026-10-06): the
-					    session-markdown engine's user-facing debut — same-origin
-						    anchor download; the route's Content-Disposition names the
-						    file. Sits with the management actions, above Delete (the
-						    destructive action stays last — the danger-fence law). */}
-						<button
-							type="button"
-							data-testid="ctx-export-md"
-							onClick={() => {
-								const chatId = ctxChatId;
-								setCtxChatId(null);
-								const a = document.createElement("a");
-								a.href = `/api/chats/${chatId}/markdown`;
-								a.download = ""; // the route's filename wins
-								document.body.appendChild(a);
-								a.click();
-								a.remove();
-							}}
-							className="flex items-center rounded-lg px-2.5 py-1.5 text-left text-primary transition-colors hover:bg-overlay-hover"
-						>
-							Export as Markdown…
-						</button>
-						<button
-							type="button"
-							data-testid="ctx-delete"
-							onClick={() => {
-								const target = chats?.find((c) => c.id === ctxChatId);
-								if (target) setDeleting(target);
-								setCtxChatId(null);
-							}}
-							className="flex items-center rounded-lg px-2.5 py-1.5 text-left text-secondary/80 transition-colors hover:bg-overlay-hover hover:text-primary"
-						>
-							Delete…
-						</button>
-						<div className="my-0.5 border-t border-border/60" aria-hidden="true" />
-						<CoverageMenuBlock chatId={ctxChatId} />
-					</MenuShell>
-				)}
 
 				{/* The two-option delete dialog (wave 6) — portaled to body
 				    by the component itself, lives here for state locality. */}

@@ -1,8 +1,9 @@
 
-import { Button } from "@/components/ui/button";
+import { ProgressBar } from "@astryxdesign/core/ProgressBar";
+import { Button } from "@astryxdesign/core/Button";
 import { useState } from "react";
-import { ConfidenceRail } from "@/components/confidence-rail";
-import { GlyphMark } from "@/components/ui/glyph-mark";
+import { Icon } from "@astryxdesign/core/Icon";
+import { CheckIcon, XIcon } from "lucide-react";
 import { ThinkingBlock } from "@/components/thinking-block";
 import { cn } from "@/lib/utils";
 import { ToolContentResponse } from "@/components/ai-elements/message";
@@ -24,7 +25,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 	const [whyOpen, setWhyOpen] = useState(false); // the tucked explanation (predictions, owner 2026-10-03)
 	if (answer.dismissed) {
 		return (
-			<div className="rounded-2xl border border-strong/70 bg-card p-4 text-sm text-secondary">
+			<div className="rounded-lg border border-strong/70 bg-card p-4 text-sm text-secondary">
 				<span className="font-medium">{answer.questionText}</span> — skipped
 			</div>
 		);
@@ -59,7 +60,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 		    p-4 into a 28px void below (12px above); the card's own padding is
 		    the bottom rhythm when a row ends the card. */}
 		<div
-			className="rounded-2xl border border-strong/70 bg-card p-5 text-primary [&>*:last-child]:mb-0"
+			className="rounded-lg border border-strong/70 bg-card p-5 text-primary [&>*:last-child]:mb-0"
 			data-testid="answered-card"
 		>
 			<div className="mb-1 flex items-center gap-2 text-xs font-medium text-secondary">
@@ -106,7 +107,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 							<div
 								key={opt.index}
 								className={cn(
-									"flex items-center gap-2 rounded-xl border border-strong/70 px-3.5 py-2",
+									"flex items-center gap-2 rounded-lg border border-strong/70 px-3.5 py-2",
 									sel && key && "border-green-500/60 bg-green-500/10",
 									sel && !key && isQuiz && "border-red-500/60 bg-red-500/10",
 									sel && !isQuiz && "border-accent-bg bg-accent-bg/15",
@@ -128,7 +129,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 									>
 										{/* Owner round 8: a touch smaller than the text (size-4→size-3.5,
 											   ≈14px vs the 16px row) while centered. */}
-										{(key || sel) && <GlyphMark kind={key ? "check" : "x"} className="size-3.5" />}
+										{(key || sel) && <Icon icon={key ? CheckIcon : XIcon} size="sm" />}
 									</span>
 								)}
 								<span className={cn(!sel && "text-secondary")}>
@@ -151,7 +152,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 					{answer.other && (
 						<div
 							data-testid="answered-other"
-							className="flex items-center gap-2 rounded-xl border border-accent-bg bg-accent-bg/15 px-3.5 py-2"
+							className="flex items-center gap-2 rounded-lg border border-accent-bg bg-accent-bg/15 px-3.5 py-2"
 						>
 							<span>“{answer.other}”</span>
 						</div>
@@ -170,7 +171,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 			    field — nothing to show, nothing rendered. */}
 			{isQuiz && answer.confidence != null && (
 				<div className="mt-3 flex items-center gap-3" data-testid="answered-confidence">
-					<ConfidenceRail value={answer.confidence} className="min-w-0 flex-1" />
+					<ProgressBar label="Confidence" isLabelHidden value={answer.confidence} max={100} data-testid="confidence-rail" className="min-w-0 flex-1" />
 					<span className="w-9 shrink-0 text-right font-mono text-sm tabular-nums text-secondary">
 						{answer.confidence}%
 					</span>
@@ -202,9 +203,9 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 				   toggle — viewable, never center stage. Identical to the
 				   prediction pattern it generalizes (owner, 2026-10-03). */
 				<div className="mt-2" data-testid="tucked-explanation">
-					<Button size="sm" variant="secondary" onClick={() => setWhyOpen((v) => !v)}>{whyOpen ? "Hide why" : "Why"}</Button>
+					<Button variant="secondary" size="sm" label={whyOpen ? "Hide why" : "Why"} onClick={() => setWhyOpen((v) => !v)} />
 					{whyOpen && (
-						<div className="mt-2 rounded-xl bg-overlay-hover px-4 py-3 text-sm text-primary/70">
+						<div className="mt-2 rounded-lg bg-overlay-hover px-4 py-3 text-sm text-primary/70">
 							<span className="font-medium text-secondary">Why: </span>
 							{/* Keep the first paragraph beside the label, not every paragraph:
 							   later paragraphs must retain their recovered document structure. */}
@@ -218,7 +219,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 			    — one field, reasoning included — shown on submit; no verdict,
 			    the model's next reply IS the grading. */}
 			{isExplain && answer.committed && (
-				<div className="mt-3 rounded-xl bg-overlay-hover px-4 py-3 text-sm text-secondary">
+				<div className="mt-3 rounded-lg bg-overlay-hover px-4 py-3 text-sm text-secondary">
 					<span className="font-medium text-primary">The answer: </span>
 					<ToolContentResponse className="inline [&>p:first-child]:inline [&>p:first-child]:m-0">{answer.committed}</ToolContentResponse>
 				</div>

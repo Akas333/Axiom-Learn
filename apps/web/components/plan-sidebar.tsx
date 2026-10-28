@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+import { VStack } from "@astryxdesign/core/VStack";
+import { Text } from "@astryxdesign/core/Text";
+import { ProgressBar } from "@astryxdesign/core/ProgressBar";
+import { List, ListItem } from "@astryxdesign/core/List";
+import { Icon } from "@astryxdesign/core/Icon";
+import { HStack } from "@astryxdesign/core/HStack";
+import { Card } from "@astryxdesign/core/Card";
+import { Button } from "@astryxdesign/core/Button";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { ActivitySection } from "@/components/activity-dock";
-import { CheckIcon, ChevronDownIcon, Maximize2Icon, PanelRightCloseIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon, Maximize2Icon, PanelRightCloseIcon } from "lucide-react";
 import { derivePlanStatuses, nodeProgress, type PlanNodeProgress } from "@/src/core";
 import { latestTree, type PopupMessage } from "@/components/plan-block";
 import { conceptNumbers, PlanMap, planLayout } from "@/components/plan-map";
-import { Hint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 
 /** The latest recap per node, from the concept_done cards in the transcript. */
@@ -96,9 +103,7 @@ export function PlanSidebar({
 				    that toggle sits under the backdrop, so the panel brings its own. */}
 				{overlay && (
 					<div className="flex h-15 shrink-0 items-center justify-end px-3">
-						<IconButton label="Hide the side panel" onClick={onClose} testid="plan-sidebar-close">
-							<PanelRightCloseIcon className="size-4" />
-						</IconButton>
+						<IconButton label="Hide the side panel" tooltip="Hide the side panel" variant="ghost" size="sm" data-testid="plan-sidebar-close" icon={<PanelRightCloseIcon className="size-4" />} onClick={onClose} />
 					</div>
 				)}
 				<div className={cn("flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3", !overlay && "pt-3")}>
@@ -144,114 +149,79 @@ function PlanCard({
 	const { order, number } = conceptNumbers(tree, layout, messages as Parameters<typeof conceptNumbers>[2], statuses?.current);
 
 	return (
-		<section className="lh-panel-card" data-testid="plan-card" aria-label="Lesson plan">
-			<header className="flex items-center gap-2">
-				<button
-					type="button"
-					onClick={() => setCollapsed((v) => !v)}
-					aria-expanded={!collapsed}
-					className="-ml-1 flex items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium text-primary transition-colors hover:bg-overlay-hover"
-				>
-					Plan
-					<ChevronDownIcon className={cn("size-3.5 text-secondary transition-transform", collapsed && "-rotate-90")} />
-				</button>
-				<span className="ml-auto text-xs tabular-nums text-secondary">
-					{doneCount} / {tree.nodes.length} done
-				</span>
-				<IconButton label="Open the full map" onClick={onExpand}>
-					<Maximize2Icon className="size-3.5" />
-				</IconButton>
-			</header>
-
-			<div className="mt-2 h-1 overflow-hidden rounded-full bg-border/60" aria-hidden>
-				<div className="h-full rounded-full bg-accent-bg transition-[width] duration-500" style={{ width: `${(doneCount / tree.nodes.length) * 100}%` }} />
-			</div>
-
-			{!collapsed && (
-			<div className="mt-1">
-				<div className="-mx-1 border-b border-border/60 pb-2 pt-3" data-testid="plan-sidebar-map">
-					<PlanMap tree={tree} layout={layout} numbers={number} progressOf={progressOf} viewingId={viewingId} onSelect={onJump} />
-				</div>
-
-				<ol className="-mx-2 flex flex-col gap-1 pt-2">
-					{order.map((id) => {
-						const node = byId.get(id)!;
-						const p = progressOf(id);
-						const recap = recaps.get(id);
-						const viewing = viewingId === id;
-						return (
-							<li key={id}>
-								<button
-									type="button"
-									data-testid={`plan-step-${id}`}
-									data-progress={p}
-									data-viewing={viewing || undefined}
-									onClick={() => onJump(id)}
-									className={cn(
-										"w-full rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-overlay-hover",
-										(p === "current" || viewing) && "bg-overlay-hover",
-									)}
-								>
-									<div className="flex items-start gap-3">
-										<StepMarker progress={p} number={number.get(id)!} />
-										<div className="min-w-0 flex-1">
-											{(p === "current" || viewing) && (
-												<div className={cn("text-[11px] font-medium", p === "current" ? "text-accent" : "text-secondary")}>
-													{p === "current" ? (waitingOnContinue ? "Up next" : "Now learning") : "Viewing"}
-												</div>
-											)}
-											<div className={cn("text-sm", p === "upcoming" && !viewing ? "text-secondary" : "text-primary", p === "current" && "font-medium")}>
-												{node.title}
-											</div>
-											{p === "current" && node.summary && <p className="mt-0.5 text-xs text-secondary">{node.summary}</p>}
-											{p === "done" && recap && recap.length > 0 && (
-												<ul className="mt-1 space-y-0.5 text-xs text-secondary">
-													{recap.map((line, li) => (
-														<li key={li} className="line-clamp-2">
-															{plainText(line)}
-														</li>
-													))}
-												</ul>
-											)}
-										</div>
-									</div>
-								</button>
-							</li>
-						);
-					})}
-				</ol>
-			</div>
-			)}
-		</section>
+		<Card padding={3} data-testid="plan-card" aria-label="Lesson plan">
+			<VStack gap={2}>
+				<HStack gap={2} align="center">
+					<Button
+						variant="ghost"
+						size="sm"
+						label="Plan"
+						aria-expanded={!collapsed}
+						endContent={<Icon icon={collapsed ? ChevronRightIcon : ChevronDownIcon} />}
+						onClick={() => setCollapsed((v) => !v)}
+					/>
+					<Text type="supporting" hasTabularNumbers className="ml-auto">
+						{doneCount} / {tree.nodes.length} done
+					</Text>
+					<IconButton label="Open the full map" tooltip="Open the full map" variant="ghost" size="sm" icon={<Maximize2Icon className="size-4" />} onClick={onExpand} />
+				</HStack>
+				<ProgressBar label="Plan progress" isLabelHidden value={doneCount} max={tree.nodes.length} />
+				{!collapsed && (
+					<>
+						<div className="border-b border-border pb-2 pt-1" data-testid="plan-sidebar-map">
+							<PlanMap tree={tree} layout={layout} numbers={number} progressOf={progressOf} viewingId={viewingId} onSelect={onJump} />
+						</div>
+						<List listStyle="none" density="compact" edge="outset">
+							{order.map((id) => {
+								const node = byId.get(id)!;
+								const p = progressOf(id);
+								const recap = recaps.get(id);
+								const viewing = viewingId === id;
+								const eyebrow = p === "current" ? (waitingOnContinue ? "Up next" : "Now learning") : viewing ? "Viewing" : null;
+								return (
+									<ListItem
+										key={id}
+										data-testid={`plan-step-${id}`}
+										data-progress={p}
+										data-viewing={viewing || undefined}
+										isSelected={p === "current" || viewing}
+										align="start"
+										onClick={() => onJump(id)}
+										startContent={<StepMarker progress={p} number={number.get(id)!} />}
+										label={
+											<VStack gap={0.5}>
+												{eyebrow && <Text type="label" color={p === "current" ? "accent" : "secondary"}>{eyebrow}</Text>}
+												<Text type="body" color={p === "upcoming" && !viewing ? "secondary" : "primary"} weight={p === "current" ? "medium" : undefined}>
+													{node.title}
+												</Text>
+											</VStack>
+										}
+										description={
+											p === "current" && node.summary
+												? node.summary
+												: p === "done" && recap && recap.length > 0
+													? recap.map((line) => plainText(line)).join(" · ")
+													: undefined
+										}
+									/>
+								);
+							})}
+						</List>
+					</>
+				)}
+			</VStack>
+		</Card>
 	);
 }
 
-function IconButton({ label, onClick, testid, children }: { label: string; onClick: () => void; testid?: string; children: ReactNode }) {
-	return (
-		<Hint label={label} side="bottom">
-			<Button size="sm" variant="ghost" data-testid={testid} onClick={onClick} aria-label={label}>{children}</Button>
-		</Hint>
-	);
-}
 
 /** Same marker language as the map: solid white check when done, filled blue
  *  number when current, outlined number otherwise. */
 function StepMarker({ progress, number }: { progress: PlanNodeProgress; number: number }) {
-	if (progress === "done") {
-		return (
-			<span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-inverted text-body">
-				<CheckIcon className="size-3" strokeWidth={3} aria-label={`${number}, done`} />
-			</span>
-		);
-	}
+	if (progress === "done") return <Icon icon={CheckIcon} size="sm" color="primary" aria-label={`${number}, done`} />;
 	return (
-		<span
-			className={cn(
-				"mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] tabular-nums",
-				progress === "current" ? "bg-accent-bg text-on-accent" : "border border-border text-secondary",
-			)}
-		>
+		<Text type="label" hasTabularNumbers color={progress === "current" ? "accent" : "secondary"}>
 			{number}
-		</span>
+		</Text>
 	);
 }

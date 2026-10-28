@@ -1,6 +1,8 @@
 import { useEffect } from "react";
+import { List, ListItem } from "@astryxdesign/core/List";
 import { ArrowRightIcon, CheckIcon, FlagIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
+import { Icon } from "@astryxdesign/core/Icon";
 import { MessageResponse } from "@/components/ai-elements/message";
 
 /** What the teacher wrote in the concept_done call. */
@@ -65,7 +67,7 @@ export function ConceptDoneCard({
 	return (
 		<section
 			data-testid="concept-done-card"
-			className="my-4 overflow-hidden rounded-2xl border border-border bg-card"
+			className="my-4 overflow-hidden rounded-lg border border-border bg-card"
 			aria-label={`Concept complete: ${title}`}
 		>
 			<div className="flex items-center gap-3 px-5 pt-4">
@@ -81,16 +83,11 @@ export function ConceptDoneCard({
 			{recap.length > 0 && (
 				<div className="px-5 pt-3">
 					<div className="pb-1.5 text-xs text-secondary">Recap</div>
-					<ul className="lh-prose space-y-1.5 text-primary">
+					<List listStyle="disc" density="compact" edge="flush">
 						{recap.map((line, i) => (
-							<li key={i} className="flex gap-2.5">
-								<span className="mt-[0.6em] size-1.5 shrink-0 rounded-full bg-accent-bg" aria-hidden />
-								<div className="min-w-0 flex-1 [&_p]:m-0">
-									<MessageResponse>{line}</MessageResponse>
-								</div>
-							</li>
+							<ListItem key={i} label={<div className="lh-prose min-w-0 [&_p]:m-0"><MessageResponse>{line}</MessageResponse></div>} />
 						))}
-					</ul>
+					</List>
 				</div>
 			)}
 
@@ -103,10 +100,7 @@ export function ConceptDoneCard({
 							{input.nextHint && <p className="mt-0.5 text-sm text-secondary">{input.nextHint}</p>}
 						</div>
 						{live ? (
-							<Button data-testid="concept-continue" onClick={() => onContinue(nextTitle)}>
-								Continue
-								<ArrowRightIcon aria-hidden />
-							</Button>
+							<Button variant="primary" size="md" label="Continue" endContent={<Icon icon={ArrowRightIcon} />} data-testid="concept-continue" onClick={() => onContinue(nextTitle)} />
 						) : (
 							<span className="shrink-0 text-xs text-secondary">Continued</span>
 						)}

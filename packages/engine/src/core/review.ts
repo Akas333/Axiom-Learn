@@ -65,6 +65,11 @@ export interface ReviewEvent {
 	session?: string;
 	/** The problem's demand mode: recall, discrimination, or composition. */
 	mode?: string;
+	/** The conclude tool call this review came from (practice reviews only):
+	 *  the conclude card's anchor, so the graph can link to it. */
+	callId?: string;
+	/** The conclude outcome as the agent recorded it (practice reviews only). */
+	outcome?: string;
 }
 
 /**
@@ -118,6 +123,8 @@ export function reviewEventsOf(messages: readonly LhMessage[], session?: string)
 					grade: g,
 					...(session !== undefined ? { session } : {}),
 					...(mode !== undefined ? { mode } : {}),
+					callId: block.id,
+					outcome: String(args.outcome),
 				});
 			}
 		}
@@ -269,6 +276,54 @@ export function masteryStateOf(state: NodeReviewState | undefined): MasteryState
 	if (state.lastGrade === 1) return "shaky";
 	if (state.strongSessions >= 2 || state.strongModes >= 2) return state.due ? "due" : "solid";
 	return "developing";
+}
+
+// ─── what the graph shows per claim ──────────────────────────────────────────
+
+/** One row of a claim's practice history (newest first in ClaimPractice). */
+export interface ClaimPracticeEntry {
+	at: number;
+	grade: ReviewGrade;
+	/** The practice chat id, or "anki:<day>" for a flashcard review. */
+	session?: string;
+	mode?: string;
+	/** The conclude call id — the link target inside the session. */
+	callId?: string;
+	outcome?: string;
+}
+
+/** A claim's practice summary, as the graph view receives it. */
+export interface ClaimPractice {
+	state: MasteryState;
+	/** Recall probability right now, 0…1. */
+	recall: number;
+	dueAt: number;
+	reviews: number;
+	/** The most recent reviews, newest first (capped at CLAIM_HISTORY_MAX). */
+	history: ClaimPracticeEntry[];
+}
+
+export const CLAIM_HISTORY_MAX = 8;
+
+/** Every practiced claim's summary, keyed by node id, as of `now`. */
+export function claimPracticeOf(events: readonly ReviewEvent[], now: number): Record<string, ClaimPractice> {
+	const states = reviewStates(events, now);
+	const out: Record<string, ClaimPractice> = {};
+	for (const [nodeId, state] of states) {
+		const history = events
+			.filter((e) => e.nodeId === nodeId)
+			.sort((a, b) => b.at - a.at)
+			.slice(0, CLAIM_HISTORY_MAX)
+			.map(({ nodeId: _n, ...rest }) => rest);
+		out[nodeId] = {
+			state: masteryStateOf(state),
+			recall: state.recall,
+			dueAt: state.dueAt,
+			reviews: state.reviews,
+			history,
+		};
+	}
+	return out;
 }
 
 // ─── wording ─────────────────────────────────────────────────────────────────

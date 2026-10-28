@@ -54,10 +54,10 @@ import { UpdateSettings } from "./update-settings.tsx";
 import { VoiceSettings } from "./voice-settings.tsx";
 import { AgentSection } from "./agent-section.tsx";
 import type { ModelsSettings } from "@/src/core";
-import { MENU_CLOSE_EVENT, MENU_OPEN_EVENT } from "@/components/menu-shell";
 import { notifySettingsSaved } from "@/components/settings-signal";
 import { KeysSection } from "./keys-section.tsx";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { hintText, TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 import { AppearanceSection, GraphSection } from "./appearance-section.tsx";
 import { KeyboardSection } from "./keyboard-section.tsx";
 import { LearnerSection } from "./learner-section.tsx";
@@ -170,8 +170,6 @@ export function SettingsDialogBody({
 		undefined,
 	);
 	const [error, setError] = useState<string | null>(null);
-	// MenuShell open-count — drives the content column's scroll lock.
-	const [openMenus, setOpenMenus] = useState(0);
 	const contentRef = useRef<HTMLDivElement | null>(null);
 	// Scroll-lock (fix wave, owner ruling: the scrollbar MAY stay,
 	// scrolling must NOT happen, nothing may move): the content column
@@ -180,28 +178,6 @@ export function SettingsDialogBody({
 	// touchmove listeners on the column preventDefault. React attaches
 	// synthetic wheel/touch passively at the root, so this needs the
 	// native-listener ref seam.
-	useEffect(() => {
-		const el = contentRef.current;
-		if (!el || openMenus === 0) return;
-		const block = (e: Event) => e.preventDefault();
-		el.addEventListener("wheel", block, { passive: false });
-		el.addEventListener("touchmove", block, { passive: false });
-		return () => {
-			el.removeEventListener("wheel", block);
-			el.removeEventListener("touchmove", block);
-		};
-	}, [openMenus]);
-
-	useEffect(() => {
-		const onOpen = () => setOpenMenus((n) => n + 1);
-		const onClose = () => setOpenMenus((n) => Math.max(0, n - 1));
-		window.addEventListener(MENU_OPEN_EVENT, onOpen);
-		window.addEventListener(MENU_CLOSE_EVENT, onClose);
-		return () => {
-			window.removeEventListener(MENU_OPEN_EVENT, onOpen);
-			window.removeEventListener(MENU_CLOSE_EVENT, onClose);
-		};
-	}, []);
 	const [active, setActive] = useState<SectionId>(initialSection);
 	const [search, setSearch] = useState("");
 	const narrow = useMediaQuery("(max-width: 640px)");
@@ -343,6 +319,18 @@ export function SettingsDialogBody({
 		</SideNav>
 	);
 
+	const closeButton = (
+		<Tooltip content={hintText("Close", undefined, "escape")} placement="start" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+			<IconButton
+				label="Close settings"
+				data-testid="settings-close"
+				variant="ghost"
+				icon={<XIcon className="size-4" />}
+				onClick={onClose}
+			/>
+		</Tooltip>
+	);
+
 	return (
 		<SettingsSkinContext.Provider value={true}>
 			<Layout
@@ -350,8 +338,8 @@ export function SettingsDialogBody({
 				className="h-[min(780px,calc(100dvh-2rem))]"
 				start={narrow ? undefined : nav}
 				header={
-					<HStack gap={2} align="center" justify="between" paddingInline={4} paddingBlock={2}>
-						{narrow ? (
+					narrow ? (
+						<HStack gap={2} align="center" justify="between" paddingInline={4} paddingBlock={2}>
 							<Selector
 								label="Settings section"
 								isLabelHidden
@@ -360,26 +348,18 @@ export function SettingsDialogBody({
 								value={active}
 								onChange={(next) => next && setActive(next as SectionId)}
 							/>
-						) : (
-							<span />
-						)}
-						<Hint label="Close" binding="escape" side="left">
-							<IconButton
-								label="Close settings"
-								data-testid="settings-close"
-								variant="ghost"
-								icon={<XIcon className="size-4" />}
-								onClick={onClose}
-							/>
-						</Hint>
-					</HStack>
+							{closeButton}
+						</HStack>
+					) : undefined
 				}
 				content={
 				<div
 					ref={contentRef}
-					className="h-full min-w-0 overflow-y-auto"
+					className="relative h-full min-w-0 overflow-y-auto"
 					data-testid="settings-content"
 				>
+					{/* Close sits in the content pane's corner (no empty header band). */}
+					{!narrow && <div className="sticky top-0 z-10 flex justify-end p-3 pb-0">{closeButton}</div>}
 					{error && (
 						<Banner status="error" title={error} collapsible={false} data-testid="settings-error" className="m-4" />
 					)}

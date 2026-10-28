@@ -64,26 +64,45 @@
 
 import { Button } from "@astryxdesign/core/Button";
 import { IconButton } from "@astryxdesign/core/IconButton";
+import { ContextMenu } from "@astryxdesign/core/ContextMenu";
+import { Popover } from "@astryxdesign/core/Popover";
+import { FileInput } from "@astryxdesign/core/FileInput";
+import { Selector } from "@astryxdesign/core/Selector";
 import { Slider } from "@astryxdesign/core/Slider";
+import { Switch } from "@astryxdesign/core/Switch";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { onGraphSearch, takePendingGraphSearch } from "@/lib/graph-search";
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NotesImportErrors, useNotesImport } from "@/components/notes-import.tsx";
 import { Link } from "@/lib/navigation";
-import { FileTextIcon, ListTreeIcon, Loader2Icon, SearchIcon, SettingsIcon, UploadIcon } from "lucide-react";
-import { incrementalLayout, propositionSessionHref, type GraphCostSummary, type GraphNode, type GraphSnapshot } from "@/src/core";
+import { FileTextIcon, ListTreeIcon, Loader2Icon, SearchIcon, SettingsIcon, UploadIcon, Trash2Icon } from "lucide-react";
+import {
+	incrementalLayout,
+	messageAnchorId,
+	propositionSessionHref,
+	MASTERY_STATES,
+	type ClaimPractice,
+	type ClaimPracticeEntry,
+	type GraphCostSummary,
+	type GraphNode,
+	type GraphSnapshot,
+	type MasteryState,
+} from "@/src/core";
+import { HStack } from "@astryxdesign/core/HStack";
+import { VStack } from "@astryxdesign/core/VStack";
+import { Text } from "@astryxdesign/core/Text";
+import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
 import { planCostLabel } from "@/components/usage-format";
 import { GraphCanvasRenderer, type GraphRenderSettings } from "./graph-canvas.ts";
 import { SphereBackdrop } from "./sphere-backdrop.tsx";
 
 
-import { usePopoverDismiss } from "@/components/popover-dismiss";
 import { useActivity } from "@/components/activity-dock";
 import { useServerEvent, useServerResync } from "@/components/server-events";
-import { MenuShell } from "@/components/menu-shell.tsx";
 import { DeleteNodeDialog } from "@/components/delete-node-dialog.tsx";
 import { ChainTableOverlay } from "@/components/chain-table.tsx";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { hintText, TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 import {
 	ARROW_LENGTH_LADDER,
 	CHARGE_RANGE,
@@ -119,6 +138,160 @@ const NODE_COLOR_TOKEN = "--color-text-secondary";
 /** Per-device graph camera persistence (zoom+pan view state). v1 in the
  *  key: the stored shape is the renderer's d3 transform {k, x, y}. */
 const CAMERA_STORAGE_KEY = "lh.graph.camera.v1";
+
+// ---- Practice colouring ---------------------------------------------------
+
+/** What the nodes are coloured by: connected topic groups, or how well each
+ *  claim is held in practice (core/review.ts named states). */
+type ColorBy = "topic" | "practice";
+const COLOR_BY_STORAGE_KEY = "lh.graph.colorBy.v1";
+
+/** Theme tokens per practice state. The canvas reads the token as hex; the
+ *  legend uses the matching Tailwind class (written out in full so the
+ *  class scanner keeps it). */
+const PRACTICE_STATE_STYLE: Record<MasteryState, { token: string; dot: string; label: string }> = {
+	untested: { token: "--color-gray-vivid", dot: "bg-gray-vivid", label: "Untested" },
+	shaky: { token: "--color-red-vivid", dot: "bg-red-vivid", label: "Shaky" },
+	developing: { token: "--color-orange-vivid", dot: "bg-orange-vivid", label: "Developing" },
+	solid: { token: "--color-green-vivid", dot: "bg-green-vivid", label: "Solid" },
+	due: { token: "--color-blue-vivid", dot: "bg-blue-vivid", label: "Due" },
+};
+
+/** Exported for tests: the state each proposition shows (missing = untested). */
+export function practiceStateCounts(
+	propositionIds: readonly string[],
+	practice: Readonly<Record<string, ClaimPractice>> | undefined,
+): Record<MasteryState, number> {
+	const counts = Object.fromEntries(MASTERY_STATES.map((s) => [s, 0])) as Record<MasteryState, number>;
+	for (const id of propositionIds) counts[practice?.[id]?.state ?? "untested"]++;
+	return counts;
+}
+
+function readColorBy(): ColorBy | null {
+	try {
+		const v = localStorage.getItem(COLOR_BY_STORAGE_KEY);
+		return v === "topic" || v === "practice" ? v : null;
+	} catch {
+		return null;
+	}
+}
+
+const OUTCOME_TEXT: Record<string, string> = {
+	solved: "Solved",
+	solvedWithHints: "Solved with hints",
+	movedOn: "Moved on",
+	surrendered: "Gave up",
+	dismissed: "Dismissed",
+};
+const GRADE_TEXT: Record<number, string> = { 1: "Again", 2: "Hard", 3: "Good", 4: "Easy" };
+
+function shortDate(at: number): string {
+	return new Date(at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function dueText(dueAt: number, now: number): string {
+	const days = Math.round((dueAt - now) / 86_400_000);
+	if (days <= 0) return "due now";
+	return days === 1 ? "due tomorrow" : `due in ${days} days`;
+}
+
+/** The legend + colour switch, bottom-left over the canvas. */
+function PracticeLegend({
+	colorBy,
+	onColorBy,
+	counts,
+}: {
+	colorBy: ColorBy;
+	onColorBy: (next: ColorBy) => void;
+	counts: Record<MasteryState, number>;
+}) {
+	return (
+		<VStack
+			gap={2}
+			className="lh-no-drag absolute bottom-3 left-3 z-10 rounded-lg border bg-card/85 p-3 shadow-lg backdrop-blur"
+			data-testid="graph-legend"
+		>
+			<SegmentedControl
+				label="Colour nodes by"
+				size="sm"
+				value={colorBy}
+				onChange={(next) => onColorBy(next === "practice" ? "practice" : "topic")}
+				data-testid="graph-color-by"
+			>
+				<SegmentedControlItem value="topic" label="Topic" data-testid="graph-color-by-topic" />
+				<SegmentedControlItem value="practice" label="Practice" data-testid="graph-color-by-practice" />
+			</SegmentedControl>
+			{colorBy === "practice" && (
+				<VStack gap={1}>
+					{MASTERY_STATES.map((state) => (
+						<HStack key={state} gap={2} align="center" data-testid={`graph-legend-${state}`}>
+							<span aria-hidden className={`size-2.5 shrink-0 rounded-full ${PRACTICE_STATE_STYLE[state].dot}`} />
+							<Text type="supporting">{PRACTICE_STATE_STYLE[state].label}</Text>
+							<Text type="supporting" className="ml-auto pl-3 tabular-nums">
+								{counts[state]}
+							</Text>
+						</HStack>
+					))}
+				</VStack>
+			)}
+		</VStack>
+	);
+}
+
+/** The detail card's practice section: state, recall, and recent reviews. */
+function PracticeHistory({
+	practice,
+	sessions,
+}: {
+	practice: ClaimPractice | undefined;
+	sessions: Readonly<Record<string, string>>;
+}) {
+	if (!practice) {
+		return <div className="mt-3 text-xs text-secondary" data-testid="practice-untested">Not practiced yet.</div>;
+	}
+	const now = Date.now();
+	const style = PRACTICE_STATE_STYLE[practice.state];
+	return (
+		<div className="mt-3 flex flex-col gap-1" data-testid="practice-history">
+			<div className="flex items-center gap-2 text-xs text-secondary">
+				<span aria-hidden className={`size-2 shrink-0 rounded-full ${style.dot}`} />
+				<span className="text-primary">{style.label}</span>
+				<span>
+					· recall {Math.round(practice.recall * 100)}% · {dueText(practice.dueAt, now)}
+				</span>
+			</div>
+			{practice.history.map((entry, i) => (
+				<PracticeHistoryRow key={`${entry.at}-${i}`} entry={entry} sessions={sessions} />
+			))}
+			{practice.reviews > practice.history.length && (
+				<div className="px-2 text-xs text-secondary">
+					{practice.reviews - practice.history.length} earlier
+				</div>
+			)}
+		</div>
+	);
+}
+
+function PracticeHistoryRow({ entry, sessions }: { entry: ClaimPracticeEntry; sessions: Readonly<Record<string, string>> }) {
+	const flashcard = entry.session?.startsWith("anki:") === true;
+	const result = entry.outcome ? (OUTCOME_TEXT[entry.outcome] ?? entry.outcome) : GRADE_TEXT[entry.grade];
+	const where = flashcard ? "Anki flashcard" : entry.session ? (sessions[entry.session] ?? "Practice session") : "Practice";
+	const body = (
+		<>
+			<span className="w-12 shrink-0 tabular-nums text-secondary">{shortDate(entry.at)}</span>
+			<span className="shrink-0">{result}</span>
+			<span className="min-w-0 flex-1 truncate text-secondary">{where}</span>
+		</>
+	);
+	const rowClass = "flex items-center gap-2 rounded-md px-2 py-1 text-xs";
+	if (flashcard || !entry.session) return <div className={rowClass}>{body}</div>;
+	const href = `/chat/${encodeURIComponent(entry.session)}${entry.callId ? `#${encodeURIComponent(messageAnchorId(entry.callId))}` : ""}`;
+	return (
+		<Link href={href} scroll={false} className={`${rowClass} text-primary transition-colors hover:bg-overlay-hover`}>
+			{body}
+		</Link>
+	);
+}
 
 // ---- Render settings (the settings-panel controls) ------------------------
 //
@@ -349,32 +522,18 @@ export function GraphCostControl({ costs }: { costs: GraphCostSummary }) {
 	const [open, setOpen] = useState(false);
 	// Click anywhere outside (or Escape) closes the panel — the root
 	// wraps button + panel, so the toggle itself keeps working.
-	const rootRef = useRef<HTMLDivElement>(null);
-	usePopoverDismiss(rootRef, open, () => setOpen(false));
 	return (
-		<div ref={rootRef} className="relative">
-			<Hint
-				// Trimmed (owner, subtlety round 2026-09-25).
-				label="Graph costs — click for details"
-				side="bottom"
-			>
-				<button
-				type="button"
-				aria-expanded={open}
-				onClick={() => setOpen((o) => !o)}
-				className={`rounded-lg px-2 py-1 text-xs tabular-nums transition-colors hover:bg-overlay-hover ${
-					open ? "text-primary" : "text-secondary hover:text-primary"
-				}`}
-			>
-				{graphUsageLabel(costs)}
-			</button>
-			</Hint>
-			{open && (
-				<div className="absolute right-0 top-full mt-2 max-h-[60dvh] overflow-y-auto">
-					<GraphCostPanel costs={costs} />
-				</div>
-			)}
-		</div>
+		<Popover
+			isOpen={open}
+			onOpenChange={setOpen}
+			placement="below"
+			alignment="end"
+			padding={0}
+			label="Graph costs"
+			content={<GraphCostPanel costs={costs} />}
+		>
+			<Button variant="ghost" size="sm" label={graphUsageLabel(costs)} tooltip="Graph costs — click for details" />
+		</Popover>
 	);
 }
 
@@ -397,7 +556,7 @@ function GraphCostPanel({ costs }: { costs: GraphCostSummary }) {
 	// the pill and this panel must agree).
 	const { unpricedRuns } = displayCostTotals(costs);
 	return (
-		<div className="w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border bg-card/95 p-3 text-xs shadow-lg backdrop-blur">
+		<div className="w-80 max-w-[calc(100vw-1.5rem)] rounded-lg border bg-card/95 p-3 text-xs shadow-lg backdrop-blur">
 			<div className="mb-2 flex items-baseline justify-between">
 				<span className="text-[10px] font-medium text-secondary">
 					Graph pipeline costs
@@ -463,41 +622,18 @@ function GraphSettingsControl({
 	const [open, setOpen] = useState(false);
 	// Click anywhere outside (or Escape) closes the panel (2026-09-17) —
 	// the root wraps button + panel, so the toggle itself keeps working.
-	const rootRef = useRef<HTMLDivElement>(null);
-	usePopoverDismiss(rootRef, open, () => setOpen(false));
 	const regionTuning = settings.regions;
 	const physicsTuning = settings.physics;
 	return (
-		<div ref={rootRef} className="relative">
-			<Hint
-				// User language (tooltip wave) — "rendering" is internal.
-				label="Graph display settings"
-				side="bottom"
-			>
-				<IconButton
-					label="Graph display settings"
-					size="sm"
-					variant="secondary"
-					elevation="med"
-					aria-expanded={open}
-					icon={<SettingsIcon className="size-4" />}
-					onClick={() => setOpen((o) => !o)}
-				/>
-			</Hint>
-			{open && (
-				// Viewport-capped + internally scrollable — the coverage
-				// dropdown's exact pattern (owner, 2026-09-17): max-h keeps a
-				// floor of free space above the window bottom at any height,
-				// and the overflow-y-auto column (which also zeroes the flex
-				// item's min-height) scrolls instead of stretching the page.
-				// w-72 + inner pr (owner, 2026-09-20): the scrollbar used to
-				// press against the content — the panel widens so the scroll
-				// gutter gets real air. Spacing concentric: content -> 10px
-				// (pr-2.5) -> scrollbar -> 10px (p-2.5) -> panel edge. The
-				// scrollbar itself does NOT move: it stays pinned at the same
-				// distance from the panel's right border.
-				<div className="absolute right-0 top-full mt-2 flex max-h-[60dvh] w-72 flex-col rounded-xl border border-border bg-popover p-2.5 shadow-lg">
-					<div className="flex flex-col gap-2 overflow-y-auto pr-2.5">
+		<Popover
+			isOpen={open}
+			onOpenChange={setOpen}
+			placement="below"
+			alignment="end"
+			width={288}
+			label="Graph display settings"
+			content={
+					<div className="flex max-h-[60dvh] flex-col gap-2 overflow-y-auto">
 							{/* Size/zoom/region sliders: LADDER-mapped 0-100, step 10 (11
 							    stops, every DEFAULT dead-center at 50, every value a nice
 							    number — src/core/render-settings.ts). Physics keeps the
@@ -554,15 +690,14 @@ function GraphSettingsControl({
 									changeSettings((cur) => ({ ...cur, labelZoom: fromLadderPosition(p, LABEL_ZOOM_LADDER) }))}
 							/>
 							{/* Cluster names: drawn above each cluster in its colour. */}
-							<label className="flex cursor-pointer items-center justify-between text-[11px] text-secondary">
-								<span>Cluster labels</span>
-								<input
-									type="checkbox"
-									checked={settings.clusterLabels}
-									onChange={(e) => changeSettings((cur) => ({ ...cur, clusterLabels: e.target.checked }))}
-									className="accent-accent-bg"
-								/>
-							</label>
+							<Switch
+								label="Cluster labels"
+								size="sm"
+								labelPosition="start"
+								labelSpacing="spread"
+								value={settings.clusterLabels}
+								onChange={(on) => changeSettings((cur) => ({ ...cur, clusterLabels: on }))}
+							/>
 							<SettingSlider
 								label="Cluster label size"
 								disabled={!settings.clusterLabels}
@@ -673,23 +808,23 @@ function GraphSettingsControl({
 							    forces first, then the mode + its conditional
 							    controls at the very bottom — the grayed group reads
 							    as a self-contained sub-section. */}
-							<label className="flex items-center justify-between gap-2 text-xs">
-								Depth anchor
-								<select
-									className="rounded border bg-body px-1 py-0.5 text-xs"
-									value={physicsTuning.depthMode}
-									onChange={(e) =>
-										changeSettings((cur) => ({
-											...cur,
-											physics: { ...cur.physics, depthMode: e.target.value as GraphRenderSettings["physics"]["depthMode"] },
-										}))
-									}
-								>
-									<option value="off">Off</option>
-									<option value="vertical">Vertical (up)</option>
-									<option value="radial">Radial (outward)</option>
-								</select>
-							</label>
+							<Selector
+								label="Depth anchor"
+								size="sm"
+								value={physicsTuning.depthMode}
+								onChange={(next) =>
+									next &&
+									changeSettings((cur) => ({
+										...cur,
+										physics: { ...cur.physics, depthMode: next as GraphRenderSettings["physics"]["depthMode"] },
+									}))
+								}
+								options={[
+									{ value: "off", label: "Off" },
+									{ value: "vertical", label: "Vertical (up)" },
+									{ value: "radial", label: "Radial (outward)" },
+								]}
+							/>
 							<SettingSlider
 								label="Depth strength"
 								disabled={physicsTuning.depthMode === "off"}
@@ -734,9 +869,17 @@ function GraphSettingsControl({
 							/>
 						</div>
 					</div>
-				</div>
-			)}
-		</div>
+			}
+		>
+			<IconButton
+				label="Graph display settings"
+				tooltip="Graph display settings"
+				size="sm"
+				variant="secondary"
+				elevation="med"
+				icon={<SettingsIcon className="size-4" />}
+			/>
+		</Popover>
 	);
 }
 
@@ -770,7 +913,7 @@ export function GraphChromeRow({
 	importing: boolean;
 	searchInputRef: React.RefObject<HTMLInputElement | null>;
 	fileInputRef: React.RefObject<HTMLInputElement | null>;
-	onImportFiles: (files: FileList | null) => void;
+	onImportFiles: (files: FileList | readonly File[] | File | null) => void;
 	settings: GraphRenderSettings;
 	changeSettings: (update: (cur: RenderSettings) => RenderSettings) => void;
 	/** Opens the chain table overlay (the chains-overlay plan,
@@ -781,12 +924,7 @@ export function GraphChromeRow({
 		<>
 			{!isEmpty && (
 				<div className="graph-chrome-fade-in w-56 min-w-0 shrink">
-					<Hint
-						// ⌘F focuses node search (surface-scoped registry action).
-						label="Search nodes"
-						action="find"
-						side="bottom"
-					>
+					<Tooltip content={hintText("Search nodes", "find", undefined)} placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
 						<TextInput
 							ref={searchInputRef}
 							label="Search nodes"
@@ -802,14 +940,14 @@ export function GraphChromeRow({
 							statusVariant="detached"
 							controlClassName="shadow-lg"
 						/>
-					</Hint>
+					</Tooltip>
 				</div>
 			)}
 			{/* The chain table (chains overlay, owner plan 2026-09-29). Own
 			    container (36px band), between the search and Import. */}
 			{!isEmpty && (
 				<div className="graph-chrome-fade-in shrink-0">
-					<Hint label="Every reasoning chain" side="bottom">
+					<Tooltip content="Every reasoning chain" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
 						<Button
 							label="Chains"
 							size="sm"
@@ -819,41 +957,23 @@ export function GraphChromeRow({
 							onClick={onOpenChains}
 							data-testid="open-chain-table"
 						/>
-					</Hint>
+					</Tooltip>
 				</div>
 			)}
 			{/* Import notes — its own container (36px, header band); ALWAYS
 			    rendered (the empty-graph ruling above — the entry point). */}
 			<div className="shrink-0">
-				<input
-					ref={fileInputRef}
-					type="file"
-					multiple
-					accept=".md,.markdown,.txt"
-					className="hidden"
-					onChange={(e) => {
-						onImportFiles(e.target.files);
-						e.target.value = ""; // allow re-picking the same file
-					}}
-				/>
-				<Hint
-					// The one button whose action isn't obvious from its label:
-					// the missing fact is where imports go (owner, subtlety
-					// round 2026-09-25).
+				<FileInput
 					label="Import notes into the graph"
-					side="bottom"
-				>
-					<Button
-						label="Import notes…"
-						size="sm"
-						variant="secondary"
-						elevation="med"
-						icon={<UploadIcon className="size-4" />}
-						isLoading={importing}
-						onClick={() => fileInputRef.current?.click()}
-						data-testid="import-notes"
-					/>
-				</Hint>
+					isLabelHidden
+					isMultiple
+					accept=".md,.markdown,.txt"
+					placeholder={importing ? "Importing…" : "Import notes…"}
+					isLoading={importing}
+					value={null}
+					onChange={(files) => onImportFiles(files)}
+					data-testid="import-notes"
+				/>
 			</div>
 			{!isEmpty && (
 				// Rendering settings — own component; the gear toggles it. The
@@ -1151,29 +1271,7 @@ export function GraphView({
 	// any element. Camera moves close the menu (it would float stale);
 	// the dismissal contract is the sidebar's (wave 6).
 	const [ctxNode, setCtxNode] = useState<{ id: string; name: string; x: number; y: number } | null>(null);
-	const ctxAnchorRef = useRef<HTMLDivElement | null>(null);
 	const [deletingNode, setDeletingNode] = useState<{ id: string; name: string } | null>(null);
-	useEffect(() => {
-		if (ctxNode === null) return;
-		const onPointerDown = (e: PointerEvent) => {
-			const target = e.target as Node;
-			if (target instanceof Element && target.closest("[data-lh-menu]")) return;
-			if (ctxAnchorRef.current?.contains(target)) return;
-			setCtxNode(null);
-		};
-		const onKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				e.stopPropagation();
-				setCtxNode(null);
-			}
-		};
-		document.addEventListener("pointerdown", onPointerDown);
-		document.addEventListener("keydown", onKeyDown);
-		return () => {
-			document.removeEventListener("pointerdown", onPointerDown);
-			document.removeEventListener("keydown", onKeyDown);
-		};
-	}, [ctxNode]);
 
 	// Layout (Option A): the positions ledger (written by the server's
 	// incremental settle after every merge) IS the layout — the renderer
@@ -1216,6 +1314,25 @@ export function GraphView({
 	// away (the empty-graph placeholder replaces it). The callbacks are
 	// created once and read through refs, so they never go stale.
 	const isEmpty = snapshot === null || snapshot.nodes.length === 0;
+
+	// Colour mode: the learner's saved choice, else practice once any claim
+	// has been practiced (an all-grey practice view helps no one).
+	const [savedColorBy, setSavedColorBy] = useState<ColorBy | null>(null);
+	useEffect(() => setSavedColorBy(readColorBy()), []);
+	const hasPractice = Object.keys(snapshot?.practice ?? {}).length > 0;
+	const colorBy: ColorBy = savedColorBy ?? (hasPractice ? "practice" : "topic");
+	const changeColorBy = useCallback((next: ColorBy) => {
+		setSavedColorBy(next);
+		try {
+			localStorage.setItem(COLOR_BY_STORAGE_KEY, next);
+		} catch {
+			// Storage unavailable: the choice lasts for this view only.
+		}
+	}, []);
+	const practiceCounts = useMemo(
+		() => practiceStateCounts((snapshot?.propositions ?? []).map((n) => n.id), snapshot?.practice),
+		[snapshot],
+	);
 	useEffect(() => {
 		if (isEmpty) return;
 		const canvas = canvasRef.current;
@@ -1358,6 +1475,23 @@ export function GraphView({
 		rendererRef.current?.setSettings(deferredSettings);
 	}, [deferredSettings, isEmpty]);
 
+	// Feed #2b — node colours: practice states, or null for topic groups.
+	// Declared after Feed #1 so it re-applies on top of every setData.
+	useEffect(() => {
+		const renderer = rendererRef.current;
+		if (!renderer || !snapshot) return;
+		if (colorBy === "topic") {
+			renderer.setNodeColors(null);
+			return;
+		}
+		const hex = Object.fromEntries(
+			MASTERY_STATES.map((state) => [state, tokenHex(PRACTICE_STATE_STYLE[state].token)]),
+		) as Record<MasteryState, string>;
+		const colors = new Map<string, string>();
+		for (const n of snapshot.propositions) colors.set(n.id, hex[snapshot.practice?.[n.id]?.state ?? "untested"]);
+		renderer.setNodeColors(colors);
+	}, [snapshot, colorBy, isEmpty]);
+
 	// Feed #3 — visibility: hidden nodes drop out of rendering, picking,
 	// hover, AND labels; edges drop when either endpoint is hidden.
 	useEffect(() => {
@@ -1421,6 +1555,25 @@ export function GraphView({
 					</div>
 				</div>
 			) : (
+				<ContextMenu
+					label="Node actions"
+					menuWidth={220}
+					items={
+						ctxNode
+							? [
+									{
+										label: `Delete “${ctxNode.name}”`,
+										icon: Trash2Icon,
+										variant: "destructive",
+										onClick: () => setDeletingNode({ id: ctxNode.id, name: ctxNode.name }),
+									},
+								]
+							: [{ label: "Right-click a node for actions", isDisabled: true }]
+					}
+					onOpenChange={(open) => {
+						if (!open) setCtxNode(null);
+					}}
+				>
 				<div ref={containerRef} className="relative h-full w-full">
 					{/* THE single canvas: every layer (hulls, edges, nodes, both
 					    label systems, hover) draws into it, once per frame. */}
@@ -1428,41 +1581,8 @@ export function GraphView({
 						ref={canvasRef}
 						className="block h-full w-full touch-none"
 					/>
-					{/* The context menu's anchor: a zero-size point at the
-					    right-click position (canvas-relative == container-relative,
-					    the canvas fills this div). */}
-					{ctxNode !== null && (
-						<div
-							ref={ctxAnchorRef}
-							style={{ position: "absolute", left: ctxNode.x, top: ctxNode.y, width: 0, height: 0 }}
-						/>
-					)}
 				</div>
-			)}
-
-			{/* The node context menu (node interlude): Delete is its one action
-			    (the same MenuShell discipline as the sidebar's session menu —
-			    placement, focus, arrow cycling; the dismissal effect above owns
-			    the contract). */}
-			{ctxNode !== null && (
-				<MenuShell
-					anchorRef={ctxAnchorRef}
-					testid="node-context-menu"
-					preferredSide="down"
-					menuClass="flex w-fit flex-col gap-0.5 rounded-xl border bg-card p-2 text-xs shadow-xl"
-				>
-					<button
-						type="button"
-						data-testid="ctx-node-delete"
-						onClick={() => {
-							setDeletingNode({ id: ctxNode.id, name: ctxNode.name });
-							setCtxNode(null);
-						}}
-						className="flex items-center rounded-lg px-2.5 py-1.5 text-left text-secondary/80 transition-colors hover:bg-overlay-hover hover:text-primary"
-					>
-						Delete
-					</button>
-				</MenuShell>
+				</ContextMenu>
 			)}
 
 			{/* The full-death confirm dialog (node interlude) — portaled to
@@ -1556,6 +1676,8 @@ export function GraphView({
 			))}
 			</div>
 
+			{!isEmpty && <PracticeLegend colorBy={colorBy} onColorBy={changeColorBy} counts={practiceCounts} />}
+
 			{selected && !isEmpty && (
 				<div
 					ref={cardRef}
@@ -1565,7 +1687,7 @@ export function GraphView({
 					// lh-no-drag: the card is placed anywhere on the canvas —
 					// when it lands in the top strip it must stay interactive
 					// over home.tsx's drag surface (2026-09-17).
-					className="lh-no-drag absolute z-10 w-80 max-w-[calc(100%-1rem)] rounded-xl border bg-card p-4 text-left shadow-lg"
+					className="lh-no-drag absolute z-10 w-80 max-w-[calc(100%-1rem)] rounded-lg border bg-card p-4 text-left shadow-lg"
 				>
 					<div className="text-sm font-medium leading-snug">{selected.node.name}</div>
 					<div className="mt-1 text-xs leading-relaxed text-secondary">{selected.node.statement}</div>
@@ -1602,6 +1724,8 @@ export function GraphView({
 					) : (
 						<div className="mt-3 text-xs text-secondary">No sessions recorded.</div>
 					)}
+					<div className="mt-3 border-t pt-2 text-xs text-secondary">Practice</div>
+					<PracticeHistory practice={snapshot?.practice?.[selected.node.id]} sessions={snapshot?.sessions ?? {}} />
 				</div>
 			)}
 			{/* The chain table overlay (chains-overlay plan, 2026-09-29):

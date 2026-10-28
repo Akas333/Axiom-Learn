@@ -753,6 +753,9 @@ export class GraphCanvasRenderer {
 	private regionMeta: { id: string; label: string | null; lines: string[] | null; cx: number; cy: number; hue: number }[] = [];
 	/** Concept-group colour per node id (absent = no group, plain grey). */
 	private colorById = new Map<string, string>();
+	/** Caller-chosen node colours (e.g. practice state). When set, they
+	 *  replace the concept-group colours; ids missing from it draw grey. */
+	private colorOverride: ReadonlyMap<string, string> | null = null;
 	/** Node discs grouped by fill: ungrouped first (color null), then one per group. */
 	private nodeGroups: { color: string | null; path: Path2D }[] = [];
 	private regionTuning: RegionTuning = DEFAULT_REGION_TUNING;
@@ -913,6 +916,16 @@ export class GraphCanvasRenderer {
 			this.simActive = true;
 		}
 		this.geoVersion++; // new data → rebuild world geometry
+		this.markDirty();
+	}
+
+	/** Colour nodes by a caller-chosen map (hex per node id), or null to
+	 *  return to concept-group colours. Recolours only: no layout or
+	 *  physics change. */
+	setNodeColors(colors: ReadonlyMap<string, string> | null): void {
+		this.colorOverride = colors;
+		this.applyNodeColors();
+		this.geoVersion++; // node fill groups are built with the geometry
 		this.markDirty();
 	}
 
@@ -1514,9 +1527,18 @@ export class GraphCanvasRenderer {
 			add(e.to, e.from);
 		}
 		this.neighbors = neighbors;
-		const ids = (this.data?.nodes ?? []).filter((n) => !isImpNodeId(n.id)).map((n) => n.id);
+		this.applyNodeColors();
+	}
+
+	/** colorById from the override when set, else from concept groups. */
+	private applyNodeColors(): void {
 		this.colorById = new Map();
-		for (const [id, g] of conceptGroups(ids, neighbors)) {
+		if (this.colorOverride) {
+			for (const [id, color] of this.colorOverride) this.colorById.set(id, color);
+			return;
+		}
+		const ids = (this.data?.nodes ?? []).filter((n) => !isImpNodeId(n.id)).map((n) => n.id);
+		for (const [id, g] of conceptGroups(ids, this.neighbors)) {
 			this.colorById.set(id, CONCEPT_PALETTE[g % CONCEPT_PALETTE.length]!);
 		}
 	}

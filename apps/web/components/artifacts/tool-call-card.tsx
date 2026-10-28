@@ -1,4 +1,7 @@
 
+import { CodeBlock } from "@astryxdesign/core/CodeBlock";
+import { HStack } from "@astryxdesign/core/HStack";
+import { Collapsible } from "@astryxdesign/core/Collapsible";
 import { ChevronRight } from "lucide-react";
 import type { ArtifactPartProps } from "@/src/core";
 
@@ -67,27 +70,22 @@ export function ToolCallCard({ part }: ArtifactPartProps) {
 	const out = outputText(p.output);
 	const failed = p.state === "output-error" || typeof p.errorText === "string";
 	return (
-		<details
-			data-testid="tool-call-card"
-			data-tool={tool}
-			className="group my-1 w-full max-w-2xl select-none"
-		>
-			<summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-secondary [&::-webkit-details-marker]:hidden">
+		<Collapsible defaultIsOpen={false} data-testid="tool-call-card" data-tool={tool} trigger={
+<HStack gap={2} align="center" className="min-w-0 text-xs text-secondary">
 				<span className={`font-medium ${failed ? "text-red-500": ""}`}>
 					{tool}
 				</span>
 				{arg && <span className="truncate">{arg}</span>}
-				<ChevronRight className="size-3 shrink-0 opacity-50 transition-transform group-open:rotate-90" />
-			</summary>
-			<div className="mt-2 space-y-2 rounded-xl border bg-card p-3 text-xs">
+			
+</HStack>
+}>
+			<div className="mt-2 space-y-2 rounded-lg border bg-card p-3 text-xs">
 				{p.input != null && (
 					<div>
 						<div className="mb-1 font-medium text-secondary">
 							Input
 						</div>
-						<pre className="max-h-32 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed">
-							{JSON.stringify(p.input, null, 2)}
-						</pre>
+						<CodeBlock code={JSON.stringify(p.input, null, 2)} language="json" isWrapped maxHeight={256} />
 					</div>
 				)}
 				{typeof p.errorText === "string" ? (
@@ -95,18 +93,14 @@ export function ToolCallCard({ part }: ArtifactPartProps) {
 						<div className="mb-1 font-medium text-secondary">
 							Error
 						</div>
-						<pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-red-500">
-							{p.errorText}
-						</pre>
+						<CodeBlock code={p.errorText} language="plaintext" isWrapped maxHeight={256} />
 					</div>
 				) : out != null ? (
 					<div>
 						<div className="mb-1 font-medium text-secondary">
 							Output
 						</div>
-						<pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed">
-							{out}
-						</pre>
+						<CodeBlock code={out} language="plaintext" isWrapped maxHeight={256} />
 					</div>
 				) : (
 					p.state !== "output-available" && (
@@ -114,6 +108,6 @@ export function ToolCallCard({ part }: ArtifactPartProps) {
 					)
 				)}
 			</div>
-		</details>
+		</Collapsible>
 	);
 }

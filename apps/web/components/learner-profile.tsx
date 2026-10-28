@@ -4,6 +4,7 @@
  * notes. Pure controlled inputs — the caller owns saving.
  */
 
+import { TextArea } from "@astryxdesign/core/TextArea";
 import {
 	LEARNER_LEVELS,
 	LEARNER_LEVEL_META,
@@ -166,23 +167,20 @@ export function NotesField({
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="relative">
-			<textarea
+			<TextArea
+				label="Notes for your tutor"
+				isLabelHidden
+				width="100%"
 				value={value}
-				onChange={(e) => onChange(e.target.value.slice(0, LEARNER_NOTES_MAX))}
+				onChange={(next) => onChange(next.slice(0, LEARNER_NOTES_MAX))}
 				onBlur={() => onCommit?.(value)}
 				rows={rows}
 				maxLength={LEARNER_NOTES_MAX}
-				aria-label="Notes for your tutor"
 				data-testid="learner-notes"
 				placeholder="Type, or tap the mic and just talk. For example: I'm in 6th grade. Explain with everyday examples and keep the math simple."
-				className="w-full resize-y rounded-lg border border-strong bg-surface px-4 pt-3 pb-12 text-[15px] leading-relaxed text-primary outline-none placeholder:text-secondary focus:border-accent-bg"
 			/>
 			<div className="absolute bottom-2 right-2 flex items-center gap-1">
-				{dictation.active ? (
-					<span className="text-[13px] text-secondary">Listening… tap to stop</span>
-				) : (
-					<span className="text-[13px] text-secondary/70">Speak it out loud</span>
-				)}
+				<Text type="supporting">{dictation.active ? "Listening… tap to stop" : "Speak it out loud"}</Text>
 				<DictationMeter dictation={dictation} />
 				<DictationButton dictation={dictation} />
 			</div>

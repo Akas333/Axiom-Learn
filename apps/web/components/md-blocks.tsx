@@ -26,7 +26,8 @@
  * EXPAND icon (opens the session overlay) when a chat page is mounted.
  */
 
-import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow } from "@astryxdesign/core/Table";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { cloneElement, isValidElement, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { CheckIcon, CopyIcon, MaximizeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,7 +42,8 @@ import { MERMAID_FONT_SIZE, renderMermaid } from "@/components/mermaid-render";
 import { MermaidError } from "@/components/mermaid-error";
 import { blurAfterPointerClick } from "@/components/focus-hygiene";
 import { chartSize, useSessionMermaid } from "@/components/session-overlay";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 
 // ─── The one affordance: the hover-reveal corner copy ────────────────────────
 
@@ -97,11 +99,13 @@ export function CopyCorner({
 	useEffect(() => () => window.clearTimeout(timerRef.current), []);
 	return (
 		<span className={cn("relative inline-flex", className)}>
-			<button
-				type="button"
-				aria-label={label}
+			<IconButton
+				label={copied ? "Copied" : label}
+				variant="ghost"
+				size="sm"
 				data-testid="md-copy"
-				className="flex size-6 items-center justify-center rounded-md text-secondary/70 opacity-0 transition-opacity hover:bg-overlay-hover hover:text-primary focus-visible:opacity-100 group-hover/md:opacity-100"
+				className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover/md:opacity-100"
+				icon={copied ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
 				onClick={(e) => {
 					blurAfterPointerClick(e);
 					void copyText(getText()).then((ok) => {
@@ -111,9 +115,7 @@ export function CopyCorner({
 						timerRef.current = window.setTimeout(() => setCopied(false), 1500);
 					});
 				}}
-			>
-				{copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
-			</button>
+			/>
 		</span>
 	);
 }
@@ -201,17 +203,12 @@ function MermaidInline({ chart }: { chart: string }) {
 			<div className="absolute top-0 right-0 flex items-start gap-0.5">
 				<CopyCorner getText={() => chart} label="Copy diagram source" />
 				{overlay && (
-					<Hint
-					// Full-screen overlay copy (tooltip wave) — "session view" was
-					// internal direction-speak for the same thing.
-					label="Open full-screen"
-					side="bottom"
-				>
-<Button size="icon-sm" variant="ghost" aria-label="Expand diagram" data-testid="md-mermaid-expand" onClick={(e) => {
+					<Tooltip content="Open full-screen" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<IconButton variant="ghost" size="sm" label="Expand diagram" icon={<MaximizeIcon className="size-4" />} className="opacity-0 transition-opacity" data-testid="md-mermaid-expand" onClick={(e) => {
 							blurAfterPointerClick(e);
 							overlay.openMermaid(chart);
-						}} className="opacity-0 transition-opacity"><MaximizeIcon className="size-4" /></Button>
-				</Hint>
+						}} />
+				</Tooltip>
 				)}
 			</div>
 		</div>
@@ -351,7 +348,7 @@ export function MarkdownBlockquote(props: ComponentProps<"blockquote"> & ExtraPr
 		<div
 			data-testid="md-callout"
 			data-alert-kind={alert.kind}
-			className="my-4 w-fit max-w-full rounded-2xl border border-accent-bg/40 bg-accent-bg/10 px-5 py-3.5 [&> :first-child]:mt-0 [&> :last-child]:mb-0"
+			className="my-4 w-fit max-w-full rounded-lg border border-accent-bg/40 bg-accent-bg/10 px-5 py-3.5 [&> :first-child]:mt-0 [&> :last-child]:mb-0"
 		>
 			{alert.children}
 		</div>
@@ -366,8 +363,8 @@ export function MarkdownBlockquote(props: ComponentProps<"blockquote"> & ExtraPr
  *  horizontal-scroller for wide ones, with the corner copy. The copy
  *  serializes the REAL DOM table (the library's own extractor → Markdown). */
 export function MarkdownTable(props: ComponentProps<"table"> & ExtraProps) {
-	const { children, node, ...rest } = props;
-	const ref = useRef<HTMLTableElement>(null);
+	const { children } = props;
+	const wrapRef = useRef<HTMLDivElement>(null);
 	return (
 		<div className="group/md relative my-4" data-testid="md-table">
 			<CopyCorner
@@ -378,21 +375,15 @@ export function MarkdownTable(props: ComponentProps<"table"> & ExtraProps) {
 				// corner is fixed to the wrapper, not the scrolling table).
 				className="absolute top-1 right-1 z-10"
 				label="Copy table"
-				getText={() => (ref.current ? tableDataToMarkdown(extractTableDataFromElement(ref.current)) : "")}
+				getText={() => {
+					const table = wrapRef.current?.querySelector("table");
+					return table ? tableDataToMarkdown(extractTableDataFromElement(table)) : "";
+				}}
 			/>
-			<div className="overflow-x-auto">
-				<table
-					ref={ref}
-					// No text-sm here — the table text runs at the session prose size
-				// (owner note, 2026-09-19: streamdown's cells pin their own text-sm
-				// 12.5px; globals.css overrides cells to inherit, so tables match the
-				// 16px chat text for a consistent look).
-					className="w-full border-collapse"
-					data-streamdown="table"
-					{...rest}
-				>
+			<div ref={wrapRef} className="overflow-x-auto">
+				<Table density="compact" dividers="rows" data-streamdown="table">
 					{children}
-				</table>
+				</Table>
 			</div>
 		</div>
 	);
@@ -455,9 +446,31 @@ export function MarkdownStrong(props: ComponentProps<"strong"> & ExtraProps) {
 	);
 }
 
+/** Markdown table parts as Astryx Table parts. */
+function MdThead({ children }: ComponentProps<"thead"> & ExtraProps) {
+	return <TableHeader>{children}</TableHeader>;
+}
+function MdTbody({ children }: ComponentProps<"tbody"> & ExtraProps) {
+	return <TableBody>{children}</TableBody>;
+}
+function MdTr({ children }: ComponentProps<"tr"> & ExtraProps) {
+	return <TableRow>{children}</TableRow>;
+}
+function MdTh({ children }: ComponentProps<"th"> & ExtraProps) {
+	return <TableHeaderCell>{children}</TableHeaderCell>;
+}
+function MdTd({ children }: ComponentProps<"td"> & ExtraProps) {
+	return <TableCell>{children}</TableCell>;
+}
+
 export const mdComponents = {
 	code: MarkdownCode,
 	table: MarkdownTable,
+	thead: MdThead,
+	tbody: MdTbody,
+	tr: MdTr,
+	th: MdTh,
+	td: MdTd,
 	span: MathDisplay,
 	strong: MarkdownStrong,
 	blockquote: MarkdownBlockquote,

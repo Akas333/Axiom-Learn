@@ -1,5 +1,6 @@
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { DownloadIcon } from "lucide-react";
 import { Toggle } from "@/components/settings/controls";
@@ -103,7 +104,7 @@ export function DemoOutputCard({
 	const result = output as DemoResult | undefined;
 	if (!result || typeof result.html !== "string" || typeof result.title !== "string") {
 		return (
-			<div className="rounded-xl border bg-card p-4 text-sm text-secondary">
+			<div className="rounded-lg border bg-card p-4 text-sm text-secondary">
 				Demo completed, but the result could not be displayed.
 			</div>
 		);
@@ -111,7 +112,7 @@ export function DemoOutputCard({
 	const failed = result.html.length === 0;
 	if (failed) {
 		return (
-			<div className="rounded-xl border bg-card p-4 text-primary" data-testid="demo-card-failed">
+			<div className="rounded-lg border bg-card p-4 text-primary" data-testid="demo-card-failed">
 				<div className="flex items-center gap-2 text-xs font-medium text-secondary">
 					Interactive demo
 					<span className="rounded bg-red-500/15 px-1.5 py-0.5 text-red-500">failed</span>
@@ -170,7 +171,7 @@ function DemoFrame({
 	}, []);
 
 	return (
-		<div className="rounded-xl border bg-card p-4 text-primary" data-testid="demo-card">
+		<div className="rounded-lg border bg-card p-4 text-primary" data-testid="demo-card">
 			{/* Caption header (owner, 2026-10-07): kind label + title in the
 			   label's size/tracking (title normal-case, foreground) — the
 			   figure card's grammar plus a name. Switch + download far right. */}
@@ -189,7 +190,7 @@ function DemoFrame({
 						title="Invert colors"
 						discIcon={<InvertDiscIcon className="size-3" />}
 					/>
-					<Button size="icon-sm" variant="ghost" aria-label="Download demo as HTML" tooltip="Download as HTML" onClick={() => downloadFile(`${slugFilename(title)}.html`, html, "text/html")} data-testid="demo-download"><DownloadIcon className="size-4" /></Button>
+					<IconButton variant="ghost" size="sm" label="Download demo as HTML" icon={<DownloadIcon className="size-4" />} tooltip="Download as HTML" onClick={() => downloadFile(`${slugFilename(title)}.html`, html, "text/html")} data-testid="demo-download" />
 				</div>
 			</div>
 			{state.error && (
@@ -246,7 +247,7 @@ export function DemoErrorChip({
 				{message}
 			</span>
 			{onSend && (
-				<Button size="sm" variant="ghost" onClick={onSend} data-testid="demo-error-send">Send to teacher</Button>
+				<Button variant="ghost" size="sm" label="Send to teacher" onClick={onSend} data-testid="demo-error-send" />
 			)}
 		</div>
 	);

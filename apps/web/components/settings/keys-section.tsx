@@ -22,14 +22,18 @@
  * effect immediately. Plaintext never returns from the store.
  */
 
+import { Text } from "@astryxdesign/core/Text";
+import { List, ListItem } from "@astryxdesign/core/List";
+import { Link } from "@astryxdesign/core/Link";
+import { HStack } from "@astryxdesign/core/HStack";
+import { Banner } from "@astryxdesign/core/Banner";
 import { TextInput } from "@astryxdesign/core/TextInput";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 import { useEffect, useRef, useState } from "react";
 import { AUTH_KEYS, type AuthKeyStatus } from "@/src/core";
 import { SettingsGroup } from "./controls.tsx";
 import { SubscriptionConnections } from "./subscription-connections.tsx";
-import { ProviderMenuList } from "./model-menu.tsx";
-import { MenuShell } from "@/components/menu-shell";
+import { ProviderSelector } from "./model-menu.tsx";
 import { notifySettingsSaved } from "@/components/settings-signal";
 
 /** One pi-ai provider with plain API-key auth (the Platform seam —
@@ -69,28 +73,30 @@ export function OllamaRow({ ollama, onRecheck }: { ollama: OllamaInfo | undefine
 				? "Running · no models that support tools"
 				: "Not running";
 	return (
-		<div className="flex flex-col gap-1 px-1 py-1.5" data-testid="ollama-row">
-			<div className="flex items-center justify-between gap-3">
-				<span className="font-ui text-xs text-primary">Ollama (local, no key)</span>
-				<span className="flex items-center gap-2">
-					<span className={`text-[11px] ${usable ? "text-primary" : "text-secondary"}`} data-testid="ollama-status">
-						{status}
-					</span>
-					<Button size="sm" variant="secondary" onClick={onRecheck} data-testid="ollama-recheck">Check again</Button>
-				</span>
-			</div>
-			{ollama && !usable && (
-				<p className="text-[11px] text-secondary" data-testid="ollama-help">
-					Install Ollama from ollama.com, then run <code className="font-mono">ollama pull llama3.1</code>. Axiom looks for it at{" "}
-					<code className="font-mono">{ollama.host}</code>.
-				</p>
-			)}
-			{usable && ollama.skipped.length > 0 && (
-				<p className="text-[11px] text-secondary/70" data-testid="ollama-skipped">
-					Not shown (no tool support): {ollama.skipped.join(", ")}
-				</p>
-			)}
-		</div>
+		<List density="compact" edge="flush">
+			<ListItem
+				data-testid="ollama-row"
+				label="Ollama (local, no key)"
+				description={
+					ollama && !usable ? (
+						<span data-testid="ollama-help">
+							Install Ollama from ollama.com, then run <code>ollama pull llama3.1</code>. Kapany looks for it at{" "}
+							<code>{ollama.host}</code>.
+						</span>
+					) : usable && ollama.skipped.length > 0 ? (
+						<span data-testid="ollama-skipped">Not shown (no tool support): {ollama.skipped.join(", ")}</span>
+					) : undefined
+				}
+				endContent={
+					<HStack gap={3} align="center">
+						<Text type="supporting" color={usable ? "primary" : "secondary"} data-testid="ollama-status">
+							{status}
+						</Text>
+						<Button variant="secondary" size="sm" label="Check again" onClick={onRecheck} data-testid="ollama-recheck" />
+					</HStack>
+				}
+			/>
+		</List>
 	);
 }
 
@@ -203,81 +209,67 @@ function KeyTableRow({
 	// right — instead of a second line beneath the row.
 	if (expanded && !envOwned) {
 		return (
-			<div data-testid={testid}>
-				<div className="flex items-center gap-2 rounded-sm px-1 py-1.5" data-testid={`${testid}-editor`}>
-					<span className="shrink-0 font-ui text-xs text-primary">{label}</span>
+			<ListItem
+				data-testid={`${testid}-editor`}
+				label={label}
+				description={error ? <Banner status="error" title={error} collapsible={false} data-testid={`${testid}-error`} /> : undefined}
+				endContent={
+					<HStack gap={2} align="center" className="min-w-0 flex-1">
 					<TextInput
-						label={`${label} key`}
-						isLabelHidden
-						size="sm"
-						value={value}
-						onChange={setValue}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") void save();
-						}}
-						placeholder="Paste key…"
-						data-testid={`${testid}-input`}
-						isDisabled={busy}
-						hasAutoFocus
-						autoComplete="off"
-						containerClassName="min-w-0 flex-1"
-						controlClassName="font-mono"
-					/>
-					<Button size="sm" variant="ghost" onClick={() => void save()} disabled={busy || !value.trim()} data-testid={`${testid}-save`}>Save</Button>
-					<Button size="sm" variant="ghost" onClick={onCancel} disabled={busy} data-testid={`${testid}-cancel`}>Cancel</Button>
-					{status.present && status.source === "file" && onDelete && (
-						<Button size="sm" variant="ghost" onClick={() => void onDelete()} disabled={busy} data-testid={`${testid}-delete`}>Delete</Button>
-					)}
-				</div>
-				{error && (
-					<p role="alert" data-testid={`${testid}-error`} className="px-1 text-xs text-red-500">
-						{error}
-					</p>
-				)}
-			</div>
+							label={`${label} key`}
+							isLabelHidden
+							size="sm"
+							value={value}
+							onChange={setValue}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") void save();
+							}}
+							placeholder="Paste key…"
+							data-testid={`${testid}-input`}
+							isDisabled={busy}
+							hasAutoFocus
+							autoComplete="off"
+							containerClassName="min-w-0 flex-1"
+							controlClassName="font-mono"
+						/>
+						<Button variant="ghost" size="sm" label="Save" isDisabled={busy || !value.trim()} onClick={() => void save()} data-testid={`${testid}-save`} />
+						<Button variant="ghost" size="sm" label="Cancel" isDisabled={busy} onClick={onCancel} data-testid={`${testid}-cancel`} />
+						{status.present && status.source === "file" && onDelete && (
+							<Button variant="ghost" size="sm" label="Delete" isDisabled={busy} onClick={() => void onDelete()} data-testid={`${testid}-delete`} />
+						)}
+					</HStack>
+				}
+			/>
 		);
 	}
 
 	return (
-		<div data-testid={testid} className={envOwned ? "opacity-40" : undefined}>
-			<button
-				type="button"
-				aria-expanded={expanded}
+			<ListItem
 				data-testid={`${testid}-row`}
+				description={error ? <Banner status="error" title={error} collapsible={false} data-testid={`${testid}-error`} /> : undefined}
+				label={label}
+				isDisabled={envOwned}
 				onClick={() => !envOwned && onToggle()}
-				className={`flex w-full items-center justify-between gap-3 rounded-sm px-1 py-1.5 text-left ${
-					envOwned ? "cursor-default" : "cursor-pointer transition-colors hover:bg-overlay-hover/50"
-				}`}
-			>
-				<span className="font-ui text-xs text-primary">{label}</span>
-				<span className="flex items-center gap-2">
-					{docsUrl && (
-						<a
-							href={docsUrl}
-							target="_blank"
-							rel="noreferrer"
-							onClick={(e) => e.stopPropagation()}
-							className="text-[10px] text-secondary/60 underline-offset-2 hover:text-primary hover:underline"
-						>
-							key ↗
-						</a>
-					)}
-					<span data-testid={`${testid}-status`} className="font-mono text-[11px] text-secondary">
-						{keyStatusLine(status)}
-					</span>
-				</span>
-			</button>
-			{error && (
-				<p role="alert" data-testid={`${testid}-error`} className="pl-6 text-xs text-red-500">
-					{error}
-				</p>
-			)}
-		</div>
+				endContent={
+					<HStack gap={2} align="center">
+						{docsUrl && (
+							<Text type="supporting">
+								<Link href={docsUrl} target="_blank">
+									Get a key ↗
+								</Link>
+							</Text>
+						)}
+						<Text type="supporting" data-testid={`${testid}-status`}>
+							{keyStatusLine(status)}
+						</Text>
+					</HStack>
+				}
+			/>
 	);
 }
 
-/** The Add-provider control — the table's last row, the app's shared
- *  dropdown look (portaled menu, the search + arrow-walk machine). */
+/** The Add-provider control — the table's last row: a searchable
+ *  Astryx Selector of providers without a key yet. */
 function AddProviderRow({
 	addable,
 	onPick,
@@ -285,62 +277,20 @@ function AddProviderRow({
 	addable: ProviderKeyInfo[];
 	onPick: (p: ProviderKeyInfo) => void;
 }) {
-	const [open, setOpen] = useState(false);
-	const anchorRef = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		if (!open) return;
-		const onPointerDown = (e: PointerEvent) => {
-			const target = e.target as Node;
-			if (anchorRef.current?.contains(target)) return;
-			if (target instanceof Element && target.closest("[data-lh-menu]")) return;
-			if (target instanceof Element && target.closest('[role="dialog"]')) setOpen(false);
-		};
-		const onKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				e.stopPropagation();
-				setOpen(false);
-			}
-		};
-		document.addEventListener("pointerdown", onPointerDown);
-		document.addEventListener("keydown", onKeyDown);
-		return () => {
-			document.removeEventListener("pointerdown", onPointerDown);
-			document.removeEventListener("keydown", onKeyDown);
-		};
-	}, [open]);
-
+	const byId = new Map(addable.map((p) => [p.id, p]));
 	return (
-		<div ref={anchorRef} className="relative">
-			<button
-				type="button"
-				aria-expanded={open}
-				data-testid="add-provider"
-				onClick={() => setOpen((v) => !v)}
-				className="flex w-full items-center justify-between gap-3 rounded-sm px-1 py-1.5 text-left font-ui text-xs text-secondary transition-colors hover:bg-overlay-hover/50 hover:text-primary"
-			>
-				<span>+ Add provider key</span>
-				{addable.length > 0 && <span className="font-mono text-[11px]">{addable.length}</span>}
-			</button>
-			{open && (
-				<MenuShell
-					anchorRef={anchorRef}
-					testid="add-provider-menu"
-					preferredSide="down"
-					menuClass="flex w-72 flex-col rounded-xl border border-border bg-card p-2 text-xs shadow-xl"
-				>
-					{/* Close on pick (owner, fix wave): a chosen provider ends
-					    the dropdown — the paste row is the next step. */}
-					<ProviderMenuList
-						providers={addable}
-						onPick={(p) => {
-							setOpen(false);
-							onPick(p);
-						}}
-					/>
-				</MenuShell>
-			)}
-		</div>
+		<ProviderSelector
+			label="Add provider key"
+			testid="add-provider"
+			placeholder={`Add provider key${addable.length ? ` (${addable.length})` : ""}`}
+			width="100%"
+			providers={addable}
+			value={undefined}
+			onChange={(p) => {
+				const full = byId.get(p.id);
+				if (full) onPick(full);
+			}}
+		/>
 	);
 }
 
@@ -447,6 +397,7 @@ export function KeysSection({
 	return (
 		<>
 			<SettingsGroup label="Model API keys" testid="group-provider-keys">
+				<List density="compact" edge="flush" hasDividers>
 				{providerRows.map((status) => (
 					<KeyTableRow
 						key={status.id}
@@ -465,6 +416,10 @@ export function KeysSection({
 						testid={`key-${status.id.toLowerCase()}`}
 					/>
 				))}
+				{unknownRows.map((status) => (
+					<ListItem key={status.id} data-testid={`unknown-${status.id}`} label={status.id} isDisabled endContent={<Text type="supporting">{status.masked}</Text>} />
+				))}
+				</List>
 				{/* Hidden once every offered provider has a key (by default just Meta). */}
 				{providers !== undefined && addable.length > 0 && (
 					<AddProviderRow
@@ -481,12 +436,6 @@ export function KeysSection({
 						<AddProviderEditor provider={adding} onSave={(v) => void saveNewProvider(adding, v)} onCancel={() => setAdding(null)} error={addError} />
 					</div>
 				)}
-				{unknownRows.length > 0 && <div data-testid="group-unknown-keys">
-					{unknownRows.map((status) => <div key={status.id} data-testid={`unknown-${status.id}`} className="flex items-center justify-between gap-3 px-1 py-1.5 opacity-40">
-						<span className="font-mono text-xs text-primary">{status.id}</span>
-						<span className="font-mono text-[11px] text-secondary">{status.masked}</span>
-					</div>)}
-				</div>}
 			</SettingsGroup>
 
 			<SettingsGroup label="Local models" testid="group-local-models">
@@ -507,13 +456,13 @@ export function KeysSection({
 			)}
 
 			<SettingsGroup label="Dictation" testid="group-dictation">
-				<div className="flex items-center justify-between gap-3 px-1 py-1.5" data-testid="dictation-engine">
-					<span className="text-xs text-primary">Muse Voice Transcribe (Meta)</span>
-					<span className="text-[11px] text-secondary">uses your Meta key</span>
-				</div>
+				<List density="compact" edge="flush">
+					<ListItem data-testid="dictation-engine" label="Muse Voice Transcribe (Meta)" endContent={<Text type="supporting">uses your Meta key</Text>} />
+				</List>
 			</SettingsGroup>
 
 			{(["Search"] as const).map((label) => <SettingsGroup key={label} label={label} testid="group-search">
+				<List density="compact" edge="flush" hasDividers>
 				{toolRows.filter((status) => status.id !== "DEEPGRAM_API_KEY").map((status) => (
 					<KeyTableRow
 						key={status.id}
@@ -532,6 +481,7 @@ export function KeysSection({
 						testid={`key-${status.id.toLowerCase()}`}
 					/>
 				))}
+				</List>
 			</SettingsGroup>)}
 
 		</>
@@ -570,12 +520,10 @@ function AddProviderEditor({
 				containerClassName="min-w-0 flex-1"
 				controlClassName="font-mono"
 			/>
-			<Button size="sm" variant="ghost" onClick={() => value.trim() && onSave(value)} disabled={!value.trim()} data-testid={`key-${provider.id}-save`}>Save</Button>
-			<Button size="sm" variant="ghost" onClick={onCancel} data-testid={`key-${provider.id}-cancel`}>Cancel</Button>
+			<Button variant="ghost" size="sm" label="Save" isDisabled={!value.trim()} onClick={() => value.trim() && onSave(value)} data-testid={`key-${provider.id}-save`} />
+			<Button variant="ghost" size="sm" label="Cancel" onClick={onCancel} data-testid={`key-${provider.id}-cancel`} />
 			{error && (
-				<p role="alert" className="w-full pl-0 text-xs text-red-500" data-testid={`key-${provider.id}-error`}>
-					{error}
-				</p>
+				<Banner status="error" title={error} collapsible={false} data-testid={`key-${provider.id}-error`} />
 			)}
 		</>
 	);

@@ -1,7 +1,16 @@
 
+import { TextArea } from "@astryxdesign/core/TextArea";
+import { ClickableCard } from "@astryxdesign/core/ClickableCard";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { Text } from "@astryxdesign/core/Text";
+import { Slider } from "@astryxdesign/core/Slider";
+import { SelectableCard } from "@astryxdesign/core/SelectableCard";
+import { HStack } from "@astryxdesign/core/HStack";
+import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownIcon, ChevronRightIcon, PlayIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
+import { Icon } from "@astryxdesign/core/Icon";
 import { finishDictation, isTranscriptPending, joinDictation, useDictationTarget } from "@/components/dictation";
 import { THINKING_TEXTAREA, ThinkingField } from "@/components/thinking-field";
 import { nearestStop, parseSpokenConfidence } from "@/components/spoken-confidence";
@@ -38,7 +47,6 @@ import {
 	type SelectMode,
 	type Phase3,
 } from "@/src/core";
-import { CONFIDENCE_COLORS, confidenceRailStyle } from "@/components/confidence-rail";
 
 /**
  * The question dock — a pending quiz/ask REPLACES the chat composer: the
@@ -139,7 +147,7 @@ export function QuestionDock({
 		canonical === "quiz" ? parseQuizInput(input) : canonical === "explain" ? parseExplainInput(input) : parseAskInput(input);
 	if (!parsed) {
 		return (
-			<div data-testid="malformed-question" className="rounded-xl border border-dashed bg-card/60 p-3 text-sm text-secondary">
+			<div data-testid="malformed-question" className="rounded-lg border border-dashed bg-card/60 p-3 text-sm text-secondary">
 				This question arrived malformed — the transcript keeps the retry.
 			</div>
 		);
@@ -233,37 +241,24 @@ export function QuestionDockBar({
 					<ToolContentResponse>{question}</ToolContentResponse>
 				</div>
 				<div className="mt-2.5 flex justify-end">
-					<button
-						type="button"
-						data-testid="teach-check-reveal"
-						onClick={onExpand}
-						className="flex h-9 items-center gap-1.5 rounded-xl bg-accent-bg px-3.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90"
-					>
-						<PlayIcon className="size-3.5" />
-						Show answer options
-						<ChevronRightIcon className="size-3.5" />
-					</button>
+					<Button variant="primary" size="md" label="Show answer options" icon={<PlayIcon className="size-4" />} endContent={<Icon icon={ChevronRightIcon} />} data-testid="teach-check-reveal" onClick={onExpand} />
 				</div>
 			</div>
 		);
 	}
 	return (
-		<button
-			type="button"
-			data-testid="question-dock-bar"
-			onClick={onExpand}
-			className="dock-variant flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm transition-colors hover:bg-overlay-hover/40"
-		>
-			<span className="shrink-0 text-xs font-medium text-secondary">
-				{label ??
-							toolLabel ??
-							(toolName === "quiz" ? "Check" : toolName === "explain" ? "Explain" : "Question")}
-			</span>
-			<span className="min-w-0 flex-1 truncate text-secondary">{teaserText(question)}</span>
-			<span className="flex shrink-0 items-center gap-1 text-xs font-medium">
-				Answer <ArrowDownIcon className="size-3.5" />
-			</span>
-		</button>
+		<ClickableCard label="Answer this question" variant="transparent" padding={0} data-testid="question-dock-bar" onClick={onExpand} className="dock-variant">
+			<HStack gap={2} align="center" paddingInline={4} paddingBlock={2}>
+				<Text type="label" color="secondary">
+					{label ?? toolLabel ?? (toolName === "quiz" ? "Check" : toolName === "explain" ? "Explain" : "Question")}
+				</Text>
+				<Text type="body" color="secondary" maxLines={1} className="min-w-0 flex-1">
+					{teaserText(question)}
+				</Text>
+				<Text type="label">Answer</Text>
+				<Icon icon={ArrowDownIcon} size="sm" />
+			</HStack>
+		</ClickableCard>
 	);
 }
 
@@ -638,116 +633,51 @@ function QuestionDockForm({
 						{qd.options.map((opt, i) => {
 							const isSel = sel.selected.has(i);
 							return (
-								<button
+								<SelectableCard
 									key={opt.value}
-									type="button"
-									role={qd.mode === "multi-select" ? "checkbox" : "radio"}
-									aria-checked={isSel}
-									data-kbdrow={i}
-									onClick={() => toggle(i)}
-									className={cn(
-										"flex items-start gap-3 rounded-lg border px-3 py-2 text-left text-sm outline-none transition-colors",
-										isSel ? "border-accent-bg bg-overlay-hover" : "hover:bg-overlay-hover/50",
-										i === kbdIdx && !isSel && "ring-1 ring-border bg-overlay-hover/40",
-									)}
+									label={opt.label}
+									isSelected={isSel}
+									onChange={() => toggle(i)}
+									padding={2}
+									data-kbdrow={String(i)}
+									className={cn(i === kbdIdx && !isSel && "ring-1 ring-border")}
 								>
-									<span
-										className={cn(
-											"mt-0.5 flex size-4 shrink-0 items-center justify-center border",
-											qd.mode === "multi-select" ? "rounded-sm" : "rounded-full",
-											isSel ? "border-accent-bg bg-accent-bg text-on-accent" : "border-secondary/40",
-										)}
-									>
-										{isSel && (
-											<span className={cn(qd.mode === "multi-select" ? "text-base leading-none" : "size-1.5 rounded-full bg-current")}>
-												{qd.mode === "multi-select" ? "✓" : ""}
-											</span>
-										)}
-									</span>
-									<span>
-										<ToolContentResponse>{opt.label}</ToolContentResponse>
-										{kind !== "quiz" && opt.description && (
-											// Option subtext renders in Source Sans 3 (owner's mockup);
-											// the "I don't know" copy stays JetBrains Mono. QUIZ options render
-											// NO description (owner ruling 2026-09-26): the model used them to
-											// telegraph correctness — the schema dropped the field and old
-											// records must not leak either. Same MessageResponse path as the
-											// label (owner, 2026-10-12): descriptions are full markdown —
-											// LaTeX included — not plain text.
-											<ToolContentResponse className="lh-prose block text-xs text-secondary">
-												{opt.description}
-											</ToolContentResponse>
-										)}
-									</span>
-								</button>
+									<ToolContentResponse>{opt.label}</ToolContentResponse>
+									{/* Quiz options never show a description: the model used them
+									    to telegraph correctness. Descriptions are full markdown. */}
+									{kind !== "quiz" && opt.description && (
+										<ToolContentResponse className="lh-prose block text-xs text-secondary">{opt.description}</ToolContentResponse>
+									)}
+								</SelectableCard>
 							);
 						})}
 
 						{kind === "quiz" && (
-							<button
-								type="button"
-								onClick={() =>
-									setSel((prev) => ({ ...prev, selected: new Set(), otherSelected: false, dontKnow: !prev.dontKnow }))
-								}
-								data-kbdrow={optionCount}
-								aria-pressed={sel.dontKnow}
-								className={cn(
-									// Option-row layout + radio circle (owner); the dashed
-									// outline stays — this is the deliberate non-answer.
-									"flex items-start gap-3 rounded-lg border border-dashed px-3 py-2 text-left text-sm outline-none transition-colors",
-									sel.dontKnow ? "border-accent-bg text-primary" : "text-secondary",
-									kbdIdx === optionCount && !sel.dontKnow && "ring-1 ring-border bg-overlay-hover/40",
-								)}
+							<SelectableCard
+								label="I don't know"
+								variant="transparent"
+								isSelected={sel.dontKnow}
+								onChange={() => setSel((prev) => ({ ...prev, selected: new Set(), otherSelected: false, dontKnow: !prev.dontKnow }))}
+								padding={2}
+								data-kbdrow={String(optionCount)}
+								className={cn(kbdIdx === optionCount && !sel.dontKnow && "ring-1 ring-border")}
 							>
-								<span
-									className={cn(
-										"mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
-										sel.dontKnow
-											? "border-accent-bg bg-accent-bg text-on-accent"
-											: "border-secondary/40",
-									)}
-								>
-									{sel.dontKnow && <span className="size-1.5 rounded-full bg-current" />}
-								</span>
-								<span>I don't know</span>
-							</button>
+								<Text type="body" color="secondary">I don't know</Text>
+							</SelectableCard>
 						)}
 
 						{kind === "ask" && (
-							<div
-								role={qd.mode === "multi-select" ? "checkbox" : "radio"}
-								aria-checked={sel.otherSelected}
-								data-testid="other-option"
-								data-kbdrow={optionCount}
-								onClick={selectOther}
-								className={cn(
-									"flex items-start gap-3 rounded-lg border px-3 py-2 text-left text-sm outline-none transition-colors",
-									sel.otherSelected ? "border-accent-bg bg-overlay-hover" : "border-dashed hover:bg-overlay-hover/50",
-									kbdIdx === optionCount && !sel.otherSelected && "ring-1 ring-border bg-overlay-hover/40",
-								)}
-							>
-								<span
-									className={cn(
-										"mt-0.5 flex size-4 shrink-0 items-center justify-center border",
-										qd.mode === "multi-select" ? "rounded-sm" : "rounded-full",
-										sel.otherSelected
-											? "border-accent-bg bg-accent-bg text-on-accent"
-											: "border-secondary/40",
-									)}
-								>
-									{sel.otherSelected && (
-										<span className={cn(qd.mode === "multi-select" ? "text-base leading-none" : "size-1.5 rounded-full bg-current")}>
-											{qd.mode === "multi-select" ? "✓" : ""}
-										</span>
-									)}
-								</span>
-								<input
+							<HStack gap={2} align="center" data-testid="other-option" data-kbdrow={String(optionCount)} className={cn("rounded-lg px-2 py-1", kbdIdx === optionCount && !sel.otherSelected && "ring-1 ring-border")}>
+								<CheckboxInput label="Other answer" isLabelHidden value={sel.otherSelected} onChange={() => selectOther()} />
+								<TextInput
 									ref={otherInputRef}
+									label="Your own answer"
+									isLabelHidden
+									width="100%"
 									value={other}
-									onChange={(e) => {
-										setOther(e.target.value);
-										// Typing selects the row — displacing in
-										// single-select, alongside the siblings in multi.
+									onChange={(next) => {
+										setOther(next);
+										// Typing selects the row — displacing in single-select, alongside the siblings in multi.
 										setSel((prev) => (prev.otherSelected ? prev : toggleOther(selectMode, prev)));
 									}}
 									onKeyDown={(e) => {
@@ -776,10 +706,9 @@ function QuestionDockForm({
 											}
 									}}
 									placeholder="Type your own answer…"
-									className="lh-input w-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-secondary"
-									onClick={(e) => e.stopPropagation()}
+									containerClassName="min-w-0 flex-1"
 								/>
-							</div>
+							</HStack>
 						)}
 					</div>
 				)}
@@ -801,86 +730,24 @@ function QuestionDockForm({
 			{kind === "quiz" && (
 				<div className="border-t border-border/60 px-4 py-2.5">
 					<div className="flex items-center gap-3">
-						<span
-							className={cn(
-								"shrink-0 text-xs font-medium",
-								sel.dontKnow
-									? "text-secondary/50"
-									: needsConfidence
-										? "text-primary"
-										: "text-secondary",
-							)}
-						>
-							{needsConfidence ? "How sure are you?" : "Confidence"}
-						</span>
-						<div
-							className={cn("relative h-4 min-w-0 flex-1", sel.dontKnow && "opacity-40")}
-							data-testid="confidence-track"
-						>
-							{/* The RAIL is painted here, not on the input: this overlay spans
-								exactly the thumb-CENTER range (inset 8px = half the 16px disc,
-								left and right), so at 0 and 100 the disc sits flush against the
-								rail's very ends — no bare stub poking past it (owner round 4).
-								STACKING LAW (owner round 5): the input is absolute too — a
-								positioned overlay paints above an in-flow input no matter the
-								DOM order, which put the rail OVER the disc. Both positioned,
-								input later in DOM → the disc rides on top. The wrapper's height
-								is pinned (h-4) so the rail's top-1/2 and the disc's track share
-								one box — centered by construction, not by hope. */}
-							<div
-								aria-hidden
-								data-testid="confidence-rail"
-								className="pointer-events-none absolute top-1/2 left-2 right-2 h-1.5 -translate-y-1/2 rounded-full border border-border"
-								style={confidenceRailStyle(confSet ? CONFIDENCE_STOPS[confIdx]! : 0)}
-							/>
-							<input
-								type="range"
-								min={0}
-								max={100}
-								step={1}
-								value={CONFIDENCE_STOPS[confIdx]}
-								disabled={sel.dontKnow}
-								aria-label="Confidence — the probability your selected answer is correct"
-								aria-valuetext={confSet ? `${CONFIDENCE_STOPS[confIdx]} percent` : "not set"}
-								title="The probability your selected answer is correct — 50% is a coin flip. Adjust with ←/→."
-								data-testid="confidence-slider"
-								onChange={(e) => {
-									// Snap to the nearest stop; the rendered VALUE is the stop's own
-									// percent, so the thumb always rests at its true fraction (50 =
-									// halfway). Keyboard needs no handler here: the dock machine treats
-									// a focused range as non-typing (see the guard above) and its ←/→
-									// branch preventDefaults, which also cancels the native 1% step.
-									const v = Number(e.target.value);
-									let best = 0;
-									for (let i = 1; i < CONFIDENCE_STOPS.length; i++) {
-										if (Math.abs(CONFIDENCE_STOPS[i]! - v) < Math.abs(CONFIDENCE_STOPS[best]! - v)) best = i;
-									}
-									chooseConf(best);
-								}}
-								// A click on the resting thumb (50) changes nothing, so
-								// onChange never fires — count the click as choosing it.
-								onClick={() => setConfSet(true)}
-								style={{ color: confSet ? CONFIDENCE_COLORS[confIdx] : "var(--color-text-secondary)" }}
-								className={cn(
-									"absolute inset-0 h-4 w-full cursor-pointer appearance-none bg-transparent outline-none",
-									// Unset: a hollow, pulsing thumb asks to be moved.
-									needsConfidence && "animate-pulse [&::-webkit-slider-thumb]:opacity-60 [&::-moz-range-thumb]:opacity-60",
-									"[&::-webkit-slider-runnable-track]:h-4 [&::-webkit-slider-runnable-track]:bg-transparent",
-									"[&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-current",
-									"[&::-moz-range-track]:h-4 [&::-moz-range-track]:bg-transparent",
-									"[&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-current",
-								)}
-							/>
-						</div>
-						<span
-							data-testid="confidence-value"
-							className={cn(
-								"w-9 shrink-0 text-right font-mono text-sm tabular-nums",
-								sel.dontKnow && "text-secondary/50",
-							)}
-						>
+						<Slider
+							label={needsConfidence ? "How sure are you?" : "Confidence"}
+							data-testid="confidence-slider"
+							min={0}
+							max={CONFIDENCE_STOPS.length - 1}
+							step={1}
+							value={confIdx}
+							isDisabled={sel.dontKnow}
+							valueDisplay="none"
+							formatValue={(i) => `${CONFIDENCE_STOPS[i]} percent`}
+							marks={CONFIDENCE_STOPS.map((stop, i) => ({ value: i, label: `${stop}%` }))}
+							onChange={(i: number) => chooseConf(i)}
+							onChangeEnd={() => setConfSet(true)}
+							containerClassName="min-w-0 flex-1"
+						/>
+						<Text type="body" hasTabularNumbers color={sel.dontKnow ? "disabled" : "primary"} data-testid="confidence-value">
 							{sel.dontKnow || !confSet ? "—" : `${CONFIDENCE_STOPS[confIdx]}%`}
-						</span>
+						</Text>
 					</div>
 					{askToSayConfidence && (
 						<p className="mt-1.5 text-xs text-primary" data-testid="say-confidence">
@@ -918,20 +785,18 @@ function QuestionDockForm({
 							: undefined
 					}
 					action={
-						<Button
-							type="submit"
-							disabled={!canSubmit || compactionRunning}
-						>
-							Submit answer
-						</Button>
+						<Button variant="primary" size="md" label="Submit answer" isDisabled={!canSubmit || compactionRunning} type="submit" />
 					}
 				>
 					{qd.mode === "text" ? (
-						<textarea
+						<TextArea
+							label="Your answer"
+							isLabelHidden
+							width="100%"
 							value={text}
-							onChange={(e) => {
-								answerTextRef.current = e.target.value;
-								setText(e.target.value);
+							onChange={(next) => {
+								answerTextRef.current = next;
+								setText(next);
 							}}
 							onKeyDown={(e) => {
 								// Esc ends dictation (the dictate decisions: click-again
@@ -952,15 +817,17 @@ function QuestionDockForm({
 							}}
 							placeholder="Type your answer…"
 							rows={1}
-							className={cn(THINKING_TEXTAREA, "min-h-10")}
 						/>
 					) : (
-						<textarea
+						<TextArea
 							ref={thinkingRef}
+							label="Your thinking"
+							isLabelHidden
+							width="100%"
 							value={thinking}
-							onChange={(e) => {
-								thinkingTextRef.current = e.target.value;
-								setThinking(e.target.value);
+							onChange={(next) => {
+								thinkingTextRef.current = next;
+								setThinking(next);
 							}}
 							onKeyDown={(e) => {
 								// Esc ends dictation (the dictate decisions: click-again
@@ -981,13 +848,7 @@ function QuestionDockForm({
 								}
 							}}
 							placeholder="Why this answer? What's on your mind?"
-							rows={1}
-							className={cn(
-								THINKING_TEXTAREA,
-								// Phase-scaled prominence: teaching invites depth,
-								// probing stays quick.
-								phase === "teach" ? "min-h-[4.5rem]" : "min-h-10",
-							)}
+							rows={phase === "teach" ? 3 : 1}
 						/>
 					)}
 				</ThinkingField>

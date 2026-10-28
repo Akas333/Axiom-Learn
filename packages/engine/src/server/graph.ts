@@ -11,6 +11,7 @@ import {
 } from "../core/graph-deletion.ts";
 import { extractionStatuses } from "../agent/subagents/extraction.ts";
 import { stores } from "./stores.ts";
+import { claimPracticeView } from "./review.ts";
 import { callCost } from "./pricing.ts";
 
 /**
@@ -20,7 +21,9 @@ import { callCost } from "./pricing.ts";
  * reflects whatever the pipeline has merged so far.
  */
 export function graphView(): GraphSnapshot {
-	return graphSnapshot(stores);
+	const snapshot = graphSnapshot(stores);
+	const liveIds = new Set(snapshot.propositions.map((n) => n.id));
+	return { ...snapshot, practice: claimPracticeView(liveIds) };
 }
 
 /** The graph view's cost surface (GET /api/graph/costs — the 2026-09 cost

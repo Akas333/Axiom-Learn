@@ -1,12 +1,12 @@
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "@/lib/navigation";
 import { GraphView } from "@/components/graph-view";
 import { MinimalHome } from "@/components/minimal-home";
 import { SetupDialog } from "@/components/setup-dialog";
 import { ComposerActions, NodePickerControl, SessionModeToggle } from "@/components/composer-actions";
-import { Composer, COMPOSER_SHELL } from "@/components/composer";
+import { Composer } from "@/components/composer";
 import { useStrongKeyless, useZeroKeys, ZeroKeysPill } from "@/components/setup-cta";
 import { joinDictation, useDictation } from "@/components/dictation";
 import { useFieldCycle } from "@/components/field-cycle";
@@ -228,11 +228,11 @@ export function Home({
 							<ZeroKeysPill inline onOpen={() => setSetupOpen(true)} />
 						) : (
 							!configured && (
-								<Button size="sm" variant="secondary" data-testid="setup-cta" onClick={() => setSetupOpen(true)}>Set up your models</Button>
+								<Button variant="secondary" size="sm" label="Set up your models" data-testid="setup-cta" onClick={() => setSetupOpen(true)} />
 							)
 						)}
 					/>
-					<div className={COMPOSER_SHELL}>
+					<div>
 						<Composer
 							busy={false}
 							value={topic}

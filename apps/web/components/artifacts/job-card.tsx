@@ -1,4 +1,5 @@
 
+import { List, ListItem } from "@astryxdesign/core/List";
 import { DispatchCard } from "@/components/artifacts/dispatch-card";
 import { MessageResponse } from "@/components/ai-elements/message";
 import type { ArtifactPartProps, PdfResult, ResearchResult } from "@/src/core";
@@ -37,7 +38,7 @@ export function PdfBriefCard({ output }: { output: unknown }) {
 	const result = output as PdfResult | undefined;
 	if (!result || typeof result.brief !== "string") {
 		return (
-			<div className="rounded-xl border bg-card p-4 text-sm text-secondary">
+			<div className="rounded-lg border bg-card p-4 text-sm text-secondary">
 				PDF reading completed, but the result could not be displayed.
 			</div>
 		);
@@ -49,7 +50,7 @@ export function PdfBriefCard({ output }: { output: unknown }) {
 	const readList = result.pagesRead ?? result.pagesConsulted ?? [];
 	const consultedList = result.pagesConsulted ?? [];
 	return (
-		<div className="rounded-xl border bg-card p-4 text-primary" data-testid="pdf-brief-card">
+		<div className="rounded-lg border bg-card p-4 text-primary" data-testid="pdf-brief-card">
 			<div className="mb-1 flex items-center gap-2 text-xs font-medium text-secondary">
 				PDF brief
 				{failed && <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-red-500">failed</span>}
@@ -79,14 +80,14 @@ export function ResearchBriefCard({ output }: { output: unknown }) {
 	const result = output as ResearchResult | undefined;
 	if (!result || typeof result.brief !== "string") {
 		return (
-			<div className="rounded-xl border bg-card p-4 text-sm text-secondary">
+			<div className="rounded-lg border bg-card p-4 text-sm text-secondary">
 				Research completed, but the result could not be displayed.
 			</div>
 		);
 	}
 	const failed = result.brief.startsWith("Research failed");
 	return (
-		<div className="rounded-xl border bg-card p-4 text-primary" data-testid="research-brief-card">
+		<div className="rounded-lg border bg-card p-4 text-primary" data-testid="research-brief-card">
 			<div className="mb-1 flex items-center gap-2 text-xs font-medium text-secondary">
 				Research brief
 				{failed && <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-red-500">failed</span>}
@@ -97,20 +98,11 @@ export function ResearchBriefCard({ output }: { output: unknown }) {
 			{result.sources.length > 0 && (
 				<div className="mt-3 border-t pt-2">
 					<div className="mb-1 text-xs font-medium text-secondary">Sources</div>
-					<ul className="flex flex-col gap-0.5 text-xs">
+					<List density="compact" edge="flush">
 						{result.sources.map((s) => (
-							<li key={s.url} className="truncate">
-								<a
-									href={s.url}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="text-accent underline-offset-2 hover:underline"
-								>
-									{s.title}
-								</a>
-							</li>
+							<ListItem key={s.url} label={s.title} href={s.url} target="_blank" />
 						))}
-					</ul>
+					</List>
 				</div>
 			)}
 		</div>

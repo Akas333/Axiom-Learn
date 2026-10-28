@@ -49,7 +49,7 @@ describe("route mounting", () => {
 	const app = createApp(echoRoutes);
 
 	it("mounts all 35 engine routes", () => {
-		assert.equal(API_ROUTES.length, 35);
+		assert.equal(API_ROUTES.length, 37);
 	});
 
 	for (const route of API_ROUTES) {
@@ -92,6 +92,25 @@ describe("engine handlers over HTTP", () => {
 		const chat = (await res.json()) as { id: string; turnInFlight: boolean };
 		assert.equal(chat.id, id);
 		assert.equal(chat.turnInFlight, false);
+	});
+
+	it("folders: create, move a session in, delete the folder keeps the session", async () => {
+		const made = (await (await app.request("/api/folders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Physics" }) })).json()) as { folder: { id: string; name: string } };
+		assert.equal(made.folder.name, "Physics");
+		const chat = (await (await app.request("/api/chats", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: "Folder fixture" }) })).json()) as { id: string };
+		const moved = await app.request(`/api/chats/${chat.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderId: made.folder.id }) });
+		assert.equal(moved.status, 200);
+		const listed = (await (await app.request("/api/chats")).json()) as { chats: { id: string; folderId?: string }[] };
+		assert.equal(listed.chats.find((c) => c.id === chat.id)?.folderId, made.folder.id);
+		const bad = await app.request(`/api/chats/${chat.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderId: "folder_missing" }) });
+		assert.equal(bad.status, 400);
+		assert.equal((await app.request(`/api/folders/${made.folder.id}`, { method: "DELETE" })).status, 200);
+		const after = (await (await app.request("/api/chats")).json()) as { chats: { id: string; folderId?: string }[] };
+		const kept = after.chats.find((c) => c.id === chat.id);
+		assert.ok(kept, "the session survives its folder");
+		assert.equal(kept.folderId, undefined);
+		const folders = (await (await app.request("/api/folders")).json()) as { folders: unknown[] };
+		assert.equal(folders.folders.length, 0);
 	});
 
 	it("GET /api/chats/:id is 404 for an unknown session", async () => {

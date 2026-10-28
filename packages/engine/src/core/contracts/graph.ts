@@ -19,6 +19,7 @@
 // ─── Knowledge graph (vision §1 — global, cross-session) ────────────────────
 
 import type { CallUsage, ExtractionRunUsage } from "./chat.ts";
+import type { ClaimPractice } from "../review.ts";
 
 /** One relation of the DERIVED view — chains are the stored truth (owner,
  *  2026-09-30: "the graph is a lossy image of what is truly stored"), and
@@ -344,6 +345,10 @@ export interface GraphSnapshot {
 	 *  exists (core/layout.ts settle writes it). Absent on a fresh graph —
 	 *  the view then falls back to its own one-shot forceAtlas2 pass. */
 	positions?: Record<string, Position>;
+	/** Practice state per claim (core/review.ts), derived on every read
+	 *  from the practice records and Anki reviews — never stored. Only
+	 *  practiced claims appear; a missing id means untested. */
+	practice?: Record<string, ClaimPractice>;
 }
 
 /** A node's resting position in layout space (the positions ledger). */

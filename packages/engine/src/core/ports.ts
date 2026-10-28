@@ -11,6 +11,7 @@
 
 import type { LhMessage } from "./native-messages.ts";
 import type {
+	ChatFolder,
 	ChatRecord,
 	ChatSettings,
 	ChatSummary,
@@ -63,6 +64,17 @@ export interface ChatStore {
 	 *  job cleanup are the caller's choreography (core/graph-deletion.ts +
 	 *  the DELETE route), not the store's. */
 	deleteChat(id: string): boolean;
+	/** Put a session in a folder, or take it out (null). Like a rename, it
+	 *  leaves updatedAt alone so the sidebar order never churns. */
+	setChatFolder(id: string, folderId: string | null): ChatRecord;
+	/** The user's sidebar folders, oldest first. */
+	listFolders(): ChatFolder[];
+	createFolder(name: string): ChatFolder;
+	/** Null when the folder id is unknown. */
+	renameFolder(id: string, name: string): ChatFolder | null;
+	/** Delete a folder; its sessions stay and move back out of any folder.
+	 *  False when the id is unknown. */
+	deleteFolder(id: string): boolean;
 }
 
 // ─── GraphStore — the append-only evidence ledgers (data/graph) ──────────────

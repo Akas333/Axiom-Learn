@@ -1,10 +1,12 @@
 
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { Popover } from "@astryxdesign/core/Popover";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useActivity } from "@/components/activity-dock";
-import { usePopoverDismiss } from "@/components/popover-dismiss";
 import { useSettingsSaved } from "@/components/settings-signal";
 import { formatTokens } from "@/components/usage-format";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 import { timeAgo } from "@/components/sidebar";
 import { resolveSettings } from "@/src/core";
 
@@ -99,121 +101,66 @@ async function requestExtract(chatId: string): Promise<boolean> {
 // ─── The sidebar context menu's coverage block ──────────────────────────────
 
 /**
- * The info block at the bottom of the session context menu (owner-locked
- * redesign): what the extractor hasn't covered yet, plus the manual Extract
- * affordance — visually separated from Rename/Delete below (those stay the
- * two session-management actions). Fetched ON MENU OPEN (the block mounts
- * with the menu — on-demand, never eagerly), polled at 2s while a run is
- * in flight so the numbers settle live. No coverage (fetch failed, 404):
- * the whole block renders nothing — no fake zeros.
+ * Coverage for the session context menu: what the extractor hasn't
+ * covered yet, plus the manual Extract action. Fetched when the menu
+ * opens (pass the chat id then, null when closed) and polled at 2s while
+ * a run is in flight so the numbers settle live. `coverage` stays null
+ * when the read fails — no fake zeros.
  */
-export function CoverageMenuBlock({ chatId }: { chatId: string }) {
+export function useSessionCoverage(chatId: string | null) {
 	const refreshActivity = useActivity().refresh;
 	const [coverage, setCoverage] = useState<SessionCoverage | null>(null);
 	const [extracting, setExtracting] = useState(false); // optimistic until the server says running
 	const lastUncoveredRef = useRef<number | null>(null);
 
 	const load = useCallback(async () => {
+		if (chatId === null) return;
 		const next = await fetchCoverage(chatId);
 		if (next === null) return;
-		// The optimistic state stands down once the server says running, or
-		// once the fold moved coverage (the run finished).
-		if (
-			next.running ||
-			(lastUncoveredRef.current !== null && next.uncoveredTokens !== lastUncoveredRef.current)
-		) {
+		// The optimistic state stands down once the server says running,
+		// or once the fold moved coverage (the run finished).
+		if (next.running || (lastUncoveredRef.current !== null && next.uncoveredTokens !== lastUncoveredRef.current)) {
 			setExtracting(false);
 		}
 		lastUncoveredRef.current = next.uncoveredTokens;
 		setCoverage(next);
 	}, [chatId]);
 
-	// On MENU OPEN (the block mounts with the menu — on-demand, never
-	// eagerly): one read, then the 2s poll below takes over while running.
 	useEffect(() => {
 		lastUncoveredRef.current = null;
 		setExtracting(false);
+		setCoverage(null);
 		void load();
 	}, [load]);
 
-	// While a run is in flight the block polls at 2s (the old panel's
-	// open-only cadence, bounded to the running state) — the numbers
-	// settle live and the block ends in "fully extracted".
-	// ACCEPTED BY DESIGN (owner, 2026-10-02): the ring drains per fold,
-	// and the events channel is per phase — that granularity gap is why
-	// this bounded, run-scoped poll stays.
 	useEffect(() => {
 		if (coverage?.running !== true && !extracting) return;
 		const timer = setInterval(() => void load(), 2000);
 		return () => clearInterval(timer);
 	}, [load, coverage?.running, extracting]);
 
-	if (coverage === null) return null;
-
-	const onExtract = async () => {
+	const extract = async () => {
+		if (chatId === null) return;
 		setExtracting(true);
-		// The dock's start-site nudge (the 202 registers the run before the
-		// response; a 409 means one is already in flight) — refresh so the
-		// run surfaces at once either way.
+		// Surface the run in the activity dock at once (409 = already running).
 		refreshActivity();
 		const started = await requestExtract(chatId);
 		if (!started) setExtracting(false);
 		void load();
 	};
-	return (
-		<CoverageMenuBody
-			coverage={coverage}
-			extracting={extracting}
-			onExtract={() => void onExtract()}
-		/>
-	);
-}
 
-/** The block's presentational core (exported for static-render tests):
- *  the numbers, the running pulse, and the Extract affordance with its
- *  optimistic "Running" state. */
-export function CoverageMenuBody({
-	coverage,
-	extracting,
-	onExtract,
-}: {
-	coverage: SessionCoverage;
-	/** Click-pending (optimistic) until the server says running. */
-	extracting: boolean;
-	onExtract: () => void;
-}) {
-	const busy = coverage.running || extracting;
-	const complete = coverage.uncoveredTokens === 0 && coverage.uncoveredCount === 0;
-	return (
-		<div data-testid="ctx-coverage" className="flex flex-col gap-1 px-2.5 pt-1 pb-2">
-			{busy ? (
-				<span className="flex items-center gap-1.5 text-secondary" data-testid="ctx-coverage-running">
-					<span className="size-1.5 animate-pulse rounded-full bg-inverted/70" aria-hidden />
-					extracting…
-				</span>
-			) : complete ? (
-				<span className="text-secondary">fully extracted</span>
-			) : (
-				<span className="flex flex-col">
-					<span className="tabular-nums text-primary">
-						{formatTokens(coverage.uncoveredTokens)} tok uncovered
-					</span>
-					<span className="tabular-nums text-secondary">
-						{coverage.uncoveredCount} message{coverage.uncoveredCount === 1 ? "" : "s"} unextracted
-					</span>
-				</span>
-			)}
-			<button
-				type="button"
-				data-testid="ctx-extract"
-				onClick={onExtract}
-				disabled={busy || complete}
-				className="flex items-center justify-center rounded-lg border px-2 py-1 text-secondary transition-colors hover:bg-overlay-hover hover:text-primary disabled:opacity-40 disabled:hover:bg-transparent"
-			>
-				{busy ? "Running" : "Extract"}
-			</button>
-		</div>
-	);
+	const busy = !!coverage?.running || extracting;
+	const complete = coverage !== null && coverage.uncoveredTokens === 0 && coverage.uncoveredCount === 0;
+	/** One-line summary for the Extract menu item. */
+	const summary =
+		coverage === null
+			? null
+			: busy
+				? "Extracting…"
+				: complete
+					? "Fully extracted"
+					: `${formatTokens(coverage.uncoveredTokens)} tok · ${coverage.uncoveredCount} message${coverage.uncoveredCount === 1 ? "" : "s"} unextracted`;
+	return { coverage, busy, complete, summary, extract };
 }
 
 // ─── The chat top bar's ring meter ──────────────────────────────────────────
@@ -245,7 +192,6 @@ export function CoverageRing({ chatId, refreshKey = 0 }: { chatId: string; refre
 	const [open, setOpen] = useState(false);
 	const [nonce, setNonce] = useState(0);
 	const rootRef = useRef<HTMLDivElement>(null);
-	usePopoverDismiss(rootRef, open, () => setOpen(false));
 
 	// The activity/refresh chain (the dispatch's seam): runs can fire from
 	// OTHER surfaces (the sidebar menu's Extract, the turn pipeline, another
@@ -298,31 +244,28 @@ export function CoverageRing({ chatId, refreshKey = 0 }: { chatId: string; refre
 	const fill = ringFill(coverage.uncoveredTokens, graph.chunkTokens);
 	return (
 		<div ref={rootRef} className="lh-no-drag relative shrink-0">
-			<Hint
-				// Trimmed (owner, subtlety round 2026-09-25).
-				label="How much of this session isn't mapped yet"
-				side="bottom"
+			<Popover
+				isOpen={open}
+				onOpenChange={setOpen}
+				placement="below"
+				alignment="end"
+				width={256}
+				label="Extraction coverage"
+				content={
+					<div data-testid="coverage-ring-popover">
+						<CoverageRingDetail coverage={coverage} chunkTokens={graph.chunkTokens} />
+					</div>
+				}
 			>
-				<button
-					type="button"
+				<IconButton
+					label="How much of this session isn't mapped yet"
+					tooltip="How much of this session isn't mapped yet"
+					variant="ghost"
+					size="sm"
 					data-testid="coverage-ring"
-					onClick={() => setOpen((o) => !o)}
-					aria-expanded={open}
-					className="relative flex size-5 cursor-pointer items-center justify-center transition-opacity hover:opacity-80"
-				>
-					{/* The donut: track + fill. The whole ring pulses while a run
-					    is in flight (motion = the working-state signal). */}
-					<CoverageRingGlyph fill={fill} running={coverage.running} />
-				</button>
-			</Hint>
-			{open && (
-				<div
-					data-testid="coverage-ring-popover"
-					className="absolute top-full right-0 z-40 mt-1.5 w-64 rounded-xl border bg-card p-3 text-xs shadow-xl"
-				>
-					<CoverageRingDetail coverage={coverage} chunkTokens={graph.chunkTokens} />
-				</div>
-			)}
+					icon={<CoverageRingGlyph fill={fill} running={coverage.running} />}
+				/>
+			</Popover>
 		</div>
 	);
 }

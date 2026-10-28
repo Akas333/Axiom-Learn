@@ -12,6 +12,8 @@ import {
 	dueOrder,
 	gradeForConclusion,
 	masteryStateOf,
+	claimPracticeOf,
+	CLAIM_HISTORY_MAX,
 	intervalDays,
 	memoryNote,
 	retrievability,
@@ -85,9 +87,10 @@ describe("gradeForConclusion", () => {
 describe("reviewEventsOf", () => {
 	it("one event per target of each clean conclude, stamped with the conclude's time", () => {
 		const messages = [...pose(["a", "b"], T0), ...conclude("solved", null, T0 + 1000)];
+		const callId = (messages[2] as unknown as { content: [{ id: string }] }).content[0].id;
 		assert.deepEqual(reviewEventsOf(messages), [
-			{ nodeId: "a", at: T0 + 1000, grade: 3, mode: "recall" },
-			{ nodeId: "b", at: T0 + 1000, grade: 3, mode: "recall" },
+			{ nodeId: "a", at: T0 + 1000, grade: 3, mode: "recall", callId, outcome: "solved" },
+			{ nodeId: "b", at: T0 + 1000, grade: 3, mode: "recall", callId, outcome: "solved" },
 		]);
 	});
 
@@ -104,7 +107,10 @@ describe("reviewEventsOf", () => {
 
 	it("a refused pose does not lend its targets to the next conclude", () => {
 		const messages = [...pose(["a"], T0), ...pose(["x"], T0 + 1, true), ...conclude("surrendered", null, T0 + 2)];
-		assert.deepEqual(reviewEventsOf(messages), [{ nodeId: "a", at: T0 + 2, grade: 1, mode: "recall" }]);
+		assert.deepEqual(
+			reviewEventsOf(messages).map(({ nodeId, grade, outcome }) => ({ nodeId, grade, outcome })),
+			[{ nodeId: "a", grade: 1, outcome: "surrendered" }],
+		);
 	});
 });
 
@@ -311,5 +317,33 @@ describe("masteryStateOf (the named states)", () => {
 	it("the memory note names the state for the practice agent", () => {
 		const state = reviewStates([{ nodeId: "a", at: T0, grade: 1 }], T0).get("a");
 		assert.match(memoryNote(state, T0), /; state shaky(;|$)/);
+	});
+});
+
+describe("claimPracticeOf (the graph's per-claim summary)", () => {
+	it("gives each practiced claim its state and newest-first history", () => {
+		const events: ReviewEvent[] = [
+			{ nodeId: "a", at: T0, grade: 3, session: "s1", callId: "c1", outcome: "solved" },
+			{ nodeId: "a", at: T0 + 3 * DAY, grade: 1, session: "s2", callId: "c2", outcome: "surrendered" },
+			{ nodeId: "b", at: T0, grade: 2, session: "anki:2026-10-01", mode: "flashcard" },
+		];
+		const out = claimPracticeOf(events, T0 + 3 * DAY);
+		assert.deepEqual(Object.keys(out).sort(), ["a", "b"]);
+		assert.equal(out.a!.state, "shaky");
+		assert.equal(out.a!.reviews, 2);
+		assert.deepEqual(out.a!.history.map((h) => h.callId), ["c2", "c1"]);
+		assert.equal("nodeId" in out.a!.history[0]!, false);
+		assert.equal(out.b!.state, "developing");
+	});
+
+	it("caps the history", () => {
+		const events: ReviewEvent[] = Array.from({ length: CLAIM_HISTORY_MAX + 4 }, (_, i) => ({
+			nodeId: "a",
+			at: T0 + i * DAY,
+			grade: 3 as const,
+		}));
+		const out = claimPracticeOf(events, T0 + 20 * DAY);
+		assert.equal(out.a!.history.length, CLAIM_HISTORY_MAX);
+		assert.equal(out.a!.history[0]!.at, T0 + (CLAIM_HISTORY_MAX + 3) * DAY);
 	});
 });

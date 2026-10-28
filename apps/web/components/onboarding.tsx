@@ -8,6 +8,7 @@
  * dispatching OPEN_ONBOARDING_EVENT.
  */
 
+import { List, ListItem } from "@astryxdesign/core/List";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@astryxdesign/core/Button";
 import { Dialog } from "@astryxdesign/core/Dialog";
@@ -232,21 +233,11 @@ const LESSON_STAGES = [
 function LessonStep() {
 	return (
 		<StepFrame title="How a lesson works" lead="Type what you want to learn on the home screen. From there, every lesson follows the same loop.">
-			<ol className="grid gap-3 sm:grid-cols-2">
-				{LESSON_STAGES.map(({ Icon, title, body }, i) => (
-					<li key={title} className="flex gap-3 rounded-xl border border-border bg-overlay-hover/40 p-4">
-						<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-overlay-hover text-primary">
-							<Icon className="size-[18px]" aria-hidden />
-						</span>
-						<span>
-							<span className="block text-[15px] text-primary">
-								{i + 1}. {title}
-							</span>
-							<span className="mt-1 block text-[14px] leading-relaxed text-secondary">{body}</span>
-						</span>
-					</li>
+			<List hasDividers>
+				{LESSON_STAGES.map(({ Icon: StageIcon, title, body }, i) => (
+					<ListItem key={title} align="start" startContent={<StageIcon className="size-5 text-secondary" aria-hidden />} label={`${i + 1}. ${title}`} description={body} />
 				))}
-			</ol>
+			</List>
 			<div className="mt-4 grid gap-3 sm:grid-cols-2">
 				<Tip Icon={PencilLineIcon} title="Think out loud">
 					Every question has a thinking field. Write or dictate your reasoning and doubts: it tells the tutor how you
@@ -262,7 +253,7 @@ function LessonStep() {
 
 function Tip({ Icon, title, children }: { Icon: typeof TargetIcon; title: string; children: React.ReactNode }) {
 	return (
-		<div className="flex gap-3 rounded-xl p-1">
+		<div className="flex gap-3 rounded-lg p-1">
 			<Icon className="mt-0.5 size-[18px] shrink-0 text-secondary" aria-hidden />
 			<span>
 				<span className="block text-[15px] text-primary">{title}</span>

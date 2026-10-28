@@ -15,6 +15,14 @@
 @import "@astryxdesign/core/tailwind-theme.css";
 @import "tailwindcss/utilities.css" layer(utilities);
 
+/* Layout geometry is the app's, not the theme's: themes like Matcha and Y2K
+   set a 6px spacing unit, which through the bridge would grow every w-/h-/
+   p-/gap- class by 50% and reshape the screens. Pin Tailwind's unit to 4px;
+   Astryx components still use their theme spacing internally. */
+@theme inline {
+	--spacing: 0.25rem;
+}
+
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* No browser focus outline on hand-built surfaces. Kept in the base

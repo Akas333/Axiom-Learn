@@ -1,4 +1,11 @@
 
+import { VStack } from "@astryxdesign/core/VStack";
+import { Text } from "@astryxdesign/core/Text";
+import { Popover } from "@astryxdesign/core/Popover";
+import { MetadataList, MetadataListItem } from "@astryxdesign/core/MetadataList";
+import { List, ListItem } from "@astryxdesign/core/List";
+import { Link } from "@astryxdesign/core/Link";
+import { Button } from "@astryxdesign/core/Button";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { subscriptionLabels, subscriptionLabel, type SessionPricing, type TurnUsage } from "@/src/core";
 import { formatTokens, formatUsd, planCostLabel, prettyModel } from "@/components/usage-format";
@@ -80,28 +87,6 @@ export function StatsBar({
 	const [selectedModel, setSelectedModel] = useState<string | undefined>();
 	// Same dropdown discipline as the model control (owner, df4433f treatment,
 	// stats round 1): close on any pointerdown outside the bar or on Escape.
-	const barRef = useRef<HTMLDivElement>(null);
-	useEffect(() => {
-		if (!open) return;
-		const onPointerDown = (e: PointerEvent) => {
-			if (barRef.current && !barRef.current.contains(e.target as Node)) setOpen(false);
-		};
-		const onKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				// THE ONE-ESC LAW (keyboard round 2026-10-06): claim — the
-				// window chain must not also act under this popover.
-				e.preventDefault();
-				e.stopPropagation();
-				setOpen(false);
-			}
-		};
-		document.addEventListener("pointerdown", onPointerDown);
-		document.addEventListener("keydown", onKeyDown);
-		return () => {
-			document.removeEventListener("pointerdown", onPointerDown);
-			document.removeEventListener("keydown", onKeyDown);
-		};
-	}, [open]);
 	// Catalog-only denominator; the picker reports its effective selection.
 	// Missing/pending catalog means usage-only, never a hardcoded maximum.
 	const { catalog } = useModelCatalog();
@@ -136,75 +121,44 @@ export function StatsBar({
 			{/* The left side: the session-data summary — only once a session
 			    exists (turns). Pre-chat renders nothing (see the header). */}
 			{(chatId || turns.length > 0) && (
-			<div ref={barRef} className="relative">
-				{/* No tooltip — the numbers describe themselves and the popover
-			    speaks on click (owner, subtlety round 2026-09-25). */}
-			<button
-				type="button"
-				onClick={() => setOpen((o) => !o)}
-				aria-expanded={open}
-				data-testid="stats-summary"
-				className="flex items-center gap-1.5 whitespace-nowrap tabular-nums transition-colors hover:text-primary"
-			>
-				<span data-testid="stats-context">
-					{contextLabel}
-				</span>
-				<span aria-hidden>·</span>
-				<span data-testid="stats-cost">{costLabel}</span>
-			</button>
-				{open && (
-					<div
-						data-testid="stats-detail"
-						className="absolute bottom-full left-0 z-40 mb-1.5 w-72 max-w-[calc(100vw-1.5rem)] sm:left-1/2 sm:-translate-x-1/2 rounded-xl border bg-card p-3 text-xs shadow-xl"
-					>
-						<div className="mb-2 text-xs font-medium text-secondary">
-							Session stats
-						</div>
-						<div className="flex flex-col gap-1 text-secondary">
-							<div className="flex justify-between gap-2">
-								<span>Context (last call)</span>
-								<span className="tabular-nums text-primary">
-									{contextLabel}
-								</span>
-							</div>
-							<div className="flex justify-between gap-2">
-								<span>{subscription ? "Usage" : "Total cost"}</span>
-								<span className="tabular-nums text-primary">{costLabel}</span>
-							</div>
-							{providers.includes("ChatGPT") && <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noreferrer" className="underline underline-offset-2">Manage ChatGPT usage</a>}
-							{unpriced > 0 && (
-								<div className="flex justify-between gap-2">
-									<span>Unpriced turns</span>
-									<span className="tabular-nums text-primary">{unpriced}</span>
-								</div>
-							)}
-						</div>
-						{turns.length > 0 && (
-							<>
-								<div className="mb-1 mt-2.5 border-t pt-2 text-xs font-medium text-secondary">
-									Turns
-								</div>
-								<ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
-									{turns.map((turn, i) => {
-										const c = pricing?.turnCosts[turn.id] ?? null;
-										return (
-											<li key={`${turn.messageId}-${i}`} className="flex items-center justify-between gap-2">
-												<span className="truncate text-secondary">
-													#{i + 1} · {prettyModel(turn.model, true)}
-												</span>
-												<span className="flex shrink-0 items-center gap-2 tabular-nums text-primary">
-													<span className="text-secondary">{turn.steps.length} steps</span>
-													<span>{subscriptionLabel(turn.model) ?? (c === null ? "—" : formatUsd(c))}</span>
-												</span>
-											</li>
-										);
-									})}
-								</ul>
-							</>
+			<Popover
+				isOpen={open}
+				onOpenChange={setOpen}
+				placement="above"
+				width={288}
+				label="Session stats"
+				content={
+					<VStack gap={3} data-testid="stats-detail">
+						<MetadataList title="Session stats">
+							<MetadataListItem label="Context (last call)">{contextLabel}</MetadataListItem>
+							<MetadataListItem label={subscription ? "Usage" : "Total cost"}>{costLabel}</MetadataListItem>
+							{unpriced > 0 && <MetadataListItem label="Unpriced turns">{String(unpriced)}</MetadataListItem>}
+						</MetadataList>
+						{providers.includes("ChatGPT") && (
+							<Link href="https://chatgpt.com/settings/usage" target="_blank">
+								Manage ChatGPT usage
+							</Link>
 						)}
-					</div>
-				)}
-			</div>
+						{turns.length > 0 && (
+							<List header={<Text type="label" color="secondary">Turns</Text>} density="compact" className="max-h-56 overflow-y-auto">
+								{turns.map((turn, i) => {
+									const c = pricing?.turnCosts[turn.id] ?? null;
+									return (
+										<ListItem
+											key={`${turn.messageId}-${i}`}
+											label={`#${i + 1} · ${prettyModel(turn.model, true)}`}
+											description={`${turn.steps.length} steps`}
+											endContent={<Text type="body" hasTabularNumbers>{subscriptionLabel(turn.model) ?? (c === null ? "—" : formatUsd(c))}</Text>}
+										/>
+									);
+								})}
+							</List>
+						)}
+					</VStack>
+				}
+			>
+				<Button variant="secondary" size="sm" label={`${contextLabel} · ${costLabel}`} data-testid="stats-summary" />
+			</Popover>
 			)}
 			{/* Dictation lives inside the input itself now (the mic + meter
 			    in the composer pill and the thinking fields). */}

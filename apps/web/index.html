@@ -19,6 +19,7 @@
 					var r = document.documentElement;
 					for (var k in c.vars) r.style.setProperty(k, c.vars[k]);
 					if (c.mode === "light" || c.dark === false) r.setAttribute("data-theme", "light");
+					if (c.theme) r.setAttribute("data-astryx-theme", c.theme);
 				}
 			} catch (e) {}
 		</script>

@@ -1,16 +1,14 @@
 import { Dialog } from "@astryxdesign/core/Dialog";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Text } from "@astryxdesign/core/Text";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 
 export function ConnectionRow({ label, action, disabled, onAction, children, testid, actionTestid }: { label: string; action: string; disabled: boolean; onAction: () => void; children?: React.ReactNode; testid?: string; actionTestid?: string }) {
 	return (
 		<HStack gap={3} align="center" wrap="wrap" data-testid={testid}>
 			<Text type="body">{label}</Text>
 			{children}
-			<Button size="sm" variant={action === "Connect" ? "secondary" : "ghost"} data-testid={actionTestid} disabled={disabled} onClick={onAction}>
-				{action}
-			</Button>
+			<Button variant={action === "Connect" ? "secondary" : "ghost"} size="sm" label={action} isDisabled={disabled} data-testid={actionTestid} onClick={onAction} />
 		</HStack>
 	);
 }

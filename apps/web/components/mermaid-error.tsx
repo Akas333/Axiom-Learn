@@ -1,5 +1,8 @@
 
-import { Button } from "@/components/ui/button";
+import { CodeBlock } from "@astryxdesign/core/CodeBlock";
+import { HStack } from "@astryxdesign/core/HStack";
+import { Collapsible } from "@astryxdesign/core/Collapsible";
+import { Button } from "@astryxdesign/core/Button";
 import { cn } from "@/lib/utils";
 import type { MermaidErrorComponentProps } from "streamdown";
 
@@ -17,7 +20,7 @@ export const MermaidError = ({
 }: MermaidErrorComponentProps & { className?: string }) => (
 	<div
 		className={cn(
-			"my-4 rounded-xl border border-error/40 bg-error/5 p-4",
+			"my-4 rounded-lg border border-error/40 bg-error/5 p-4",
 			className,
 		)}
 		data-streamdown="mermaid-error"
@@ -28,16 +31,14 @@ export const MermaidError = ({
 		<p className="mt-1 font-mono text-xs break-words text-secondary">
 			{error}
 		</p>
-		<details className="mt-3">
-			<summary className="cursor-pointer text-xs text-secondary">
+		<Collapsible defaultIsOpen={false}  trigger={
+<HStack gap={2} align="center" className="min-w-0 text-xs text-secondary">
 				Show diagram source
-			</summary>
-			<pre className="mt-2 overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs text-primary">
-				{chart}
-			</pre>
-		</details>
-		<Button className="mt-3" onClick={retry} size="sm" variant="outline">
-			Retry
-		</Button>
+			
+</HStack>
+}>
+			<CodeBlock code={chart} language="plaintext" isWrapped maxHeight={256} />
+		</Collapsible>
+		<Button variant="secondary" size="sm" label="Retry" className="mt-3" onClick={retry} />
 	</div>
 );

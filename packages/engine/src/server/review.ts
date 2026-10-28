@@ -1,8 +1,10 @@
 import {
+	claimPracticeOf,
 	dueOrder,
 	masteryStateOf,
 	reviewEventsOf,
 	reviewStates,
+	type ClaimPractice,
 	type MasteryState,
 	type NodeReviewState,
 	type ReviewEvent,
@@ -58,4 +60,13 @@ export function reviewView(now = Date.now()): ReviewView {
 	}
 	const due = dueOrder(nodes) as ReviewNode[];
 	return { now, nodes, due };
+}
+
+/** Per-claim practice summaries for the graph view (GET /api/graph),
+ *  limited to claims that still exist in the graph. */
+export function claimPracticeView(liveIds: ReadonlySet<string>, now = Date.now()): Record<string, ClaimPractice> {
+	const all = claimPracticeOf(allReviewEvents(), now);
+	const out: Record<string, ClaimPractice> = {};
+	for (const [id, practice] of Object.entries(all)) if (liveIds.has(id)) out[id] = practice;
+	return out;
 }

@@ -53,7 +53,11 @@
  * Read-only toward the graph.
  */
 
-import { Button } from "@/components/ui/button";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { Icon } from "@astryxdesign/core/Icon";
+import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
+import { Button } from "@astryxdesign/core/Button";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { useEffect, useMemo, useState } from "react";
 import {
 	ChevronDownIcon,
@@ -232,8 +236,6 @@ export function ChainTableBody({
 
 	const nameOf = (id: string) => byId.get(id)?.name ?? id;
 	const dateOf = (id: string) => byId.get(id)?.createdAt.slice(0, 10) ?? "";
-	const dirIcon = (col: ChainSortCol) =>
-		sort.col !== col ? null : sort.dir === 1 ? <ChevronUpIcon className="size-3" /> : <ChevronDownIcon className="size-3" />;
 
 	return (
 		<div data-testid="chain-table" className="relative flex h-full min-h-0 flex-col">
@@ -248,19 +250,20 @@ export function ChainTableBody({
 				<span className="min-w-0 flex-1 truncate text-xs text-secondary">
 					{chains.length} {chains.length === 1 ? "chain" : "chains"} · {nodes.length} {nodes.length === 1 ? "node" : "nodes"}
 				</span>
-				<div className="relative shrink-0">
-					<SearchIcon className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-secondary" />
-					<input
-						value={query}
-						data-testid="chain-table-search"
-						onChange={(e) => onQuery(e.target.value)}
-						placeholder="Search nodes…"
-						aria-label="Search nodes"
-						spellCheck={false}
-						className="lh-no-drag h-8 w-56 rounded-lg border bg-body pl-8 pr-3 text-xs outline-none placeholder:text-secondary focus:border-accent-bg"
-					/>
-				</div>
-			<Button size="icon-sm" variant="secondary" data-testid="chain-table-close" onClick={onClose} aria-label="Close chains" className="lh-no-drag shrink-0"><XIcon className="size-4" /></Button>
+				<TextInput
+					label="Search nodes"
+					isLabelHidden
+					size="sm"
+					width={224}
+					startIcon={SearchIcon}
+					hasClear
+					value={query}
+					data-testid="chain-table-search"
+					onChange={onQuery}
+					placeholder="Search nodes…"
+					containerClassName="lh-no-drag shrink-0"
+				/>
+			<IconButton variant="secondary" size="sm" label="Close chains" icon={<XIcon className="size-4" />} className="lh-no-drag shrink-0" data-testid="chain-table-close" onClick={onClose} />
 			</TopBar>
 
 			{/* The list: NO per-row lines (owner ruling) — the ONLY horizontal
@@ -273,33 +276,39 @@ export function ChainTableBody({
 				{/* The TOP rule (owner round 5: the table is framed — a line under
 			    the header, a line under the last group, lines between groups). */}
 				<div className="sticky top-0 z-10 flex items-center gap-1 border-b border-border/60 bg-body/80 px-3 py-1.5 text-[11px] text-secondary/70 backdrop-blur">
-					<button
-						type="button"
-						data-testid="sort-name"
-						onClick={() => onSort("name")}
-						aria-sort={sort.col === "name" ? (sort.dir === 1 ? "ascending" : "descending") : "none"}
-						className="flex flex-1 items-center gap-1 text-left transition-colors hover:text-primary"
-					>
-						Name {dirIcon("name")}
-					</button>
-					<button
-						type="button"
-						data-testid="sort-props"
-						onClick={() => onSort("props")}
-						aria-sort={sort.col === "props" ? (sort.dir === 1 ? "ascending" : "descending") : "none"}
-						className="flex w-14 shrink-0 items-center justify-end gap-1 text-right transition-colors hover:text-primary"
-					>
-						Props {dirIcon("props")}
-					</button>
-					<button
-						type="button"
-						data-testid="sort-created"
-						onClick={() => onSort("created")}
-						aria-sort={sort.col === "created" ? (sort.dir === 1 ? "ascending" : "descending") : "none"}
-						className="flex w-20 shrink-0 items-center justify-end gap-1 text-right transition-colors hover:text-primary"
-					>
-						Created {dirIcon("created")}
-					</button>
+					<span className="flex flex-1">
+						<Button
+							variant="ghost"
+							size="sm"
+							label="Name"
+							data-testid="sort-name"
+							aria-sort={sort.col === "name" ? (sort.dir === 1 ? "ascending" : "descending") : "none"}
+							endContent={sort.col === "name" ? <Icon icon={sort.dir === 1 ? ChevronUpIcon : ChevronDownIcon} /> : undefined}
+							onClick={() => onSort("name")}
+						/>
+					</span>
+					<span className="flex w-20 shrink-0 justify-end">
+						<Button
+							variant="ghost"
+							size="sm"
+							label="Props"
+							data-testid="sort-props"
+							aria-sort={sort.col === "props" ? (sort.dir === 1 ? "ascending" : "descending") : "none"}
+							endContent={sort.col === "props" ? <Icon icon={sort.dir === 1 ? ChevronUpIcon : ChevronDownIcon} /> : undefined}
+							onClick={() => onSort("props")}
+						/>
+					</span>
+					<span className="flex w-24 shrink-0 justify-end">
+						<Button
+							variant="ghost"
+							size="sm"
+							label="Created"
+							data-testid="sort-created"
+							aria-sort={sort.col === "created" ? (sort.dir === 1 ? "ascending" : "descending") : "none"}
+							endContent={sort.col === "created" ? <Icon icon={sort.dir === 1 ? ChevronUpIcon : ChevronDownIcon} /> : undefined}
+							onClick={() => onSort("created")}
+						/>
+					</span>
 				</div>
 
 				{groups.length === 0 && (
@@ -335,14 +344,8 @@ export function ChainTableBody({
 							)}
 							{/* The cluster row: birth-session group header. */}
 							<div className="flex items-center gap-1 px-3 py-1.5">
-								<RowCheckbox
-									checked={selectedCount === group.nodeIds.length && group.nodeIds.length > 0}
-									indeterminate={selectedCount > 0 && selectedCount < group.nodeIds.length}
-									onToggle={(next) => onToggleNodes(group.nodeIds, next)}
-									testid={`cluster-checkbox-${group.key}`}
-									label={`Select everything born in ${group.label ?? "unlabeled"}`}
-								/>
-								<Expander open={open} onClick={() => onToggleCluster(group.key)} testid={`cluster-toggle-${group.key}`} label={`Expand cluster ${group.label ?? "unlabeled"}`} />
+								<CheckboxInput size="sm" isLabelHidden label={`Select everything born in ${group.label ?? "unlabeled"}`} data-testid={`cluster-checkbox-${group.key}`} value={(selectedCount > 0 && selectedCount < group.nodeIds.length) ? "indeterminate" : selectedCount === group.nodeIds.length && group.nodeIds.length > 0} onChange={(next) => onToggleNodes(group.nodeIds, next)} />
+								<IconButton variant="ghost" size="sm" label={`Expand cluster ${group.label ?? "unlabeled"}`} aria-expanded={open} data-testid={`cluster-toggle-${group.key}`} icon={open ? <ChevronDownIcon className="size-4" /> : <ChevronRightIcon className="size-4" />} onClick={() => onToggleCluster(group.key)} />
 								<span className="flex shrink-0 items-center justify-center text-secondary">
 									{open ? <FolderOpenIcon className="size-3.5" /> : <FolderIcon className="size-3.5" />}
 								</span>
@@ -384,14 +387,8 @@ export function ChainTableBody({
 												aria-label={formatChainLine(chain, Object.fromEntries([...byId.entries()].map(([id, n]) => [id, { name: n.name }])))}
 												className="flex items-center gap-1 py-1 pl-12 pr-3"
 											>
-												<RowCheckbox
-													checked={selectedInChain === memberIds.length && memberIds.length > 0}
-													indeterminate={selectedInChain > 0 && selectedInChain < memberIds.length}
-													onToggle={(next) => onToggleNodes(memberIds, next)}
-													testid={`chain-checkbox-${chain.id}`}
-													label={`Select chain ${nameOf(chain.conclusion)}`}
-												/>
-												<Expander open={chainOpen} onClick={() => onToggleChain(chain.id)} testid={`chain-toggle-${chain.id}`} label={`Expand chain ${nameOf(chain.conclusion)}`} />
+												<CheckboxInput size="sm" isLabelHidden label={`Select chain ${nameOf(chain.conclusion)}`} data-testid={`chain-checkbox-${chain.id}`} value={(selectedInChain > 0 && selectedInChain < memberIds.length) ? "indeterminate" : selectedInChain === memberIds.length && memberIds.length > 0} onChange={(next) => onToggleNodes(memberIds, next)} />
+												<IconButton variant="ghost" size="sm" label={`Expand chain ${nameOf(chain.conclusion)}`} aria-expanded={chainOpen} data-testid={`chain-toggle-${chain.id}`} icon={chainOpen ? <ChevronDownIcon className="size-4" /> : <ChevronRightIcon className="size-4" />} onClick={() => onToggleChain(chain.id)} />
 												{/* The chain line: proposition names as faint-outlined
 												    chips. THE LOGIC IS THE PAYLOAD (owner rulings,
 												    2026-09-30): premises join with the LaTeX LAND (∧),
@@ -453,12 +450,7 @@ export function ChainTableBody({
 															data-testid={`prop-row-${id}`}
 															className="flex items-start gap-2 py-1 pl-21 pr-3"
 														>
-															<RowCheckbox
-																checked={selection.has(id)}
-																onToggle={(next) => onToggleNodes([id], next)}
-																testid={`prop-checkbox-${id}`}
-																label={`Select node ${node.name}`}
-															/>
+															<CheckboxInput size="sm" isLabelHidden label={`Select node ${node.name}`} data-testid={`prop-checkbox-${id}`} value={selection.has(id)} onChange={(next) => onToggleNodes([id], next)} />
 															<span className="min-w-0 flex-1 text-xs leading-relaxed text-secondary">
 																{node.statement}
 															</span>
@@ -488,9 +480,9 @@ export function ChainTableBody({
 							{selection.size} {selection.size === 1 ? "node" : "nodes"} →{" "}
 							{derived.length} {derived.length === 1 ? "chain" : "chains"}
 						</span>
-						<Button size="sm" variant="ghost" data-testid="chain-clear" onClick={onClear}>Clear</Button>
+						<Button variant="ghost" size="sm" label="Clear" data-testid="chain-clear" onClick={onClear} />
 						{selectMode ? (
-							<Button size="sm" variant="primary" data-testid="chain-practice-done" onClick={onSelect} aria-label={`Done picking — ${selection.size} ${selection.size === 1 ? "proposition" : "propositions"} selected`}><DumbbellIcon aria-hidden="true" className="size-4" />Done</Button>
+							<Button variant="primary" size="sm" label="Done" icon={<DumbbellIcon aria-hidden="true" className="size-4" />} aria-label={`Done picking — ${selection.size} ${selection.size === 1 ? "proposition" : "propositions"} selected`} data-testid="chain-practice-done" onClick={onSelect} />
 						) : (
 							<>
 							{/* The danger fence (owner ruling): a divider quarantines
@@ -498,60 +490,13 @@ export function ChainTableBody({
 								    safe actions and the kill switch never blend. The
 								    full-death confirm dialog catches the misclick. */}
 							<span data-testid="chain-danger-divider" aria-hidden="true" className="h-4 w-px bg-border/70" />
-							<Button size="sm" variant="destructive" data-testid="chain-delete" onClick={onDelete} aria-label={`Delete ${selection.size} selected ${selection.size === 1 ? "node" : "nodes"}`}><Trash2Icon aria-hidden="true" className="size-4" />Delete</Button>
+							<Button variant="destructive" size="sm" label="Delete" icon={<Trash2Icon aria-hidden="true" className="size-4" />} aria-label={`Delete ${selection.size} selected ${selection.size === 1 ? "node" : "nodes"}`} data-testid="chain-delete" onClick={onDelete} />
 							</>
 						)}
 					</div>
 				</div>
 			)}
 		</div>
-	);
-}
-
-/** The rotating chevron — collapsed points right, expanded rotates down
- *  (owner ruling: the affordance must read on every expandable row). */
-function Expander({ open, onClick, testid, label }: { open: boolean; onClick: () => void; testid: string; label: string }) {
-	return (
-		<button
-			type="button"
-			data-testid={testid}
-			onClick={onClick}
-			aria-label={label}
-			aria-expanded={open}
-			className="flex h-5 w-3.5 shrink-0 items-center justify-center rounded text-secondary/70 transition-colors hover:bg-overlay-hover hover:text-primary"
-		>
-			<ChevronRightIcon className={`size-3.5 transition-transform ${open ? "rotate-90" : ""}`} />
-		</button>
-	);
-}
-
-/** The checkbox — checked/indeterminate (partial chains/clusters); DOM
- *  property set via ref (React does not expose `indeterminate`). */
-function RowCheckbox({
-	checked,
-	indeterminate = false,
-	onToggle,
-	testid,
-	label,
-}: {
-	checked: boolean;
-	indeterminate?: boolean;
-	onToggle: (next: boolean) => void;
-	testid: string;
-	label: string;
-}) {
-	return (
-		<input
-			type="checkbox"
-			checked={checked}
-			ref={(el) => {
-				if (el) el.indeterminate = indeterminate;
-			}}
-			data-testid={testid}
-			aria-label={label}
-			onChange={(e) => onToggle(e.target.checked)}
-			className="size-3.5 shrink-0 accent-accent-bg"
-		/>
 	);
 }
 

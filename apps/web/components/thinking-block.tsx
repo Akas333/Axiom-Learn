@@ -1,4 +1,6 @@
 
+import { Collapsible } from "@astryxdesign/core/Collapsible";
+import { Text } from "@astryxdesign/core/Text";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDownIcon } from "lucide-react";
 import { blurAfterPointerClick } from "@/components/focus-hygiene";
@@ -115,22 +117,16 @@ export function ThinkingBlock({
 				inCard ? "items-start" : "items-end",
 			)}
 		>
-			<button
-				type="button"
+			<Collapsible
 				data-testid={testId ? `${testId}-trigger` : undefined}
-				onClick={(e) => {
-					setOpen((v) => !v);
-					blurAfterPointerClick(e);
-				}}
-				aria-expanded={open}
-				className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-overlay-hover px-3 font-medium text-secondary transition-colors hover:bg-overlay-pressed hover:text-primary"
+				isOpen={open}
+				onOpenChange={setOpen}
+				trigger={<Text type="supporting" size="sm" weight="medium">{label}</Text>}
 			>
-				{label}
-				<ChevronDownIcon className={cn("size-3.5 shrink-0 transition-transform", open ? "rotate-180" : "rotate-0")} />
-			</button>
-			{open && (
-				<span className={cn("lh-prose block max-w-[80%] whitespace-pre-wrap rounded-2xl border border-strong/70 px-4 py-2.5 text-[15px] italic text-primary/60", inCard && "max-w-full")}>{text}</span>
-			)}
+				<Text type="body" as="p" color="secondary" className={cn("lh-prose block whitespace-pre-wrap italic", inCard ? "max-w-full" : "max-w-[80%]")}>
+					{text}
+				</Text>
+			</Collapsible>
 		</div>
 	);
 }

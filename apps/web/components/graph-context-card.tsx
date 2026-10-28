@@ -1,4 +1,6 @@
 
+import { Collapsible } from "@astryxdesign/core/Collapsible";
+import { Text } from "@astryxdesign/core/Text";
 import { useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,21 +27,19 @@ export function GraphContextCard({ data }: { data: GraphContextData }) {
 	const noun = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 	return (
 		<div data-testid="graph-context-card" className="my-1">
-			<button
-				type="button"
+			<Collapsible
 				data-testid="graph-context-toggle"
-				onClick={() => setOpen((v) => !v)}
-				className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border/70 px-3 py-2 text-left text-xs text-secondary transition-colors hover:text-primary"
+				isOpen={open}
+				onOpenChange={setOpen}
+				chevronPosition="start"
+				trigger={
+					<Text type="supporting" size="sm">
+						Graph context · {noun(propositions.length, "proposition", "propositions")}
+						{chains.length > 0 ? ` · ${noun(chains.length, "chain", "chains")}` : ""}
+					</Text>
+				}
 			>
-				<ChevronRightIcon aria-hidden="true" className={cn("size-3.5 shrink-0 transition-transform", open && "rotate-90")} />
-				<span className="font-medium">Graph context</span>
-				<span className="min-w-0 flex-1 truncate">
-					{noun(propositions.length, "proposition", "propositions")}
-					{chains.length > 0 ? ` · ${noun(chains.length, "chain", "chains")}` : ""}
-				</span>
-			</button>
-			{open && (
-				<div data-testid="graph-context-body" className="mt-1 space-y-1 rounded-lg border border-dashed border-border/70 px-4 py-3 text-xs">
+				<div data-testid="graph-context-body" className="space-y-1 text-xs">
 					{propositions.map((p) => (
 						<div key={p.id} data-testid={`graph-context-prop-${p.id}`} className="leading-relaxed">
 							<span className="font-medium text-primary/80">{p.name}</span>
@@ -56,7 +56,7 @@ export function GraphContextCard({ data }: { data: GraphContextData }) {
 						</div>
 					)}
 				</div>
-			)}
+			</Collapsible>
 		</div>
 	);
 }

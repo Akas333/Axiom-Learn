@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { PATHS } from "../../config.ts";
 import { emit } from "../core/events.ts";
 import type { ChatStore } from "../core/ports.ts";
-import type { ChatRecord, ChatSettings, ChatSummary, ExtractionRunUsage, PlanTree, TurnUsage } from "../core/contracts.ts";
+import type { ChatFolder, ChatRecord, ChatSettings, ChatSummary, ExtractionRunUsage, PlanTree, TurnUsage } from "../core/contracts.ts";
 import { CURRENT_CHAT_VERSION } from "../core/contracts.ts";
 import type { LhMessage } from "../core/native-messages.ts";
 import { activeProblemOf, danglingQuestionOf } from "../core/native-messages.ts";
@@ -195,6 +195,77 @@ function deleteChat(id: string): boolean {
 	}
 }
 
+/** Put a session in a folder or take it out (null). A list-shape write, so
+ *  it announces; like a rename it leaves updatedAt alone. */
+function setChatFolder(id: string, folderId: string | null): ChatRecord {
+	const record = getChat(id);
+	if (!record) throw new Error(`Chat not found: ${id}`);
+	if (folderId === null) delete record.folderId;
+	else record.folderId = folderId;
+	writeChat(record);
+	emit("chats-changed", {});
+	return record;
+}
+
+// ─── Folders (data/folders.json) ─────────────────────────────────────────────
+// One small JSON array. A session points at its folder by id (ChatRecord
+// folderId); the folder file never lists its sessions.
+
+function foldersFile(): string {
+	return path.join(PATHS.data, "folders.json");
+}
+
+function listFolders(): ChatFolder[] {
+	try {
+		const parsed = JSON.parse(fs.readFileSync(foldersFile(), "utf-8")) as unknown;
+		return Array.isArray(parsed) ? (parsed as ChatFolder[]) : [];
+	} catch {
+		return [];
+	}
+}
+
+function writeFolders(folders: ChatFolder[]): void {
+	fs.mkdirSync(PATHS.data, { recursive: true });
+	fs.writeFileSync(foldersFile(), JSON.stringify(folders, null, "\t"), "utf-8");
+}
+
+function createFolder(name: string): ChatFolder {
+	const folder: ChatFolder = {
+		id: `folder_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 8)}`,
+		name: name.trim() || "New folder",
+		createdAt: new Date().toISOString(),
+	};
+	writeFolders([...listFolders(), folder]);
+	emit("chats-changed", {});
+	return folder;
+}
+
+function renameFolder(id: string, name: string): ChatFolder | null {
+	const folders = listFolders();
+	const folder = folders.find((f) => f.id === id);
+	if (!folder) return null;
+	folder.name = name.trim() || folder.name;
+	writeFolders(folders);
+	emit("chats-changed", {});
+	return folder;
+}
+
+/** The folder goes; its sessions stay and fall back to no folder. */
+function deleteFolder(id: string): boolean {
+	const folders = listFolders();
+	if (!folders.some((f) => f.id === id)) return false;
+	writeFolders(folders.filter((f) => f.id !== id));
+	for (const summary of listChats()) {
+		if (summary.folderId !== id) continue;
+		const record = getChat(summary.id);
+		if (!record) continue;
+		delete record.folderId;
+		writeChat(record);
+	}
+	emit("chats-changed", {});
+	return true;
+}
+
 /** Persist the session plan tree (plan tools call this in execute). */
 function saveTree(id: string, tree: PlanTree): void {
 	const record = getChat(id);
@@ -216,4 +287,9 @@ export const chatStore: ChatStore = {
 	deleteChat,
 	appendTurnUsage,
 	appendExtractionUsage,
+	setChatFolder,
+	listFolders,
+	createFolder,
+	renameFolder,
+	deleteFolder,
 };

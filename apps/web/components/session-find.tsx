@@ -1,5 +1,7 @@
 
-import { Button } from "@/components/ui/button";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { Text } from "@astryxdesign/core/Text";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from "lucide-react";
 import { kbdEventForAction, stepSessionMatch } from "@/src/core";
@@ -179,22 +181,23 @@ export function SessionFind({ scopeRef, scrollContextRef }: {
 				}
 			}}
 		>
-			<SearchIcon className="size-4 shrink-0 text-secondary" aria-hidden />
-			<input
+			<TextInput
 				ref={inputRef}
-				aria-label="Find in session"
+				label="Find in session"
+				isLabelHidden
+				size="sm"
+				startIcon={SearchIcon}
 				placeholder="Find in session…"
 				value={query}
-				onChange={(event) => setQuery(event.target.value)}
-				spellCheck={false}
-				className="lh-input min-w-0 flex-1 bg-transparent outline-none placeholder:text-secondary"
+				onChange={setQuery}
+				containerClassName="min-w-0 flex-1"
 			/>
-			<output aria-live="polite" data-testid="session-find-count" className="shrink-0 text-xs tabular-nums text-secondary">
+			<Text type="supporting" hasTabularNumbers aria-live="polite" data-testid="session-find-count">
 				{query ? `${result.index + 1}/${result.count}` : ""}
-			</output>
-			<Button size="icon-sm" variant="ghost" aria-label="Previous match" tooltip="Previous match (Shift+Enter)" disabled={!result.count} onMouseDown={(event) => event.preventDefault()} onClick={() => step(-1)}><ChevronUpIcon className="size-4" aria-hidden /></Button>
-			<Button size="icon-sm" variant="ghost" aria-label="Next match" tooltip="Next match (Enter)" disabled={!result.count} onMouseDown={(event) => event.preventDefault()} onClick={() => step(1)}><ChevronDownIcon className="size-4" aria-hidden /></Button>
-			<Button size="icon-sm" variant="ghost" aria-label="Close Find" tooltip="Close Find (Esc)" onClick={close}><XIcon className="size-4" aria-hidden /></Button>
+			</Text>
+			<IconButton variant="ghost" size="sm" label="Previous match" icon={<ChevronUpIcon className="size-4" aria-hidden />} isDisabled={!result.count} tooltip="Previous match (Shift+Enter)" onMouseDown={(event) => event.preventDefault()} onClick={() => step(-1)} />
+			<IconButton variant="ghost" size="sm" label="Next match" icon={<ChevronDownIcon className="size-4" aria-hidden />} isDisabled={!result.count} tooltip="Next match (Enter)" onMouseDown={(event) => event.preventDefault()} onClick={() => step(1)} />
+			<IconButton variant="ghost" size="sm" label="Close Find" icon={<XIcon className="size-4" aria-hidden />} tooltip="Close Find (Esc)" onClick={close} />
 		</div>
 	);
 }

@@ -278,27 +278,16 @@ export interface MdRenderingSettings {
 }
 
 /** Appearance settings — mode, colors, type, markdown emphasis. */
-/** The standard color themes (ids). The palettes themselves live in the
- *  web app (components/settings/themes.ts); the ids are here so the server
- *  can validate what it stores. "kapany-dark" is the factory look. */
-export const THEME_IDS = [
-	"kapany-dark",
-	"kapany-light",
-	"midnight",
-	"nord",
-	"dracula",
-	"catppuccin-mocha",
-	"gruvbox-dark",
-	"solarized-dark",
-	"solarized-light",
-	"sepia",
-] as const;
+/** The Astryx themes the app ships (ids = Astryx theme slugs). The theme
+ *  packages live in the web app (apps/web/astryx-themes.ts); the ids are
+ *  here so the server can validate what it stores. null = "neutral". */
+export const THEME_IDS = ["neutral", "stone", "gothic", "matcha", "y2k", "butter", "chocolate"] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 
 export interface AppearanceSettings {
 	/** "dark" | "light" (default dark). */
 	mode?: "dark" | "light";
-	/** A standard color theme; null = the factory theme (kapany-dark). */
+	/** An Astryx theme; null = the factory theme (neutral). */
 	theme?: ThemeId | null;
 	/** The one user-chosen color; everything else derives per-mode in code.
 	 *  null = the mode's default background. */
@@ -425,7 +414,7 @@ export const FACTORY_SETTINGS: FactorySettings = {
 	general: { autoUpdate: true },
 	appearance: {
 		mode: "dark",
-		theme: null, // kapany-dark
+		theme: null, // neutral
 		background: null, // the dark default (#141414) lives in the mode's derivation curve
 		fontFamily: null, // Source Sans 3
 		proseFontSize: 16,

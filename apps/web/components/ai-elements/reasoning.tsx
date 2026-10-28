@@ -1,8 +1,9 @@
 
+import { Text } from "@astryxdesign/core/Text";
+import { Spinner } from "@astryxdesign/core/Spinner";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { Collapsible } from "@astryxdesign/core/Collapsible";
 import { cn } from "@/lib/utils";
-import { BrailleSpinner } from "@/components/braille-spinner";
 import type { ComponentProps, ReactNode } from "react";
 import {
   Children,
@@ -21,7 +22,6 @@ import { Streamdown } from "streamdown";
 import { transformMathDelimiters } from "@/src/core";
 import { streamdownPlugins } from "./message";
 import { mdComponents } from "@/components/md-blocks";
-import { Shimmer } from "./shimmer";
 
 interface ReasoningContextValue {
   isStreaming: boolean;
@@ -134,7 +134,7 @@ export type ReasoningTriggerProps = {
    language; motion (spinner + shimmer) stays the working signal. */
 const defaultGetThinkingMessage = (isStreaming: boolean) => {
   if (isStreaming) {
-    return <Shimmer duration={1}>Thinking...</Shimmer>;
+    return <Text type="supporting">Thinking...</Text>;
   }
   return <p>Agent’s thinking</p>;
 };
@@ -151,7 +151,7 @@ export const ReasoningTrigger = memo(
         {children ?? (
           <>
             {/* The spinner shows only while streaming: motion is the signal. */}
-            {isStreaming && <BrailleSpinner label="Thinking" />}
+            {isStreaming && <Spinner size="sm" label="Thinking" />}
             {getThinkingMessage(isStreaming)}
           </>
         )}

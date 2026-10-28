@@ -1,4 +1,5 @@
 
+import { TextArea } from "@astryxdesign/core/TextArea";
 import { useCallback } from "react";
 import { joinDictation, useDictationTarget } from "@/components/dictation";
 import { THINKING_TEXTAREA, ThinkingField } from "@/components/thinking-field";
@@ -62,18 +63,12 @@ export function ReadingThinkingField({
 			hint={onOpen ? "↵ shows the options · ⇧↵ newline" : undefined}
 			mic={claim}
 		>
-			<textarea
+			<TextArea
+				label="Your thoughts on the reading"
+				isLabelHidden
+				width="100%"
 				value={value}
-				onChange={(e) => onChange(e.target.value)}
-				/* py-0.5 (owner round, 2026-10-07): the scrollbar fix. Source
-				   Sans 3's font box is 22px at 16px; lh-input's 1.25 leading
-				   gives a 20px line box — the content area sticks 1px below the
-				   line, Chromium counts it in scrollHeight, and a zero-padding
-				   textarea turns that into a permanent 1px scroll (the bar shows
-				   empty and at every size below max-h). 2px of vertical padding
-				   absorbs it — the same absorption the composer and dock fields
-				   get implicitly from their py-2. Line-height stays 1.25 (the
-				   caret law, typography round 2). */
+				onChange={onChange}
 				onKeyDown={(e) => {
 					if (e.key === "Escape") {
 						// Esc stops dictation (the strip's rule) — claimed so the
@@ -108,7 +103,6 @@ export function ReadingThinkingField({
 						: "What's on your mind from the reading?"
 				}
 				rows={1}
-				className={`${THINKING_TEXTAREA} min-h-10`}
 			/>
 		</ThinkingField>
 	);

@@ -78,7 +78,7 @@ export function useNotesImport(callbacks: { onStart?: () => void; onFinish?: () 
 	};
 	return {
 		errors, importing,
-		onImportFiles: (files: FileList | null) => { if (files) void submit(Array.from(files)); },
+		onImportFiles: (files: FileList | readonly File[] | File | null) => { if (files) void submit(files instanceof File ? [files] : Array.from(files)); },
 	};
 }
 

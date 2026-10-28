@@ -1,5 +1,7 @@
 
-import { Button } from "@/components/ui/button";
+import { Link } from "@astryxdesign/core/Link";
+import { Collapsible } from "@astryxdesign/core/Collapsible";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIcon, BotIcon, FileTextIcon, PenToolIcon, PlayIcon, SearchIcon, SquareIcon, WaypointsIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -424,14 +426,13 @@ function ActivityBlobRow({
 	return (
 		<div
 			data-testid={`activity-blob-${blob.process}`}
-			className="relative rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-overlay-hover"
+			className="relative rounded-lg px-2 py-1.5 text-xs"
 		>
-			<button
-				type="button"
-				onClick={onToggleDetail}
-				aria-expanded={detailOpen}
-				className="flex w-full items-center gap-2 pr-7 text-left"
-			>
+			<Collapsible
+				isOpen={detailOpen}
+				onOpenChange={() => onToggleDetail()}
+				trigger={
+					<span className="flex w-full items-center gap-2 pr-7 text-left">
 				<Icon className="size-3.5 shrink-0 text-secondary" />
 				<span className="min-w-0 flex-1">
 					<span className="block truncate font-medium text-primary">{blob.title}</span>
@@ -447,13 +448,9 @@ function ActivityBlobRow({
 					<span data-testid="activity-blob-cost">{planCostLabel(blob.cost, subscriptionLabel(blob.model))}</span>
 					<span data-testid="activity-blob-elapsed">{formatElapsed(now - blob.startedAt)}</span>
 				</span>
-			</button>
-			{/* The explicit END always on the blob's face (SCOPE) — the popover
-			    is for DETAIL, not the control. A failed abort locks the button and
-			    says why; a succeeded one just makes the blob vanish on refresh. */}
-			<Button size="icon-sm" variant="destructive" data-testid="activity-abort" onClick={onAbort} disabled={abortState !== undefined} tooltip={abortState === "failed" ? "Abort failed — try again" : "End this background process"} aria-label={`End ${label} in ${blob.title}`} className="absolute right-1 top-1/2"><SquareIcon className="size-4" /></Button>
-
-			{detailOpen && (
+					</span>
+				}
+			>
 				<div
 					data-testid="activity-blob-detail"
 					className="mt-1 flex flex-col gap-1 rounded-lg bg-overlay-hover/40 p-2 text-secondary"
@@ -496,16 +493,20 @@ function ActivityBlobRow({
 								<span className="tabular-nums text-primary">{blob.steps}</span>
 							</div>
 						)}
-						<a href={`/chat/${blob.chatId}`} className="text-accent hover:underline">
+						<Link href={`/chat/${blob.chatId}`}>
 							Open session →
-						</a>
+						</Link>
 					</div>
 					<div className="mt-2 text-secondary/80">
 					{abortState === "failed" && "Abort failed — try again"}
 					{abortState === "pending" && "Stopping…"}
 				</div>
 				</div>
-			)}
+			</Collapsible>
+			{/* The explicit END always on the blob's face (SCOPE) — the popover
+			    is for DETAIL, not the control. A failed abort locks the button and
+			    says why; a succeeded one just makes the blob vanish on refresh. */}
+			<IconButton variant="destructive" size="sm" label={`End ${label} in ${blob.title}`} icon={<SquareIcon className="size-4" />} isDisabled={abortState !== undefined} tooltip={abortState === "failed" ? "Abort failed — try again" : "End this background process"} className="absolute right-1 top-1/2" data-testid="activity-abort" onClick={onAbort} />
 		</div>
 	);
 }

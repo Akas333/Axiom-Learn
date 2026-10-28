@@ -1,11 +1,12 @@
 
-import { Button } from "@/components/ui/button";
+import { Text } from "@astryxdesign/core/Text";
+import { Spinner } from "@astryxdesign/core/Spinner";
+import { Button } from "@astryxdesign/core/Button";
 import { useContext } from "react";
 import { CheckIcon, SettingsIcon, XIcon } from "lucide-react";
 import { JobsContext } from "@/components/jobs-context";
 import { ChatActionsContext } from "@/components/chat";
 import { isModelsRefusal, isProviderKeyRefusal, type JobKind, type JobRecord } from "@/src/core";
-import { BrailleSpinner } from "@/components/braille-spinner";
 
 /**
  * The dispatch card (contracts.ts "THE ASYNC PROTOCOL" §4): the tool-call
@@ -71,7 +72,7 @@ function DispatchRefusedCard({ label, line, button }: { label: string; line: str
 			<span className="font-medium">{label}</span>
 			<span>{line}</span>
 			{ctx && (
-				<Button size="sm" variant="secondary" data-testid="dispatch-setup-link" onClick={ctx.openSetup}>{button}</Button>
+				<Button variant="secondary" size="sm" label={button} data-testid="dispatch-setup-link" onClick={ctx.openSetup} />
 			)}
 		</div>
 	);
@@ -84,7 +85,7 @@ function DispatchActivityCard({ job, label }: { job: JobRecord | null; label: st
 		job && job.createdAt ? Math.max(0, Math.round((Date.now() - Date.parse(job.createdAt)) / 1000)) : null;
 	return (
 		<div
-			className="rounded-xl border bg-card p-4 text-primary"
+			className="rounded-lg border bg-card p-4 text-primary"
 			data-testid="dispatch-card"
 		>
 			<div className="flex items-center gap-2 text-xs font-medium text-secondary">
@@ -92,7 +93,7 @@ function DispatchActivityCard({ job, label }: { job: JobRecord | null; label: st
 				    the Braille spinner replaces the pulsing dot — one indicator
 				    everywhere. This is the ONLY dispatch-card change; the card's
 				    shape is untouched. */}
-				<BrailleSpinner label={`${label} running`} />
+				<Spinner size="sm" label={`${label} running`} />
 				{label}
 				{elapsed !== null && <span className="font-normal">· {elapsed}s</span>}
 			</div>

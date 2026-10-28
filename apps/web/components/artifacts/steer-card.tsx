@@ -1,4 +1,6 @@
 
+import { HStack } from "@astryxdesign/core/HStack";
+import { Collapsible } from "@astryxdesign/core/Collapsible";
 import { CheckIcon, CircleX } from "lucide-react";
 import type { PdfResult, ResearchResult, SubagentArtifactData } from "@/src/core";
 import type { LhViewMessage } from "@/src/core";
@@ -36,7 +38,7 @@ export function SubagentSteerCard({ message }: { message: LhViewMessage }) {
 			| undefined;
 		if (aborted?.data) return <AbortedBadge kind={aborted.data.kind ?? "job"} />;
 		return (
-				<div className="rounded-xl border bg-card p-4 text-sm text-secondary">
+				<div className="rounded-lg border bg-card p-4 text-sm text-secondary">
 				A sub-agent finished, but its result could not be displayed.
 			</div>
 		);
@@ -83,8 +85,8 @@ function PdfCompleteBadge({ result }: { result: PdfResult }) {
 	// the ?? is runtime tolerance for pre-split persisted steers.
 	const readPages = result.pagesRead ?? result.pagesConsulted;
 	return (
-		<details data-testid="pdf-complete-badge" className="group w-full text-xs text-secondary">
-			<summary className="flex cursor-pointer select-none list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+		<Collapsible defaultIsOpen={false} data-testid="pdf-complete-badge" trigger={
+				<HStack gap={2} align="center" className="text-xs text-secondary">
 				<CheckIcon className="size-3.5" />
 				<span className="font-medium">PDF</span>
 				<span>reading complete</span>
@@ -93,35 +95,33 @@ function PdfCompleteBadge({ result }: { result: PdfResult }) {
 						· read {readPages.length} page{readPages.length === 1 ? "" : "s"}
 					</span>
 				)}
-				<span className="ml-1 text-xs text-secondary/70 group-open:hidden">view brief</span>
-				<span className="ml-1 hidden text-xs text-secondary/70 group-open:inline">hide brief</span>
-			</summary>
+				</HStack>
+			}>
 			<div className="mt-2">
 				<PdfBriefCard output={result} />
 			</div>
-		</details>
+		</Collapsible>
 	);
 }
 
 /** Quiet one-liner, the dispatch-settled idiom — the lesson lives in the
  * teacher's wake turn; the badge just marks delivery. The persisted brief
- * rides along in a collapsed <details> (the wave-1 "view full research"
+ * rides along in a collapsed disclosure (the wave-1 "view full research"
  * affordance): full markdown + sources, one click away, no extra fetch —
  * the artifact part in the record is the single source of truth. */
 function ResearchCompleteBadge({ result }: { result: ResearchResult }) {
 	return (
-		<details data-testid="research-complete-badge" className="group w-full text-xs text-secondary">
-			<summary className="flex cursor-pointer select-none list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+		<Collapsible defaultIsOpen={false} data-testid="research-complete-badge" trigger={
+				<HStack gap={2} align="center" className="text-xs text-secondary">
 				<CheckIcon className="size-3.5" />
 				<span className="font-medium">Research</span>
 				<span>complete</span>
 				{result.sources.length > 0 && <span>· {result.sources.length} sources</span>}
-				<span className="ml-1 text-xs text-secondary/70 group-open:hidden">view brief</span>
-				<span className="ml-1 hidden text-xs text-secondary/70 group-open:inline">hide brief</span>
-			</summary>
+				</HStack>
+			}>
 			<div className="mt-2">
 				<ResearchBriefCard output={result} />
 			</div>
-		</details>
+		</Collapsible>
 	);
 }

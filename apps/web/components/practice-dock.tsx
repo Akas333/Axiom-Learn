@@ -1,8 +1,13 @@
 
+import { TextArea } from "@astryxdesign/core/TextArea";
+import { Text } from "@astryxdesign/core/Text";
+import { Icon } from "@astryxdesign/core/Icon";
+import { HStack } from "@astryxdesign/core/HStack";
+import { ClickableCard } from "@astryxdesign/core/ClickableCard";
 import { useCallback, useRef, useState } from "react";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon, ChevronDownIcon } from "lucide-react";
 import { ToolContentResponse } from "@/components/ai-elements/message";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 import { joinDictation, useDictationTarget } from "@/components/dictation";
 import { THINKING_TEXTAREA, ThinkingField } from "@/components/thinking-field";
 import { useEnterSubmits } from "@/components/enter-submits";
@@ -85,16 +90,13 @@ export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmi
 	/* ── the collapsed bar ── */
 	if (!expanded) {
 		return (
-			<button
-				type="button"
-				data-testid="practice-dock-bar"
-				onClick={onExpand}
-				className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-left text-sm text-secondary transition-colors hover:text-primary"
-			>
-				<ChevronRightIcon className="size-4 shrink-0 rotate-90" />
-				<span className="font-medium">Problem</span>
-				<span className="min-w-0 flex-1 truncate">{input.statement}</span>
-			</button>
+			<ClickableCard label="Open the problem" variant="transparent" padding={0} data-testid="practice-dock-bar" onClick={onExpand}>
+				<HStack gap={2} align="center" paddingInline={4} paddingBlock={3}>
+					<Icon icon={ChevronDownIcon} size="sm" color="secondary" />
+					<Text type="label" color="secondary">Problem</Text>
+					<Text type="body" color="secondary" maxLines={1} className="min-w-0 flex-1">{input.statement}</Text>
+				</HStack>
+			</ClickableCard>
 		);
 	}
 
@@ -120,21 +122,18 @@ export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmi
 				className="m-2"
 				hint={compactionRunning ? "compacting session…" : "↵ submits · ⇧↵ newline"}
 				action={
-					<Button
-						type="button"
-						data-testid="practice-send"
-						disabled={thinking.trim().length === 0 || compactionRunning}
-						onClick={() => submit()}
-					>
-						Submit thinking
-					</Button>
+					<Button variant="primary" size="md" label="Submit thinking" isDisabled={thinking.trim().length === 0 || compactionRunning} type="button" data-testid="practice-send" onClick={() => submit()} />
 				}
 			>
-				<textarea
+				<TextArea
+					label="Your thinking"
+					isLabelHidden
+					width="100%"
+					rows={4}
 					value={thinking}
-					onChange={(e) => {
-						thinkingRef.current = e.target.value;
-						setThinking(e.target.value);
+					onChange={(next) => {
+						thinkingRef.current = next;
+						setThinking(next);
 					}}
 					onKeyDown={(e) => {
 						// Esc ends dictation — stopPropagation claims it (the
@@ -153,8 +152,6 @@ export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmi
 						}
 					}}
 					placeholder="Work through it here — think out loud."
-					rows={4}
-					className={cn(THINKING_TEXTAREA, "max-h-64 min-h-16")}
 				/>
 			</ThinkingField>
 		</div>

@@ -1,10 +1,17 @@
 
-import { Button } from "@/components/ui/button";
+import { Text } from "@astryxdesign/core/Text";
+import { Spinner } from "@astryxdesign/core/Spinner";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { ClickableCard } from "@astryxdesign/core/ClickableCard";
+import { Icon } from "@astryxdesign/core/Icon";
+import { Button } from "@astryxdesign/core/Button";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { createContext, Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useChatSession } from "@/components/session";
 import { visibleQueuedSteers } from "@/components/session-core";
 import { SetupDialog } from "@/components/setup-dialog";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 import { useZeroKeys, ZeroKeysPill } from "@/components/setup-cta";
 import { useStickToBottomContext, type StickToBottomContext } from "use-stick-to-bottom";
 import {
@@ -15,8 +22,6 @@ import {
 } from "@/components/ai-elements/conversation";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
-import { Shimmer } from "@/components/ai-elements/shimmer";
-import { BrailleSpinner } from "@/components/braille-spinner";
 import { LiveToolCard } from "@/components/artifacts/live-tool-card";
 import { Divider } from "@astryxdesign/core/Divider";
 import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
@@ -671,7 +676,7 @@ export function Chat({
 	 * composer: with a question pending the Composer is unmounted, the ref
 	 * is null, and the thinking field is left alone by design. */
 	const dictationWasActiveRef = useRef(false);
-	const composerInputRef = useRef<HTMLTextAreaElement>(null);
+	const composerInputRef = useRef<HTMLElement>(null);
 	useEffect(() => {
 		if (dictation.active) {
 			dictationWasActiveRef.current = true;
@@ -1328,24 +1333,24 @@ export function Chat({
 				>
 					{renaming ? (
 						<>
-							<input
+							<TextInput
 								ref={titleInputRef}
+								label="Session title"
+								isLabelHidden
+								size="sm"
+								hasAutoFocus
+								containerClassName="lh-no-drag min-w-[8ch] max-w-[70%] shrink-0"
 								value={titleDraft}
-								onChange={(e) => setTitleDraft(e.target.value)}
+								onChange={setTitleDraft}
 								onKeyDown={(e) => {
 									if (e.key === "Enter") void commitRename(titleDraft);
-									// stopPropagation claims the Esc (keyboard wave A):
-									// closing rename must not also abort a turn.
+									// Claim Esc: closing rename must not also abort a turn.
 									else if (e.key === "Escape") {
 										e.stopPropagation();
 										setRenaming(false);
 									}
 								}}
 								onBlur={() => void commitRename(titleDraft)}
-								spellCheck={false}
-								aria-label="Session title"
-								title="Rename this session"
-								className="lh-no-drag min-w-[8ch] max-w-[70%] shrink-0 bg-transparent text-[15px] font-medium caret-current outline-none [field-sizing:content]"
 							/>
 							{/* flex-1 spacer during rename too, so the chips stay at
 							    the right edge; clicks here commit via the header
@@ -1362,15 +1367,14 @@ export function Chat({
 								onOpenChange={setTitleMenu}
 								menuWidth={208}
 								renderTrigger={(trigger) => (
-									<button
+									<Button
 										{...trigger}
-										type="button"
 										data-testid="session-title-menu"
-										className="lh-no-drag flex min-w-0 max-w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left text-[15px] font-medium text-primary transition-colors hover:bg-overlay-hover"
-									>
-										<span className="truncate">{titleText}</span>
-										<ChevronDownIcon className="size-4 shrink-0 text-secondary" />
-									</button>
+										variant="ghost"
+										className="lh-no-drag"
+										label={titleText}
+										endContent={<Icon icon={ChevronDownIcon} />}
+									/>
 								)}
 								items={[
 									{
@@ -1430,28 +1434,26 @@ export function Chat({
 					    background agents. */}
 					<div className="flex shrink-0 items-center gap-0.5">
 						{planTree && (
-							<Hint label="Summarize what you've learned" side="bottom">
-								<Button size="icon-sm" variant="ghost" data-testid="summarize-chip" aria-label="Summarize" disabled={!!pending || compacting} onClick={(e) => {
+							<Tooltip content="Summarize what you've learned" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+								<IconButton variant="ghost" size="sm" label="Summarize" icon={<NotebookPenIcon className="size-4" aria-hidden />} isDisabled={!!pending || compacting} data-testid="summarize-chip" onClick={(e) => {
 										blurAfterPointerClick(e);
 										requestSummary();
-									}}><NotebookPenIcon className="size-4" aria-hidden /></Button>
-							</Hint>
+									}} />
+							</Tooltip>
 						)}
-						<Hint label={planSidebar ? "Hide the side panel" : "Show the side panel"} side="bottom">
-							<button
-								type="button"
+						<Tooltip content={planSidebar ? "Hide the side panel" : "Show the side panel"} placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+							<IconButton
 								data-testid="plan-chip"
-								aria-label={planSidebar ? "Hide the side panel" : "Show the side panel"}
+								label={planSidebar ? "Hide the side panel" : "Show the side panel"}
+								variant={planSidebar ? "secondary" : "ghost"}
 								aria-pressed={planSidebar}
+								icon={planSidebar ? <PanelRightCloseIcon className="size-4" /> : <PanelRightOpenIcon className="size-4" />}
 								onClick={(e) => {
 									blurAfterPointerClick(e);
 									setPlanSidebar(!planSidebar);
 								}}
-								className={`${TOPBAR_ICON} ${planSidebar ? "bg-overlay-hover text-primary" : ""}`}
-							>
-								{planSidebar ? <PanelRightCloseIcon className="size-[18px]" aria-hidden /> : <PanelRightOpenIcon className="size-[18px]" aria-hidden />}
-							</button>
-						</Hint>
+							/>
+						</Tooltip>
 					</div>
 				</TopBar>
 
@@ -1558,7 +1560,7 @@ export function Chat({
 										    bubble. Rendered plain — the model's LaTeX pipeline is not
 										    applied to learner-authored text ($ stays $). */
 										<div data-testid="user-message" className="my-4 flex w-full justify-end">
-											<div className="lh-prose max-w-[80%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-overlay-hover px-4 py-2.5 text-[15px] text-primary">
+											<div className="lh-prose max-w-[80%] whitespace-pre-wrap rounded-lg rounded-br-lg bg-overlay-hover px-4 py-2.5 text-[15px] text-primary">
 												{m.parts.filter((p) => p.type === "text").map((p) => p.text).join("\n")}
 											</div>
 										</div>
@@ -1728,16 +1730,16 @@ export function Chat({
 							)}
 							{compacting && (
 								<span className="flex items-center gap-2 font-ui text-xs font-medium text-secondary">
-									<BrailleSpinner label="Compacting context" />
-									<Shimmer duration={1}>COMPACTING CONTEXT…</Shimmer>
+									<Spinner size="sm" label="Compacting context" />
+									<Text type="supporting">COMPACTING CONTEXT…</Text>
 								</span>
 							)}
 							{(status === "submitted" || turnInFlight) && (
 								<span className="flex items-center gap-2 font-ui text-xs font-medium text-secondary">
-									<BrailleSpinner label="Thinking" />
-									<Shimmer duration={1}>
+									<Spinner size="sm" label="Thinking" />
+									<Text type="supporting">
 										THINKING…
-									</Shimmer>
+									</Text>
 								</span>
 							)}
 							{error && (
@@ -1786,7 +1788,7 @@ export function Chat({
 						) : (
 							!configured && (
 								<div className="pointer-events-auto mb-2 flex justify-center">
-									<Button size="sm" variant="secondary" data-testid="setup-cta" onClick={() => setSetupOpen(true)}>Set up your models</Button>
+									<Button variant="secondary" size="sm" label="Set up your models" data-testid="setup-cta" onClick={() => setSetupOpen(true)} />
 								</div>
 							)
 						)
@@ -2489,7 +2491,7 @@ function DockOverlay({
 					    open, BELOW the question while the check is still closed
 					    (read the question first, then talk it through). */}
 					{!revealPending && readingField}
-					<div ref={shellRef} className={`pointer-events-auto overflow-hidden ${COMPOSER_SHELL}`}>
+					<div ref={shellRef} className={`pointer-events-auto ${pending || practice ? `overflow-hidden ${COMPOSER_SHELL}` : ""}`}>
 						<div
 						ref={contentRef}
 						key={mode}
@@ -2564,9 +2566,11 @@ function DockOverlay({
 				    mid-question unmount), and widening past the floor fades it
 				    back in. */}
 				{pending && plan && (
-					<Hint label="Open the full plan" side="bottom">
-<button
-						type="button"
+					<Tooltip content="Open the full plan" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<ClickableCard
+						label="Open the full plan"
+						variant="transparent"
+						padding={0}
 						data-testid="plan-marginalia"
 						onClick={onOpenPlan}
 						style={{ left: `calc(50% + ${DOCK_W / 2 + MARGIN_GAP}px)` }}
@@ -2577,8 +2581,8 @@ function DockOverlay({
 						}`}
 					>
 						{plan}
-					</button>
-</Hint>
+					</ClickableCard>
+</Tooltip>
 				)}
 			</div>
 		</div>

@@ -16,6 +16,8 @@ import * as chatsIdSteer from "./routes/chats-id-steer.ts";
 import * as chatsIdStream from "./routes/chats-id-stream.ts";
 import * as chats from "./routes/chats.ts";
 import * as events from "./routes/events.ts";
+import * as folders from "./routes/folders.ts";
+import * as foldersId from "./routes/folders-id.ts";
 import * as graphCosts from "./routes/graph-costs.ts";
 import * as graphCoverageExtract from "./routes/graph-coverage-extract.ts";
 import * as graphImport from "./routes/graph-import.ts";
@@ -62,6 +64,8 @@ export const API_ROUTES: readonly ApiRoute[] = [
 	{ path: "/api/chats/:id/stream", handlers: { GET: chatsIdStream.GET as RouteHandler } },
 	{ path: "/api/chats", handlers: { GET: chats.GET as RouteHandler, POST: chats.POST as RouteHandler } },
 	{ path: "/api/events", handlers: { GET: events.GET as RouteHandler } },
+	{ path: "/api/folders", handlers: { GET: folders.GET as RouteHandler, POST: folders.POST as RouteHandler } },
+	{ path: "/api/folders/:id", handlers: { PUT: foldersId.PUT as RouteHandler, DELETE: foldersId.DELETE as RouteHandler } },
 	{ path: "/api/graph/costs", handlers: { GET: graphCosts.GET as RouteHandler } },
 	{ path: "/api/review", handlers: { GET: review.GET as RouteHandler } },
 	{ path: "/api/anki", handlers: { GET: anki.GET as RouteHandler } },

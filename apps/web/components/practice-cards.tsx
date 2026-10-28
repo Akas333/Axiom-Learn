@@ -1,7 +1,10 @@
 
+import { Popover } from "@astryxdesign/core/Popover";
+import { MetadataList, MetadataListItem } from "@astryxdesign/core/MetadataList";
+import { Button } from "@astryxdesign/core/Button";
 import { ToolContentResponse } from "@/components/ai-elements/message";
 import { cn } from "@/lib/utils";
-import type { ArtifactPartProps } from "@/src/core";
+import { messageAnchorId, type ArtifactPartProps } from "@/src/core";
 
 /**
  * The practice transcript cards (practice sessions, owner design
@@ -20,10 +23,8 @@ import type { ArtifactPartProps } from "@/src/core";
  */
 
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
 import { ThinkingBlock } from "@/components/thinking-block";
-import { usePopoverDismiss } from "@/components/popover-dismiss";
 
 /* TARGET NAMES (owner round 17, 2026-10-06): targets are normalized to
  * opaque node ids at the record seam (owner round 9 — the mastery trace
@@ -62,7 +63,7 @@ export function ProblemCard({ part }: ArtifactPartProps) {
 	const input = (part.input ?? {}) as { statement?: string };
 	const statement = typeof input.statement === "string" ? input.statement : "";
 	return (
-		<div data-testid="problem-card" className="lh-card-enter my-1 rounded-xl border bg-card p-4">
+		<div data-testid="problem-card" className="lh-card-enter my-1 rounded-lg border bg-card p-4">
 			<div className="mb-1 text-xs font-medium text-secondary">Problem</div>
 			<div className="lh-prose text-[15px]">
 				<ToolContentResponse>{statement}</ToolContentResponse>
@@ -109,14 +110,14 @@ export function ConcludeCard({ part }: ArtifactPartProps) {
 	// learner clicked; the record needs only the fact).
 	if (outcome === "dismissed") {
 		return (
-			<div data-testid="conclude-card" className="my-1 px-1 text-sm text-secondary/70">
+			<div id={messageAnchorId(part.toolCallId)} data-testid="conclude-card" className="my-1 px-1 text-sm text-secondary/70">
 				Problem dismissed.
 			</div>
 		);
 	}
 
 	return (
-		<div data-testid="conclude-card" className="lh-card-enter relative my-1 rounded-xl border bg-card p-4">
+		<div id={messageAnchorId(part.toolCallId)} data-testid="conclude-card" className="lh-card-enter relative my-1 rounded-lg border bg-card p-4">
 			{/* The heading row (owner round 3, 2026-10-05): plain 'Concluded'
 			    eyebrow + the outcome in the quiz cards' EXACT chip register —
 			    no more two same-weight headings stacked. */}
@@ -159,7 +160,7 @@ export function ConcludeCard({ part }: ArtifactPartProps) {
 /* THE METADATA POPOVER (owner round 17 refinement, 2026-10-06 — full
  * transparency): a quiet METADATA trigger at the very bottom of the
  * conclude card (no divider — it just sits there); click opens the
- * info-box register of the graph-view node cards (rounded-xl border
+ * info-box register of the graph-view node cards (rounded-lg border
  * bg-card p-4 shadow-lg, opening BELOW the trigger — always); any scroll or
  * click outside closes it (plus Esc, claimed from the layered chain
  * per the popover law). Shows every field the agent filled in both the
@@ -177,12 +178,6 @@ function MetadataPopover({
 	problemInput: { mode?: unknown; target?: unknown };
 }) {
 	const [open, setOpen] = useState(false);
-	const triggerRef = useRef<HTMLButtonElement | null>(null);
-	const rootRef = useRef<HTMLDivElement | null>(null);
-	// The portal's anchor (owner fix, 2026-10-06): the box is placed from
-	// the trigger's viewport rect AT OPEN TIME — any scroll closes the
-	// box, so there is nothing to track.
-	const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
 	const [names, setNames] = useState<Record<string, string> | null>(null);
 	const targets = Array.isArray(problemInput.target)
 		? problemInput.target.filter((t): t is string => typeof t === "string")
@@ -199,7 +194,6 @@ function MetadataPopover({
 		};
 	}, [open, targets.length, names]);
 
-	usePopoverDismiss(rootRef, open, () => setOpen(false));
 	// ANY scroll closes it (owner law): capture-phase, so every scroller
 	// in the tree counts — the transcript's own scroll included.
 	useEffect(() => {
@@ -217,73 +211,28 @@ function MetadataPopover({
 	if (!mode && targets.length === 0 && !rung && !miss && retest === undefined) return null;
 
 	return (
-		<div ref={rootRef} className="relative mt-3">
-			<button
-				type="button"
-				data-testid="metadata-toggle"
-				ref={triggerRef}
-				onClick={() => {
-					setOpen((v) => {
-						if (v) return false;
-						const r = triggerRef.current?.getBoundingClientRect();
-						if (r) {
-							// Below the trigger, always; clamped so the 320px box
-							// never leaves the viewport's right edge.
-							const left = Math.max(8, Math.min(r.left, window.innerWidth - 328));
-							setAnchor({ top: r.bottom + 8, left });
-						}
-						return true;
-					});
-				}}
-				aria-expanded={open}
-				className="flex items-center gap-1 text-xs font-medium text-secondary transition-colors hover:text-primary"
+		<div className="mt-3">
+			<Popover
+				isOpen={open}
+				onOpenChange={setOpen}
+				placement="below"
+				width={320}
+				label="Problem metadata"
+				content={
+					<MetadataList data-testid="metadata-box">
+						<MetadataListItem label="Mode">{mode || "—"}</MetadataListItem>
+						<MetadataListItem label="Targets">
+							{targets.length === 0 ? "untagged" : targets.map((t) => names?.[t] ?? t).join(", ")}
+						</MetadataListItem>
+						<MetadataListItem label="Outcome">{outcome || "—"}</MetadataListItem>
+						<MetadataListItem label="Hint rung">{rung || "none"}</MetadataListItem>
+						<MetadataListItem label="Miss class">{miss || "none"}</MetadataListItem>
+						<MetadataListItem label="Retest">{retest === undefined ? "—" : retest ? "yes" : "no"}</MetadataListItem>
+					</MetadataList>
+				}
 			>
-				Metadata
-			</button>
-			{open &&
-				anchor &&
-				createPortal(
-					<div
-						data-testid="metadata-box"
-						// PORTALED TO BODY (owner fix, 2026-10-06): the transcript's
-						// MessageContent boxes carry overflow-hidden — an absolutely
-						// positioned child clips at its own message block's edge (the
-						// cut-off bug). A fixed-position portal sits on top of
-						// EVERYTHING, the dialogs' law. Node-card info-box register;
-						// opening BELOW the trigger — always.
-						style={{ position: "fixed", top: anchor.top, left: anchor.left }}
-						className="z-50 w-80 max-w-[calc(100vw-1rem)] rounded-xl border bg-card p-4 text-left shadow-lg"
-					>
-				<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
-						<dt className="text-secondary">Mode</dt>
-						<dd className="font-mono">{mode || "—"}</dd>
-						<dt className="text-secondary">Targets</dt>
-						<dd className="font-mono">
-							{targets.length === 0 ? (
-								"untagged"
-							) : (
-								<span>
-									{targets.map((t, i) => (
-										<span key={t}>
-											{i > 0 && ", "}
-											{names?.[t] ?? t}
-										</span>
-									))}
-								</span>
-							)}
-						</dd>
-						<dt className="text-secondary">Outcome</dt>
-						<dd className="font-mono">{outcome || "—"}</dd>
-						<dt className="text-secondary">Hint rung</dt>
-						<dd className="font-mono">{rung || "none"}</dd>
-						<dt className="text-secondary">Miss class</dt>
-						<dd className="font-mono">{miss || "none"}</dd>
-						<dt className="text-secondary">Retest</dt>
-						<dd className="font-mono">{retest === undefined ? "—" : retest ? "yes" : "no"}</dd>
-					</dl>
-					</div>,
-					document.body,
-				)}
+				<Button data-testid="metadata-toggle" variant="ghost" size="sm" label="Metadata" />
+			</Popover>
 		</div>
 	);
 }

@@ -1,5 +1,5 @@
 
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { useContext, useState } from "react";
 import { ChatActionsContext } from "@/components/chat";
 import { DownloadIcon, MaximizeIcon } from "lucide-react";
@@ -71,7 +71,7 @@ export function VisualOutputCard({
 	const natural = result && typeof result.svg === "string" ? svgNaturalWidth(result.svg) : null;
 	if (!result || typeof result.svg !== "string") {
 		return (
-			<div className="rounded-xl border bg-card p-4 text-sm text-secondary">
+			<div className="rounded-lg border bg-card p-4 text-sm text-secondary">
 				Figure completed, but the result could not be displayed.
 			</div>
 		);
@@ -79,7 +79,7 @@ export function VisualOutputCard({
 	const failed = result.svg.length === 0;
 	if (failed) {
 		return (
-			<div className="rounded-xl border bg-card p-4 text-primary" data-testid="visual-card-failed">
+			<div className="rounded-lg border bg-card p-4 text-primary" data-testid="visual-card-failed">
 				<div className="flex items-center gap-2 text-xs font-medium text-secondary">
 					Figure
 					<span className="rounded bg-red-500/15 px-1.5 py-0.5 text-red-500">failed</span>
@@ -135,9 +135,9 @@ export function VisualOutputCard({
 						title="Invert colors"
 						discIcon={<InvertDiscIcon className="size-3" />}
 					/>
-					<Button size="icon-sm" variant="ghost" aria-label="Download figure as SVG" tooltip="Download as SVG" onClick={() => downloadFile("figure.svg", result.svg, "image/svg+xml")} data-testid="visual-download"><DownloadIcon className="size-4" /></Button>
+					<IconButton variant="ghost" size="sm" label="Download figure as SVG" icon={<DownloadIcon className="size-4" />} tooltip="Download as SVG" onClick={() => downloadFile("figure.svg", result.svg, "image/svg+xml")} data-testid="visual-download" />
 					{overlay && (
-						<Button size="icon-sm" variant="ghost" aria-label="Open figure fullscreen" tooltip="Open fullscreen" onClick={() => overlay.openFigure(result.svg, inverted)} data-testid="visual-open"><MaximizeIcon className="size-4" /></Button>
+						<IconButton variant="ghost" size="sm" label="Open figure fullscreen" icon={<MaximizeIcon className="size-4" />} tooltip="Open fullscreen" onClick={() => overlay.openFigure(result.svg, inverted)} data-testid="visual-open" />
 					)}
 				</div>
 			</div>

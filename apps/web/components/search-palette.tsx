@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { List, ListItem } from "@astryxdesign/core/List";
 import { Dialog } from "@astryxdesign/core/Dialog";
 import { IconButton } from "@astryxdesign/core/IconButton";
 import { Kbd } from "@astryxdesign/core/Kbd";
@@ -6,7 +8,6 @@ import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/Segme
 import { Spinner } from "@astryxdesign/core/Spinner";
 import { Text } from "@astryxdesign/core/Text";
 import {
-	CornerDownLeftIcon,
 	DumbbellIcon,
 	GraduationCapIcon,
 	NetworkIcon,
@@ -211,8 +212,13 @@ export function SearchPalette() {
 		}
 	};
 
-	// Group headers in render order.
-	let lastGroup: string | null = null;
+	// Results grouped in render order; `i` stays the flat keyboard index.
+	const groups: { name: string; rows: { item: Item; i: number }[] }[] = [];
+	items.forEach((item, i) => {
+		const last = groups[groups.length - 1];
+		if (last && last.name === item.group) last.rows.push({ item, i });
+		else groups.push({ name: item.group, rows: [{ item, i }] });
+	});
 
 	return (
 		<Dialog
@@ -230,14 +236,17 @@ export function SearchPalette() {
 			<div onKeyDown={onKeyDown} data-testid="search-palette" className="flex max-h-[72vh] flex-col">
 				{/* Search box */}
 				<div className="flex items-center gap-3 px-5 pt-4 pb-2">
-					<SearchIcon className="size-4 shrink-0 text-secondary" />
-					<input
+					<TextInput
 						ref={inputRef}
+						label="Search"
+						isLabelHidden
+						size="lg"
+						width="100%"
+						startIcon={SearchIcon}
 						value={query}
-						onChange={(e) => setQuery(e.target.value)}
+						onChange={setQuery}
 						placeholder="Search sessions, concepts and actions"
-						aria-label="Search"
-						className="lh-input min-w-0 flex-1 bg-transparent py-1 text-lg text-primary outline-none placeholder:text-secondary"
+						containerClassName="min-w-0 flex-1"
 					/>
 					<IconButton label="Close search" variant="ghost" size="sm" icon={<XIcon className="size-4" />} onClick={close} />
 				</div>
@@ -260,7 +269,7 @@ export function SearchPalette() {
 				</div>
 
 				{/* Results */}
-				<div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-2 py-2" role="listbox" aria-label="Results">
+				<div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label="Results">
 					{loading && items.length === 0 ? (
 						<div className="flex items-center gap-2 px-3 py-6">
 							<Spinner size="sm" />
@@ -273,39 +282,22 @@ export function SearchPalette() {
 							</Text>
 						</div>
 					) : (
-						items.map((item, i) => {
-							const header = item.group !== lastGroup ? item.group : null;
-							lastGroup = item.group;
-							const selected = i === index;
-							return (
-								<div key={item.key}>
-									{header && (
-										<div className="px-3 pt-3 pb-1.5 first:pt-1">
-											<Text type="label" color="secondary">{header}</Text>
-										</div>
-									)}
-									<button
-										type="button"
-										role="option"
-										aria-selected={selected}
+						groups.map((g) => (
+							<List key={g.name} density="compact" header={<Text type="label" color="secondary">{g.name}</Text>}>
+								{g.rows.map(({ item, i }) => (
+									<ListItem
+										key={item.key}
 										data-index={i}
+										isSelected={i === index}
 										onMouseMove={() => setIndex(i)}
 										onClick={item.run}
-										className={cn(
-											"flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-primary transition-colors",
-											selected && "bg-overlay-hover",
-										)}
-									>
-										<span className="shrink-0 text-secondary">{item.icon}</span>
-										<span className="min-w-0 flex-1 truncate">{item.title}</span>
-										{item.meta && <Text type="supporting" size="sm">{item.meta}</Text>}
-										<CornerDownLeftIcon
-											className={cn("size-4 shrink-0 text-secondary", selected ? "opacity-100" : "opacity-0")}
-										/>
-									</button>
-								</div>
-							);
-						})
+										startContent={<span className="text-secondary">{item.icon}</span>}
+										label={item.title}
+										endContent={item.meta ? <Text type="supporting">{item.meta}</Text> : undefined}
+									/>
+								))}
+							</List>
+						))
 					)}
 				</div>
 

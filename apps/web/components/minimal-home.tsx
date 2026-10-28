@@ -17,12 +17,15 @@
  * The practice pick flow mirrors GraphView's contract verbatim (home
  * lifts the pick set; the chip opens the overlay in select mode).
  */
+import { FileInput } from "@astryxdesign/core/FileInput";
+import { Button } from "@astryxdesign/core/Button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ListTreeIcon, UploadIcon } from "lucide-react";
 import { ChainTableOverlay } from "@/components/chain-table.tsx";
 import { GraphCostControl } from "@/components/graph-view.tsx";
 import { NotesImportErrors, useNotesImport } from "@/components/notes-import.tsx";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 import type { ChatSummary, GraphCostSummary, GraphSnapshot } from "@/src/core";
 
 /** The quiet centered summary — a pure body (props in, markup out) so
@@ -131,17 +134,6 @@ export function MinimalHome({
 
 	return (
 		<div className="relative h-full">
-			<input
-				ref={fileInputRef}
-				type="file"
-				multiple
-				accept=".md,.markdown,.txt"
-				className="hidden"
-				onChange={(e) => {
-					onImportFiles(e.target.files);
-					e.target.value = ""; // allow re-picking the same file
-				}}
-			/>
 
 			{/* The quiet summary — centered, biased up off the composer. */}
 			<div className="pointer-events-none flex h-full items-center justify-center pb-40">
@@ -165,33 +157,28 @@ export function MinimalHome({
 			    entry law). */}
 			<div className="lh-no-drag lh-wco-floating absolute right-2 top-2 z-10 flex max-w-[calc(100%-5.5rem)] flex-col items-end gap-2">
 				<div className="flex min-w-0 max-w-full items-start gap-2">
-					<div className="graph-chrome-fade-in shrink-0 rounded-xl border bg-card/85 px-1 py-[3px] shadow-lg backdrop-blur">
-						<Hint label="Every reasoning chain" side="bottom">
-							<button
-								type="button"
-								onClick={() => setChainsOpen(true)}
-								data-testid="open-chain-table"
-								className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs text-secondary transition-colors hover:bg-overlay-hover"
-							>
-								<ListTreeIcon className="size-3" />
-								<span className="max-sm:sr-only">Chains</span>
-							</button>
-						</Hint>
-					</div>
-					<div className="shrink-0 rounded-xl border bg-card/85 px-1 py-[3px] shadow-lg backdrop-blur">
-						<Hint label="Import notes into the graph" side="bottom">
-							<button
-								type="button"
-								disabled={importing}
-								onClick={() => fileInputRef.current?.click()}
-								data-testid="import-notes"
-								className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs text-secondary transition-colors hover:bg-overlay-hover disabled:opacity-50"
-							>
-								<UploadIcon className="size-3" />
-								<span className="max-sm:sr-only">{importing ? "Importing…" : "Import notes…"}</span>
-							</button>
-						</Hint>
-					</div>
+					<Tooltip content="Every reasoning chain" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+						<Button
+							label="Chains"
+							size="sm"
+							variant="secondary"
+							elevation="med"
+							icon={<ListTreeIcon className="size-4" />}
+							onClick={() => setChainsOpen(true)}
+							data-testid="open-chain-table"
+						/>
+					</Tooltip>
+					<FileInput
+						label="Import notes into the graph"
+						isLabelHidden
+						isMultiple
+						accept=".md,.markdown,.txt"
+						placeholder={importing ? "Importing…" : "Import notes…"}
+						isLoading={importing}
+						value={null}
+						onChange={(files) => onImportFiles(files)}
+						data-testid="import-notes"
+				/>
 				</div>
 				<NotesImportErrors errors={notesImport.errors} />
 				{costs && costs.runs.length > 0 && <GraphCostControl costs={costs} />}

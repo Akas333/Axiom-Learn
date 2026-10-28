@@ -3,10 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatSettings, ModelCatalogEntry, ModelCatalogResponse, ModelsSettings, UserSettings } from "@/src/core";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import { prettyModel } from "@/components/usage-format";
-import { ModelMenuList, ThinkingMenuList } from "@/components/settings/model-menu";
+import { ModelSelector, ThinkingSelector } from "@/components/settings/model-menu";
 import { composeSlotModel } from "@/components/settings/agent-section";
-import { MenuShell } from "@/components/menu-shell";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { hintText, TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 import { notifySettingsSaved, onSettingsSaved, useSettingsSaved } from "@/components/settings-signal";
 import { defaultOrderLevel, populateLevel, THINKING_LABEL } from "@/components/thinking-default";
 
@@ -289,9 +289,10 @@ export function ModelControl({
 	// tab-focus. Both work from any focus, including mid-typing.
 	useEffect(() => {
 		const onOpenPicker = () => {
-			setOpen("model");
 			setError(null);
 			refresh(); // mid-session key changes widen the menu (cache fix)
+			// Open the Astryx Selector by pressing its trigger.
+			containerRef.current?.querySelector<HTMLElement>('[data-picker="model"] button')?.click();
 		};
 		window.addEventListener("lh:kbd-open-model-picker", onOpenPicker);
 		return () => window.removeEventListener("lh:kbd-open-model-picker", onOpenPicker);
@@ -343,107 +344,38 @@ export function ModelControl({
 						: "contents"
 				}
 			>
-			<Hint
-				// Trimmed (owner, subtlety round 2026-09-25): "Model selector"
-				// — the long sentence was way too much. ⌘K opens this same
-				// menu (registry, override-aware).
-				label="Model selector"
-				action="open-model-picker"
-				side="bottom"
-			>
-				<button
-				type="button"
-				data-testid="stats-model"
-				onClick={() => openMenu("model")}
-				aria-expanded={open === "model"}
-				// Chrome look (owner, fix wave round 3): matches the graph
-				// view's floating top-right buttons (import notes, gear,
-				// coverage) — blurred, fuller opacity, shadowed — so the
-				// graph no longer bleeds through these pills.
-				className={modelClass}
-			>
-				<span className="truncate text-primary max-sm:max-w-[9rem]">{effectiveId ? prettyModel(effectiveId) : "—"}</span>
-				<span aria-hidden className="text-xs text-secondary">▾</span>
-			</button>
-			</Hint>
-			<Hint
-				// "Thinking" + its real shortcut via the registry (owner interlude
-				// 2026-09-25): ⇧⇥ cycles the level, so "Thinking (⇧⇥)" —
-				// rebind-live like every Hint suffix.
-				label="Thinking"
-				action="cycle-thinking"
-				side="bottom"
-			>
-				<button
-				type="button"
-				data-testid="stats-thinking"
-				onClick={() => {
-					// No model picked → nothing to set a level FOR: the click
-					// is a no-op, never an empty menu.
-					if (entry === undefined) return;
-					openMenu("thinking");
-				}}
-				aria-expanded={open === "thinking"}
-				// Chrome look (owner, fix wave round 3): matches the graph
-				// view's floating top-right buttons (import notes, gear,
-				// coverage) — blurred, fuller opacity, shadowed — so the
-				// graph no longer bleeds through these pills.
-				className={levelClass}
-			>
-				{/* Just the level — the button reads like the model button reads
-				   the model name (owner, stats-control round 1). */}
-				<span className="text-primary">
-					{effectiveLevel === undefined ? "—" : (THINKING_LABEL[effectiveLevel] ?? effectiveLevel)}
-				</span>
-				<span aria-hidden className="text-xs text-secondary">▾</span>
-			</button>
-			</Hint>
-
-			</div>
-			{/* The shared dropdown body (extracted 2026-09-20): the agent
-			    settings' slot selects and the setup dialog use the exact same
-			    one. */}
-			{open === "model" && (
-				<MenuShell
-					anchorRef={containerRef}
-					testid="model-menu"
-					preferredSide="up"
-					menuClass="flex w-[22rem] flex-col rounded-xl border bg-card p-2 text-xs shadow-xl"
-				>
-					{error && <div className="mb-1.5 text-error">{error}</div>}
-					<ModelMenuList
+			<Tooltip content={hintText("Model selector", "open-model-picker", undefined)} placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+				<span data-picker="model" onClickCapture={() => refresh()}>
+					<ModelSelector
+						label="Model"
+						testid="stats-model"
+						variant="secondary"
+						placement="above"
 						models={catalog?.models}
-						effectiveId={effectiveId}
-						effectiveProvider={effectiveProvider}
-						onPick={pickModel}
-						footer={
-							catalog && catalog.models.length === 0
-								? "No models — add a provider key in Keys"
-								: chatId
-									? "This session's model"
-									: "Strong tier — the default for new sessions"
-						}
+						value={effectiveId ? { provider: effectiveProvider ?? "", id: effectiveId } : undefined}
+						placeholder="—"
+						emptyText="No models — add a provider key in Settings → Providers"
+						onChange={pickModel}
 					/>
-				</MenuShell>
-			)}
-
-			{open === "thinking" && (
-				<MenuShell
-					anchorRef={containerRef}
-					testid="thinking-menu"
-					preferredSide="up"
-					menuClass="flex w-44 flex-col gap-0.5 rounded-xl border bg-card p-2 text-xs shadow-xl"
-				>
-					<ThinkingMenuList
+				</span>
+			</Tooltip>
+			<Tooltip content={hintText("Thinking", "cycle-thinking", undefined)} placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+				<span data-picker="thinking">
+					<ThinkingSelector
+						label="Thinking"
+						testid="stats-thinking"
+						variant="secondary"
+						placement="above"
 						levels={catalog ? levels : []}
-						effectiveLevel={effectiveLevel}
-						onPick={(level) => apply(effectiveProvider ?? "", effectiveId ?? "", level as ThinkingLevel)}
-						empty={catalog ? (effectiveId ? `${prettyModel(effectiveId)} has no thinking levels.` : "Pick a model first.") : "Loading…"}
-						footer="Levels this model actually supports"
+						value={effectiveLevel}
+						format={(lv) => THINKING_LABEL[lv as ThinkingLevel] ?? lv}
+						isDisabled={entry === undefined}
+						onChange={(level) => apply(effectiveProvider ?? "", effectiveId ?? "", level as ThinkingLevel)}
 					/>
-					{error && <div className="mt-1 text-error">{error}</div>}
-				</MenuShell>
-			)}
+				</span>
+			</Tooltip>
+			</div>
+			{error && <span className="text-sm text-error">{error}</span>}
 		</div>
 	);
 }

@@ -15,7 +15,7 @@
  * both. Detection belongs to the designed wave.
  */
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 import { useEffect, useState } from "react";
 import {
 	KEYBOARD_ACTIONS,
@@ -117,12 +117,12 @@ export function KeyboardSection() {
 												{rebinding === def.id ? "Press keys…" : formatBinding(effective)}
 											</kbd>
 											{def.displayOnly ? null : rebinding === def.id ? (
-												<Button size="sm" variant="ghost" onClick={() => setRebinding(null)}>Cancel</Button>
+												<Button variant="ghost" size="sm" label="Cancel" onClick={() => setRebinding(null)} />
 											) : (
 												<>
-													<Button size="sm" variant="ghost" onClick={() => setRebinding(def.id)} data-testid={`kbd-rebind-${def.id}`}>Rebind</Button>
+													<Button variant="ghost" size="sm" label="Rebind" onClick={() => setRebinding(def.id)} data-testid={`kbd-rebind-${def.id}`} />
 													{overridden(def.id) && (
-														<Button size="sm" variant="ghost" onClick={() => resetOne(def.id)} data-testid={`kbd-reset-${def.id}`}>Reset</Button>
+														<Button variant="ghost" size="sm" label="Reset" onClick={() => resetOne(def.id)} data-testid={`kbd-reset-${def.id}`} />
 													)}
 												</>
 											)}
@@ -136,7 +136,7 @@ export function KeyboardSection() {
 			})}
 			<div className="mt-1 flex items-center justify-between">
 				<span className="text-xs text-secondary/70">Stored on this device (lh:keymap) — overrides only.</span>
-				<Button size="sm" variant="ghost" onClick={resetAll} data-testid="kbd-reset-all">Reset all to defaults</Button>
+				<Button variant="ghost" size="sm" label="Reset all to defaults" onClick={resetAll} data-testid="kbd-reset-all" />
 			</div>
 		</>
 	);

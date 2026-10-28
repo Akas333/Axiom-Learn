@@ -38,20 +38,17 @@ import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
 import { IconButton } from "@astryxdesign/core/IconButton";
 import { Layout, LayoutContent } from "@astryxdesign/core/Layout";
 import { XIcon } from "lucide-react";
-import { PICKER_TRIGGER } from "@/components/ui/picker-trigger";
 import type React from "react";
 import { type ModelCatalogEntry, type ModelSlotName, type ModelsSettings } from "@/src/core";
 import { prettyModel } from "@/components/usage-format";
-import { ModelMenuList } from "@/components/settings/model-menu";
-import { MenuShell } from "@/components/menu-shell";
+import { ModelSelector, ProviderSelector, ThinkingSelector } from "@/components/settings/model-menu";
 import { notifySettingsSaved, useSettingsSaved } from "@/components/settings-signal";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { hintText, TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 import { OllamaRow, type OllamaInfo, type ProviderKeyInfo } from "@/components/settings/keys-section";
-import { ProviderMenuList } from "@/components/settings/model-menu";
 import { ChatGPTBackgroundAccess } from "@/components/settings/chatgpt-connection";
 import { NativeSubscriptionBackgroundAccess, SubscriptionConnections } from "@/components/settings/subscription-connections";
 import { defaultOrderLevel, populateLevel, THINKING_LABEL } from "@/components/thinking-default";
-import { ThinkingMenuList } from "@/components/settings/model-menu";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 
 /** The pickers' slot identity — same roster language as the Agent
@@ -165,32 +162,14 @@ export function SetupKeysBody({
 				Paste your Meta Model API key to use the Muse models, or run Ollama for local models with no key. You’ll pick your models next.
 			</p>
 			<div className="flex flex-col gap-2">
-				<div ref={menuAnchor} className="relative max-w-96">
-					<button
-						type="button"
-						aria-label="Provider"
-						data-testid="setup-key-provider"
-						aria-expanded={menuOpen}
-						onClick={onToggleMenu}
-						className={PICKER_TRIGGER + " w-full"}
-					>
-						<span className="min-w-0 flex-1 truncate text-left">{provider ? provider.label : "Pick a provider…"}</span>
-						<span aria-hidden className="text-secondary">
-							▾
-						</span>
-					</button>
-					{menuOpen && (
-						<MenuShell
-							anchorRef={menuAnchor}
-							testid="setup-key-provider-menu"
-							preferredSide="down"
-							align="left"
-							menuClass="flex w-[22rem] flex-col rounded-xl border border-border bg-card p-2 text-xs shadow-xl"
-						>
-							<ProviderMenuList providers={providers ?? []} onPick={onPick} />
-						</MenuShell>
-					)}
-				</div>
+				<ProviderSelector
+					label="Provider"
+					testid="setup-key-provider"
+					width={384}
+					providers={providers ?? []}
+					value={provider?.id}
+					onChange={onPick}
+				/>
 				{provider && (
 					<div className="flex max-w-96 items-center gap-2">
 						<TextInput
@@ -431,9 +410,9 @@ export function SetupDialog({
 					<DialogHeader
 						title="Set up your models"
 						endContent={
-							<Hint label="Close" binding="escape" side="left">
+							<Tooltip content={hintText("Close", undefined, "escape")} placement="start" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
 								<IconButton label="Close setup" data-testid="setup-close" variant="ghost" icon={<XIcon className="size-4" />} onClick={onClose} />
-							</Hint>
+							</Tooltip>
 						}
 					/>
 				}
@@ -499,96 +478,29 @@ export function SetupDialog({
 									<span className="text-xs text-secondary/70">{SLOT_META[slot].roster}</span>
 									{slot !== "strong" && <><ChatGPTBackgroundAccess provider={entry?.provider} /><NativeSubscriptionBackgroundAccess provider={entry?.provider} /></>}
 									<div className="flex items-center gap-2">
-										<div className="relative flex-1">
-											<button
-												type="button"
-												aria-label={`${SLOT_META[slot].label} model`}
-												data-testid={`setup-trigger-${slot}`}
-												aria-expanded={openMenu?.slot === slot && openMenu.kind === "model"}
-												onClick={() => setOpenMenu(openMenu?.slot === slot && openMenu.kind === "model" ? null : { slot, kind: "model" })}
-												className={PICKER_TRIGGER + " w-full min-w-40"}
-											>
-												<span className="min-w-0 flex-1 truncate">{entry ? prettyModel(entry.id) : "Pick a model…"}</span>
-												<span aria-hidden className="text-secondary">
-													▾
-												</span>
-											</button>
-											{/* Anchor by TESTID, not a ref (the settings-section pattern):
-											    React attaches a host element's ref AFTER its descendants'
-											    layout effects run, so a ref freshly attached in this same
-											    commit (menu opening = the ref condition turning true) is
-											    still null when MenuShell measures — place() gives up, the
-											    menu stays invisible, and only a window resize (which re-runs
-											    place()) shows it. querySelector at place time has no such
-											    ordering hazard. Live-caught by the owner 2026-10-09: every
-											    setup picker opened dead until a window resize. */}
-											{openMenu?.slot === slot && openMenu.kind === "model" && (
-												<MenuShell
-													anchorTestid={`setup-trigger-${slot}`}
-													testid={`setup-menu-${slot}`}
-													preferredSide="down"
-													align="left"
-													menuClass="flex w-[22rem] flex-col rounded-xl border border-border bg-card p-2 text-xs shadow-xl"
-												>
-													<ModelMenuList
-														models={catalog}
-														effectiveId={entry?.id}
-														effectiveProvider={entry?.provider}
-														onPick={(m) => {
-															setPicked((prev) => ({ ...prev, [slot]: m }));
-															// Auto-populate (chunk 2, owner: "populate
-															// everywhere"): no explicit level → the
-															// ordering's level for the fresh pick; an
-															// explicit one rides (Save clamps server-side).
-															setLevels((prev) => ({
-																...prev,
-																[slot]: populateLevel(prev[slot], m.supportedLevels),
-															}));
-															setOpenMenu(null);
-														}}
-														footer={catalog && catalog.length === 0 ? "No image-capable models. Add a provider key with access to a vision model." : undefined}
-													/>
-												</MenuShell>
-											)}
-										</div>
-										{/* Thinking selector (chunk 2): editable, pre-populated from
-										    the ordering per picked model — no model, no levels. */}
-										<div className="relative">
-											<button
-												type="button"
-												aria-label={`${SLOT_META[slot].label} thinking`}
-												data-testid={`setup-thinking-${slot}`}
-												aria-expanded={openMenu?.slot === slot && openMenu.kind === "thinking"}
-												disabled={!entry}
-												onClick={() => setOpenMenu(openMenu?.slot === slot && openMenu.kind === "thinking" ? null : { slot, kind: "thinking" })}
-												className={PICKER_TRIGGER + " w-24"}
-											>
-												<span className="min-w-0 flex-1 truncate text-left">
-													{entry ? (level ? THINKING_LABEL[level] ?? level : "…") : "—"}
-												</span>
-												<span aria-hidden className="text-secondary">
-													▾
-												</span>
-											</button>
-											{openMenu?.slot === slot && openMenu.kind === "thinking" && (
-												<MenuShell
-													anchorTestid={`setup-thinking-${slot}`}
-													testid={`setup-thinking-menu-${slot}`}
-													preferredSide="down"
-													align="left"
-													menuClass="flex w-44 flex-col gap-0.5 rounded-xl border border-border bg-card p-2 text-xs shadow-xl"
-												>
-													<ThinkingMenuList
-														levels={levelsForEntry.map(String)}
-														effectiveLevel={level}
-														onPick={(lv) => {
-															setLevels((prev) => ({ ...prev, [slot]: lv as ThinkingLevel }));
-															setOpenMenu(null);
-														}}
-													/>
-												</MenuShell>
-											)}
-										</div>
+										<ModelSelector
+											label={`${SLOT_META[slot].label} model`}
+											testid={`setup-trigger-${slot}`}
+											width="100%"
+											models={catalog}
+											value={entry}
+											emptyText={catalog && catalog.length === 0 ? "No image-capable models. Add a provider key with access to a vision model." : undefined}
+											onChange={(m) => {
+												setPicked((prev) => ({ ...prev, [slot]: m }));
+												// A fresh pick takes the model's default thinking level.
+												setLevels((prev) => ({ ...prev, [slot]: populateLevel(prev[slot], m.supportedLevels) }));
+											}}
+										/>
+										<ThinkingSelector
+											label={`${SLOT_META[slot].label} thinking`}
+											testid={`setup-thinking-${slot}`}
+											width={128}
+											levels={levelsForEntry.map(String)}
+											value={level}
+											format={(lv) => THINKING_LABEL[lv as ThinkingLevel] ?? lv}
+											isDisabled={!entry}
+											onChange={(lv) => setLevels((prev) => ({ ...prev, [slot]: lv as ThinkingLevel }))}
+										/>
 									</div>
 								</div>
 							);

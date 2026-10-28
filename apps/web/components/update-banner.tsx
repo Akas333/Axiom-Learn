@@ -10,7 +10,7 @@
  * (autoInstallOnAppQuit); the banner is a courtesy, not a gate.
  */
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 import { useUpdateState } from "@/components/settings/update-settings.tsx";
 
 export default function UpdateBanner() {
@@ -25,7 +25,7 @@ export default function UpdateBanner() {
 				<span className="font-medium">Kapany {ready.version ?? "update"} is ready</span>
 				<span className="text-secondary"> — restart to finish installing.</span>
 			</div>
-			<Button size="sm" variant="secondary" onClick={() => window.lh?.installUpdate?.()}>Restart</Button>
+			<Button variant="secondary" size="sm" label="Restart" onClick={() => window.lh?.installUpdate?.()} />
 		</div>
 	);
 }

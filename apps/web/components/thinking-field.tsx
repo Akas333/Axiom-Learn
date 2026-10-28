@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 import { KeyboardIcon, MicIcon } from "lucide-react";
 import { DictationControl, LevelDots, useDictationContext } from "@/components/dictation";
 import { useHandsFreePref, useVoiceThinking } from "@/components/voice-thinking";
@@ -63,7 +63,7 @@ export function ThinkingField({
 			data-testid={testId}
 			data-listening={listening || undefined}
 			className={cn(
-				"rounded-2xl border bg-card transition-[border-color,box-shadow] duration-200",
+				"rounded-lg border bg-card transition-[border-color,box-shadow] duration-200",
 				listening
 					? cn(
 							"border-accent-bg/50 [&_textarea]:placeholder:text-transparent",
@@ -106,9 +106,9 @@ export function ThinkingField({
 						</span>
 					)}
 					{listening ? (
-						<Button size="sm" variant="ghost" onClick={voice.typeInstead} data-testid="voice-type-instead" className="shrink-0"><KeyboardIcon className="size-4" />Type instead</Button>
+						<Button variant="ghost" size="sm" label="Type instead" icon={<KeyboardIcon className="size-4" />} className="shrink-0" onClick={voice.typeInstead} data-testid="voice-type-instead" />
 					) : canTalkAgain ? (
-						<Button size="sm" variant="ghost" onClick={voice.listenAgain} data-testid="voice-talk" className="shrink-0"><MicIcon className="size-4" />Talk</Button>
+						<Button variant="ghost" size="sm" label="Talk" icon={<MicIcon className="size-4" />} className="shrink-0" onClick={voice.listenAgain} data-testid="voice-talk" />
 					) : (
 						<DictationControl show={mic} />
 					)}

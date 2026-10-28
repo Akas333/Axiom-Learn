@@ -10,7 +10,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FACTORY_SETTINGS, type AppearanceSettings } from "@/src/core";
 import { Theme } from "@astryxdesign/core/theme";
-import { themes, defaultThemeSlug } from "@/astryx-themes";
+import { LinkProvider } from "@astryxdesign/core/Link";
+import { Link } from "@/lib/navigation";
+import { themes, defaultThemeSlug, type ThemeSlug } from "@/astryx-themes";
+
+/** The Astryx theme to render: the stored choice, or the default. */
+export function themeSlug(theme: string | null | undefined): ThemeSlug {
+	return theme && theme in themes ? (theme as ThemeSlug) : defaultThemeSlug;
+}
 
 /** Last-applied appearance, read by the inline boot script in index.html
  *  so a reload paints the chosen theme before React mounts (no flash). */
@@ -129,7 +136,7 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 		}
 		requestAnimationFrame(syncThemeColor);
 		try {
-			localStorage.setItem(BOOT_CACHE_KEY, JSON.stringify({ vars, mode: resolveAppearance(delta).mode }));
+			localStorage.setItem(BOOT_CACHE_KEY, JSON.stringify({ vars, mode: resolveAppearance(delta).mode, theme: themeSlug(resolveAppearance(delta).theme) }));
 		} catch {}
 	}, [key, vars, delta, loaded]);
 
@@ -165,12 +172,13 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 		() => ({ appearance: resolveAppearance(delta), onAppearanceChange }),
 		[delta, onAppearanceChange],
 	);
-	// The Astryx neutral theme for the whole app. The root Theme writes
+	// The chosen Astryx theme for the whole app. The root Theme writes
 	// data-theme on <html>, so portaled overlays get the same tokens.
 	return (
 		<AppearanceContext.Provider value={value}>
-			<Theme theme={themes[defaultThemeSlug]} mode={value.appearance.mode}>
-				{children}
+			<Theme theme={themes[themeSlug(value.appearance.theme)]} mode={value.appearance.mode}>
+				{/* Astryx links and href buttons route through React Router. */}
+				<LinkProvider component={Link}>{children}</LinkProvider>
 			</Theme>
 		</AppearanceContext.Provider>
 	);

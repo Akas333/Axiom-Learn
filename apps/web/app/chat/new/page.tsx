@@ -15,6 +15,7 @@ export default function NewSessionPage() {
 		<NewSession
 			initialConfigured={slotsConfigured(record.data?.models)}
 			mode={search.get("mode") === "practice" ? "practice" : "teach"}
+			folderId={search.get("folder") ?? undefined}
 		/>
 	);
 }

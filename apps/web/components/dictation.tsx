@@ -1,8 +1,11 @@
 
+import { ProgressBar } from "@astryxdesign/core/ProgressBar";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Loader2Icon, MicIcon } from "lucide-react";
 import { useSettingsDialog } from "@/components/settings/settings-dialog";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { hintText, TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 
 /**
  * Voice dictation — the cloud engine (STT wave 1, 2026-09-17).
@@ -577,9 +580,16 @@ export function DictationButton({ dictation }: { dictation: Dictation }) {
 	const keyless = error === DICTATION_KEYLESS;
 	const label = active ? "Stop dictation (Esc)" : (error ?? "Dictate");
 	return (
-		<Hint label={label} action={active || error ? undefined : "toggle-dictation"} side="top">
-			<button
-				type="button"
+		<Tooltip content={hintText(label, active || error ? undefined : "toggle-dictation", undefined)} placement="above" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+			<IconButton
+				label={active ? "Stop dictation" : error ? `Dictation failed: ${error}` : "Start dictation"}
+				variant={active ? "primary" : error ? "destructive" : "ghost"}
+				aria-pressed={active}
+				data-testid="dictation-toggle"
+				isDisabled={phase === "stopping"}
+				isLoading={phase === "stopping" || phase === "connecting"}
+				isInterruptible
+				icon={<MicIcon className="size-4" />}
 				onClick={() => {
 					if (keyless) {
 						clearError();
@@ -588,25 +598,8 @@ export function DictationButton({ dictation }: { dictation: Dictation }) {
 						toggle();
 					}
 				}}
-				disabled={phase === "stopping"}
-				aria-label={active ? "Stop dictation" : error ? `Dictation failed: ${error}` : "Start dictation"}
-				aria-pressed={active}
-				data-testid="dictation-toggle"
-				className={`flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
-					active
-						? "bg-accent-bg/25 text-primary hover:bg-accent-bg/35"
-						: error
-							? "text-error hover:bg-overlay-hover"
-							: "text-secondary hover:bg-overlay-hover hover:text-primary"
-				}`}
-			>
-				{phase === "stopping" || phase === "connecting" ? (
-					<Loader2Icon className="size-[18px] animate-spin" />
-				) : (
-					<MicIcon className="size-[18px]" />
-				)}
-			</button>
-		</Hint>
+			/>
+		</Tooltip>
 	);
 }
 
@@ -639,16 +632,18 @@ export function LevelDots({
 		return () => clearInterval(id);
 	}, [active, levelRef, count]);
 	if (!active) return null;
+	// The live voice level (latest tick) as an Astryx ProgressBar.
+	const level = levels[levels.length - 1] ?? 0;
 	return (
-		<div className={`flex h-9 shrink-0 items-center gap-[5px] px-1.5 ${className}`} data-testid="dictation-meter" aria-hidden>
-			{levels.map((v, i) => (
-				<span
-					key={i}
-					className="w-[3px] rounded-full bg-current opacity-80 transition-[height] duration-75"
-					style={{ height: `${3 + Math.round(v * 15)}px` }}
-				/>
-			))}
-		</div>
+		<ProgressBar
+			label="Voice level"
+			isLabelHidden
+			value={Math.round(level * 100)}
+			max={100}
+			variant="neutral"
+			data-testid="dictation-meter"
+			className={`w-16 shrink-0 ${className}`}
+		/>
 	);
 }
 

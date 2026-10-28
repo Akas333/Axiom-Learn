@@ -52,10 +52,8 @@
 
 import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
 import { TextArea } from "@astryxdesign/core/TextArea";
-import { Button } from "@/components/ui/button";
-import { PICKER_TRIGGER } from "@/components/ui/picker-trigger";
+import { Button } from "@astryxdesign/core/Button";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MenuShell } from "@/components/menu-shell";
 import { useSettingsSaved } from "@/components/settings-signal";
 import { defaultOrderLevel, populateLevel } from "@/components/thinking-default";
 import type React from "react";
@@ -74,7 +72,8 @@ import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import { prettyModel } from "@/components/usage-format";
 import { cn } from "@/lib/utils";
 import { SettingsGroup, SettingsRow, Toggle, CommitInput } from "./controls.tsx";
-import { ModelMenuList, ThinkingMenuList } from "./model-menu";
+import { ModelSelector, ThinkingSelector } from "./model-menu";
+import { Selector } from "@astryxdesign/core/Selector";
 import { ChatGPTBackgroundAccess } from "./chatgpt-connection";
 import { NativeSubscriptionBackgroundAccess } from "./subscription-connections";
 
@@ -226,51 +225,6 @@ export function composePromptSwitch(agent: AgentSettings | undefined, path: stri
 	return { ...agent, prompts };
 }
 
-/** The collapsed select look (owner: "the look of the collapsed menu is
- *  good") — now a button that opens the shared model-picker dropdown. */
-function MenuTrigger({
-	value,
-	emptyLabel,
-	ariaLabel,
-	testid,
-	open,
-	onClick,
-	widthClass,
-	disabled,
-}: {
-	value: string;
-	/** What the trigger shows when there is no override ("Default"). */
-	emptyLabel: string;
-	ariaLabel: string;
-	testid: string;
-	open: boolean;
-	onClick: () => void;
-	/** Owner (2026-09-20): the thinking trigger is FIXED at the width the
-	 *  Default state needs (values shifting it mid-edit shifted the row);
-	 *  the model trigger takes the same width as a MINIMUM — its values
-	 *  genuinely vary in length. */
-	widthClass: string;
-	/** The no-key search state grays the whole row; the trigger follows. */
-	disabled?: boolean;
-}) {
-	return (
-		<button
-			type="button"
-			aria-label={ariaLabel}
-			aria-expanded={open}
-			data-testid={testid}
-			onClick={() => {
-				if (!disabled) onClick();
-			}}
-			className={`${PICKER_TRIGGER} ${disabled ? "cursor-not-allowed opacity-40" : ""} ${widthClass}`}
-		>
-			<span className="min-w-0 flex-1 truncate">{value || emptyLabel}</span>
-			<span aria-hidden className="text-secondary">
-				▾
-			</span>
-		</button>
-	);
-}
 
 /* The section's dropdowns all mount the shared MenuShell (fix wave chunk
  * B): portaled to document.body, fixed-anchored to the open trigger by
@@ -475,29 +429,6 @@ export function AgentSection({
 	}
 
 		/** The search-engine menu row — label + the quiet live-key mark. */
-	const engineOption = (
-		id: (typeof SEARCH_ENGINES)[number] | "auto",
-		label: string,
-		active: boolean,
-		live: boolean | null,
-		onPick: () => void,
-	) => (
-		<button
-			key={id}
-			type="button"
-			data-testid={`engine-option-${id}`}
-			onClick={onPick}
-			className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted ${
-				active ? "bg-muted/60 text-primary" : "text-primary"
-			}`}
-		>
-			<span>{label}</span>
-			<span className="text-secondary">
-				{live === null ? (active && <span aria-hidden>✓</span>) : live ? <span aria-hidden>✓ key</span> : <span aria-hidden>· no key</span>}
-			</span>
-		</button>
-	);
-
 	const segmentRow = (info: SegmentInfo) => {
 		const fileExists = info.overrideText !== null;
 		const open = openSegment === info.path;
@@ -533,10 +464,10 @@ export function AgentSection({
 						/>
 					</span>
 				</SettingsRow>
-				<Button size="sm" variant="ghost" onClick={() => {
+				<Button variant="ghost" size="sm" label={open ? "Hide text" : "Show text"} onClick={() => {
 						setOpenSegment(open ? null : info.path);
 						setSegmentStatus(null);
-					}}>{open ? "Hide text" : "Show text"}</Button>
+					}} />
 				{open && (
 					<div className="mt-1 flex flex-col gap-2">
 						<div>
@@ -556,9 +487,9 @@ export function AgentSection({
 							/>
 						</div>
 						<div className="flex items-center gap-3">
-							<Button size="sm" variant="ghost" disabled={!dirty} onClick={() => void saveSegment(info.path, segmentDraft[info.path] ?? "")}>Save</Button>
+							<Button variant="ghost" size="sm" label="Save" isDisabled={!dirty} onClick={() => void saveSegment(info.path, segmentDraft[info.path] ?? "")} />
 							{fileExists && (
-								<Button size="sm" variant="ghost" onClick={() => void deleteSegment(info.path)}>Delete</Button>
+								<Button variant="ghost" size="sm" label="Delete" onClick={() => void deleteSegment(info.path)} />
 							)}
 							{/* The quiet inline confirmation — next to the
 							    action, not the old path-echoing line at the
@@ -620,78 +551,32 @@ export function AgentSection({
 						>
 							{/* The anchor for the outside-click contract is the
 							    span holding BOTH triggers of the open menu. */}
-							<span
-								ref={thisMenuOpen ? menuAnchorRef : undefined}
-								className="relative flex items-center gap-2"
-							>
+							<span className="flex items-center gap-2">
 								{slot !== "strong" && <><ChatGPTBackgroundAccess provider={coord?.provider} /><NativeSubscriptionBackgroundAccess provider={coord?.provider} /></>}
-								<MenuTrigger
-									value={modelId ? prettyModel(modelId) : ""}
-									emptyLabel="—"
-									ariaLabel={`${SLOT_META[slot].label} model`}
+								<ModelSelector
+									label={`${SLOT_META[slot].label} model`}
 									testid={`slot-model-${slot}`}
-									open={thisMenuOpen === "model"}
-									onClick={() => setOpenMenu(thisMenuOpen === "model" ? null : { target: slot, kind: "model" })}
-									widthClass="min-w-20"
+									width={200}
+									models={slotCatalog ?? undefined}
+									value={modelId ? { provider: provider ?? "", id: modelId } : undefined}
+									placeholder="—"
+									emptyText="No models — add a provider key in Providers"
+									onChange={(entry) => {
+										// A fresh pick keeps the stored level (clamped server-side) or takes the model's default.
+										const next = populateLevel(thinking || undefined, entry.supportedLevels);
+										onModelsChange(composeSlotModel(models, slot, entry.provider, entry.id, next));
+									}}
 								/>
-								<MenuTrigger
-									// Legacy display (chunk 2 item 4): no stored level + a known
-									// model → the RESOLVED level (the ordering's first supported —
-									// what the engine build runs). Display-only until a pick writes.
-									value={thinking || (chosen ? defaultOrderLevel(levels) : "")}
-									emptyLabel="—"
-									ariaLabel={`${SLOT_META[slot].label} thinking`}
+								<ThinkingSelector
+									label={`${SLOT_META[slot].label} thinking`}
 									testid={`slot-thinking-${slot}`}
-									open={thisMenuOpen === "thinking"}
-									onClick={() => setOpenMenu(thisMenuOpen === "thinking" ? null : { target: slot, kind: "thinking" })}
-									widthClass="w-28"
+									width={120}
+									levels={levels.map(String)}
+									// Legacy unset records show the resolved level the engine runs.
+									value={thinking || (chosen ? defaultOrderLevel(levels) : undefined)}
+									isDisabled={!chosen}
+									onChange={(level) => onModelsChange(composeSlotModel(models, slot, provider, modelId, level))}
 								/>
-								{thisMenuOpen === "model" && (
-									<MenuShell
-										preferredSide="down"
-											anchorTestid={`slot-model-${slot}`}
-										testid={`slot-model-menu-${slot}`}
-										menuClass="flex w-[22rem] flex-col rounded-xl border border-border bg-card p-2 text-xs shadow-xl"
-									>
-										<ModelMenuList
-											models={slotCatalog ?? undefined}
-											effectiveId={modelId}
-											effectiveProvider={provider}
-											onPick={(entry) => {
-												// Auto-populate (chunk 2, owner: "populate everywhere"): the
-												// fresh pick writes a level — the stored one rides as-is
-												// (the write clamps server-side), else the ordering's level.
-												const next = populateLevel(thinking || undefined, entry.supportedLevels);
-												onModelsChange(composeSlotModel(models, slot, entry.provider, entry.id, next));
-												setOpenMenu(null);
-											}}
-											footer={
-												catalog && catalog.length === 0
-													? "No models — add a provider key in Keys"
-													: "Runs every agent of this tier"
-											}
-										/>
-									</MenuShell>
-								)}
-								{thisMenuOpen === "thinking" && (
-									<MenuShell
-										preferredSide="down"
-											anchorTestid={`slot-thinking-${slot}`}
-										testid={`slot-thinking-menu-${slot}`}
-										menuClass="flex w-44 flex-col gap-0.5 rounded-xl border border-border bg-card p-2 text-xs shadow-xl"
-									>
-										<ThinkingMenuList
-											levels={levels.map(String)}
-											// The ✓ sits on the RESOLVED level for legacy unset records —
-											// the same one the trigger shows.
-											effectiveLevel={thinking || (chosen ? defaultOrderLevel(levels) : undefined)}
-											onPick={(level) => {
-												onModelsChange(composeSlotModel(models, slot, provider, modelId, level));
-												setOpenMenu(null);
-											}}
-										/>
-									</MenuShell>
-								)}
 							</span>
 						</SettingsRow>
 					);
@@ -772,37 +657,24 @@ export function AgentSection({
 							testid="search-engine-row"
 							dimmed={!anyKey}
 						>
-							<span ref={open ? menuAnchorRef : undefined} className="relative flex items-center gap-2">
-								<MenuTrigger
-									value={engine === "tavily" ? "Tavily" : engine === "brave" ? "Brave" : ""}
-									emptyLabel="Automatic"
-									ariaLabel="Search engine"
-									testid="search-engine-trigger"
-									open={open}
-									onClick={() => setOpenMenu(open ? null : { target: "search", kind: "engine" })}
-									widthClass="min-w-20"
-									disabled={!anyKey}
-								/>
-								{open && (
-									<MenuShell
-										preferredSide="down"
-											anchorTestid="search-engine-trigger"
-										testid="search-engine-menu"
-										menuClass="flex w-44 flex-col gap-0.5 rounded-xl border border-border bg-card p-2 text-xs shadow-xl"
-									>
-										{engineOption("auto", "Automatic", engine === null, null, () => {
-											onSectionChange(composeSearchEngine(agent, null));
-											setOpenMenu(null);
-										})}
-										{SEARCH_ENGINES.map((id) =>
-											engineOption(id, id === "tavily" ? "Tavily" : "Brave", engine === id, engineKeys[id] ?? false, () => {
-												onSectionChange(composeSearchEngine(agent, id));
-												setOpenMenu(null);
-											}),
-										)}
-									</MenuShell>
-								)}
-							</span>
+							<Selector
+								label="Search engine"
+								isLabelHidden
+								size="sm"
+								width={176}
+								data-testid="search-engine-trigger"
+								isDisabled={!anyKey}
+								value={engine ?? "auto"}
+								onChange={(next) => next && onSectionChange(composeSearchEngine(agent, next === "auto" ? null : (next as (typeof SEARCH_ENGINES)[number])))}
+								options={[
+									{ value: "auto", label: "Automatic" },
+									...SEARCH_ENGINES.map((id) => ({
+										value: id,
+										label: id === "tavily" ? "Tavily" : "Brave",
+										description: engineKeys[id] ? "Key set" : "No key",
+									})),
+								]}
+							/>
 						</SettingsRow>
 					);
 				})()}

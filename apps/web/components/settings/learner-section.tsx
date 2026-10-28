@@ -4,7 +4,7 @@
  * the onboarding walkthrough.
  */
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 import { useState } from "react";
 import type { LearnerSettings } from "@/src/core";
 import { notifySettingsSaved } from "@/components/settings-signal";
@@ -69,7 +69,7 @@ export function LearnerSection({
 				/>
 			</SettingsGroup>
 			<div className="mt-8 flex items-center gap-4">
-				<Button size="sm" variant="secondary" data-testid="learner-replay" onClick={openOnboarding}>Replay the intro</Button>
+				<Button variant="secondary" size="sm" label="Replay the intro" data-testid="learner-replay" onClick={openOnboarding} />
 				<span className="text-sm text-secondary" role="status">
 					{status === "saving" ? "Saving…" : status === "saved" ? "Saved" : status === "idle" ? "" : status}
 				</span>

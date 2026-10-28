@@ -1,7 +1,7 @@
 
+import { Link } from "@astryxdesign/core/Link";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { BrailleSpinner } from "@/components/braille-spinner";
+import { Button } from "@astryxdesign/core/Button";
 import { SettingsRow, Toggle } from "./controls.tsx";
 
 /** Observational snapshot from electron/main.cjs; never updater permission. */
@@ -89,17 +89,14 @@ export function UpdateSettings({
 					<>
 						{status && <span className="block" role="status" data-testid="update-status">{status}</span>}
 						{active && <span className="block">{MANUAL_UPDATE_HINT}</span>}
-						{releaseNotes && <a href={releaseNotes} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:text-primary hover:underline" data-testid="release-notes">Release notes</a>}
+						{releaseNotes && <Link href={releaseNotes} target="_blank" data-testid="release-notes">Release notes</Link>}
 					</>
 				}
 			>
 				{active && (state.status === "downloaded" ? (
-					<Button type="button" size="xs" data-testid="update-restart" onClick={() => window.lh?.installUpdate?.()}>Restart</Button>
+					<Button variant="primary" size="sm" label="Restart" type="button" data-testid="update-restart" onClick={() => window.lh?.installUpdate?.()} />
 				) : (
-					<Button type="button" size="xs" variant="outline" data-testid="update-check" disabled={busy} aria-busy={busy} onClick={check}>
-						{busy && <BrailleSpinner label={state.status === "downloading" ? "Downloading update" : "Checking for updates"} />}
-						Check for updates
-					</Button>
+					<Button variant="secondary" size="sm" label={busy ? (state.status === "downloading" ? "Downloading update" : "Checking for updates") : "Check for updates"} isLoading={busy} data-testid="update-check" onClick={check} />
 				))}
 			</SettingsRow>
 			{active && (

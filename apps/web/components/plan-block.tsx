@@ -1,5 +1,6 @@
 
-import { Button } from "@/components/ui/button";
+import { ClickableCard } from "@astryxdesign/core/ClickableCard";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { MaximizeIcon, MinusIcon, PlusIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,8 @@ import { curveBasis, line } from "d3-shape";
 import { fitGraphView, fitZoomFor, zoomedGraphView, type Viewport } from "@/components/pan-zoom";
 import type { PlanBlockData, PlanNodeStatus, PlanTree } from "@/src/core";
 import { derivedNodeStatus, derivePlanStatuses } from "@/src/core";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { hintText, TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 
 /**
  * PLAN BLOCKS — the plan lives in the chat (wave 4): persisted
@@ -680,14 +682,8 @@ export function PlanBlock({ data, onOpen }: { data: PlanBlockData; onOpen: () =>
 	const statusMap = useMemo(() => new Map(data.nodes.map((n) => [n.id, n.status] as const)), [data]);
 	const statusOf = (id: string): PlanNodeStatus => statusMap.get(id) ?? "upcoming";
 	return (
-		<Hint label="Open the full plan" side="bottom">
-<button
-			type="button"
-			data-testid="plan-block-full"
-			aria-label="Open the full plan"
-			onClick={onOpen}
-			className="block w-full text-left"
-		>
+		<Tooltip content="Open the full plan" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<ClickableCard label="Open the full plan" variant="transparent" padding={0} data-testid="plan-block-full" onClick={onOpen}>
 			{/* pad keeps centered strokes + the glow halo inside the frame; the
 		    cap keeps node text at or below chat prose size while still filling
 		    the column when it can (owner, plan-graph refinement round 1). */}
@@ -700,8 +696,8 @@ export function PlanBlock({ data, onOpen }: { data: PlanBlockData; onOpen: () =>
 			textCapScale={TEXT_CAP_SCALE}
 			monochrome
 		/>
-		</button>
-</Hint>
+		</ClickableCard>
+</Tooltip>
 	);
 }
 
@@ -895,14 +891,14 @@ export function PlanPopup({ messages, onClose }: { messages: readonly PopupMessa
 			<div className="mb-2 flex items-center gap-2">
 				<span className="text-sm font-medium">The plan</span>
 				<span className="text-xs text-secondary">live — statuses derive from your check outcomes</span>
-				<Hint label="Close" binding="escape" side="left">
-<Button size="icon-sm" variant="ghost" onClick={onClose} aria-label="Close" data-testid="plan-popup-close" className="ml-auto"><XIcon className="size-4" /></Button>
-</Hint>
+				<Tooltip content={hintText("Close", undefined, "escape")} placement="start" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<IconButton variant="ghost" size="sm" label="Close" icon={<XIcon className="size-4" />} className="ml-auto" onClick={onClose} data-testid="plan-popup-close" />
+</Tooltip>
 			</div>
 			<div
 				ref={viewportRef}
 				className={cn(
-					"relative min-h-0 flex-1 touch-none overflow-hidden rounded-xl border select-none",
+					"relative min-h-0 flex-1 touch-none overflow-hidden rounded-lg border select-none",
 					atFloor ? "cursor-default" : "cursor-grab",
 				)}
 				onPointerDown={startDrag}
@@ -941,15 +937,15 @@ export function PlanPopup({ messages, onClose }: { messages: readonly PopupMessa
 						<div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between p-2">
 							<span className="text-xs text-secondary/60">Drag to pan · scroll to zoom</span>
 							<div className="flex gap-1">
-								<Hint label="Zoom out" side="bottom">
-<Button size="icon-sm" variant="secondary" aria-label="Zoom out" onClick={() => stepZoom(1 / 1.25)} className="pointer-events-auto"><MinusIcon className="size-4" /></Button>
-</Hint>
-								<Hint label="Fit plan to screen" side="bottom">
-<Button size="icon-sm" variant="secondary" aria-label="Fit plan to screen" onClick={fitView} data-testid="plan-popup-fit" className="pointer-events-auto"><MaximizeIcon className="size-4" /></Button>
-</Hint>
-								<Hint label="Zoom in" side="bottom">
-<Button size="icon-sm" variant="secondary" aria-label="Zoom in" onClick={() => stepZoom(1.25)} className="pointer-events-auto"><PlusIcon className="size-4" /></Button>
-</Hint>
+								<Tooltip content="Zoom out" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<IconButton variant="secondary" size="sm" label="Zoom out" icon={<MinusIcon className="size-4" />} className="pointer-events-auto" onClick={() => stepZoom(1 / 1.25)} />
+</Tooltip>
+								<Tooltip content="Fit plan to screen" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<IconButton variant="secondary" size="sm" label="Fit plan to screen" icon={<MaximizeIcon className="size-4" />} className="pointer-events-auto" onClick={fitView} data-testid="plan-popup-fit" />
+</Tooltip>
+								<Tooltip content="Zoom in" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<IconButton variant="secondary" size="sm" label="Zoom in" icon={<PlusIcon className="size-4" />} className="pointer-events-auto" onClick={() => stepZoom(1.25)} />
+</Tooltip>
 							</div>
 						</div>
 					</>

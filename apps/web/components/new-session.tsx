@@ -1,13 +1,16 @@
 
-import { Button } from "@/components/ui/button";
+import { Token } from "@astryxdesign/core/Token";
+import { Button } from "@astryxdesign/core/Button";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "@/lib/navigation";
-import { Composer, COMPOSER_SHELL } from "@/components/composer";
+import { Composer } from "@/components/composer";
 import { joinDictation, useDictation } from "@/components/dictation";
 import { HistoryIcon, PlusIcon, XIcon } from "lucide-react";
 import { LhMark } from "@/components/lh-mark";
 import { SphereBackdrop } from "@/components/sphere-backdrop";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 import { StatsBar } from "@/components/stats-bar";
 import { useFieldCycle } from "@/components/field-cycle";
 import { SidebarToggle } from "@/components/sidebar";
@@ -56,6 +59,8 @@ export async function startDraftSession(
 	fetchLike: typeof fetch,
 	mode?: "practice",
 	picks?: readonly DraftPick[],
+	/** The sidebar folder the chat was started from (/chat/new?folder=). */
+	folderId?: string,
 ): Promise<string | null> {
 	const t = text.trim();
 	if (!t) return null;
@@ -66,11 +71,12 @@ export async function startDraftSession(
 	const res = await fetchLike("/api/chats", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(
-			mode === "practice"
+		body: JSON.stringify({
+			...(mode === "practice"
 				? { title: t, kind: "practice", ...(picks && picks.length > 0 ? { graphContext: { propositions: picks } } : {}) }
-				: { title: t },
-		),
+				: { title: t }),
+			...(folderId ? { folderId } : {}),
+		}),
 	});
 	const { id } = (await res.json()) as { id: string };
 	// No settings PUT on create (per-session models, owner 2026-09-28):
@@ -160,7 +166,7 @@ export function DraftShell({
 	};
 	/* Run end focuses the composer (owner, 2026-10-01): the hands are on
 	 * the keyboard from the stop — falling edge of `active` only. */
-	const composerInputRef = useRef<HTMLTextAreaElement>(null);
+	const composerInputRef = useRef<HTMLElement>(null);
 	const dictationWasActiveRef = useRef(false);
 	useEffect(() => {
 		if (dictation.active) {
@@ -195,7 +201,7 @@ export function DraftShell({
 						</h1>
 						<div className={`${DOCK} mt-9`}>
 							{setupCta && <ComposerActions setup={setupCta} />}
-							<div className={COMPOSER_SHELL}>
+							<div>
 								<Composer
 									busy={busy}
 									value={text}
@@ -214,9 +220,9 @@ export function DraftShell({
 									dictation={dictation}
 									leading={
 										mode === "practice" ? (
-											<Hint label="Pick nodes from your graph" side="bottom">
-												<Button size="icon-sm" variant="ghost" aria-label="Pick nodes from your graph" data-testid="practice-props-chip" onClick={onOpenPicker} className="shrink-0"><PlusIcon className="size-4" /></Button>
-											</Hint>
+											<Tooltip content="Pick nodes from your graph" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+												<IconButton variant="ghost" size="sm" label="Pick nodes from your graph" icon={<PlusIcon className="size-4" />} className="shrink-0" data-testid="practice-props-chip" onClick={onOpenPicker} />
+											</Tooltip>
 										) : undefined
 									}
 								/>
@@ -227,23 +233,23 @@ export function DraftShell({
 									<div className="flex items-center gap-2">
 										<SessionModeToggle mode={mode} onChange={(m) => onModeChange?.(m)} testIdPrefix="draft-mode" />
 										{mode === "practice" && picks.length === 0 && dueCount > 0 && onPickDue && (
-											<Hint label="Pick the nodes you're starting to forget" side="bottom">
-												<button
-													type="button"
+											<Tooltip content="Pick the nodes you're starting to forget" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+												<Button
 													data-testid="practice-review-due"
+													variant="secondary"
+													size="sm"
+													icon={<HistoryIcon className="size-4" />}
+													label={`Review ${dueCount} due`}
 													onClick={onPickDue}
-													className="flex items-center gap-1.5 rounded-full bg-overlay-hover px-2.5 py-0.5 text-sm text-primary transition-colors hover:bg-overlay-pressed"
-												>
-													<HistoryIcon className="size-3.5 text-secondary" />
-													Review {dueCount} due
-												</button>
-											</Hint>
+												/>
+											</Tooltip>
 										)}
 										{picks.length > 0 && (
-											<span className="flex items-center gap-1 rounded-full bg-overlay-hover py-0.5 pl-2.5 pr-0.5 text-sm text-primary">
-												{picks.length} {picks.length === 1 ? "node" : "nodes"}
-												<Button size="icon-sm" variant="ghost" aria-label="Clear picked nodes" data-testid="practice-props-clear" onClick={onClearPicks}><XIcon className="size-4" /></Button>
-											</span>
+											<Token
+												label={`${picks.length} ${picks.length === 1 ? "node" : "nodes"}`}
+												data-testid="practice-props-clear"
+												onRemove={onClearPicks}
+											/>
 										)}
 									</div>
 								}
@@ -265,7 +271,7 @@ export function DraftShell({
 	);
 }
 
-export function NewSession({ initialConfigured, mode = "teach" }: { initialConfigured: boolean; mode?: "teach" | "practice" }) {
+export function NewSession({ initialConfigured, mode = "teach", folderId }: { initialConfigured: boolean; mode?: "teach" | "practice"; folderId?: string }) {
 	const router = useRouter();
 	const [text, setText] = useState("");
 	/* The draft MIRROR ("nothing gets lost" round, 2026-10-01): the shell's
@@ -357,13 +363,13 @@ export function NewSession({ initialConfigured, mode = "teach" }: { initialConfi
 			return;
 		}
 		setBusy(true);
-		void startDraftSession(draft, fetch, mode === "practice" ? "practice" : undefined, mode === "practice" ? picksRef.current : undefined)
+		void startDraftSession(draft, fetch, mode === "practice" ? "practice" : undefined, mode === "practice" ? picksRef.current : undefined, folderId)
 			.then((target) => {
 				if (target) router.push(target);
 				else setBusy(false);
 			})
 			.catch(() => setBusy(false));
-	}, [busy, router, configured, zeroKeys, strongKeyless]);
+	}, [busy, router, configured, zeroKeys, strongKeyless, folderId]);
 
 	return (
 		<>
@@ -373,7 +379,14 @@ export function NewSession({ initialConfigured, mode = "teach" }: { initialConfi
 				onChange={applyText}
 				onSend={send}
 				mode={mode}
-				onModeChange={(m) => router.replace(m === "practice" ? "/chat/new?mode=practice" : "/chat/new")}
+				onModeChange={(m) => {
+					// Switching mode keeps the folder the draft was started from.
+					const q = new URLSearchParams();
+					if (m === "practice") q.set("mode", "practice");
+					if (folderId) q.set("folder", folderId);
+					const qs = q.toString();
+					router.replace(qs ? `/chat/new?${qs}` : "/chat/new");
+				}}
 				picks={picks}
 				onOpenPicker={openPicker}
 				onClearPicks={() => applyPicks([])}
@@ -409,7 +422,7 @@ export function NewSession({ initialConfigured, mode = "teach" }: { initialConfi
 						<ZeroKeysPill inline onOpen={() => setSetupOpen(true)} />
 					) : (
 						!configured && (
-							<Button size="sm" variant="secondary" data-testid="setup-cta" onClick={() => setSetupOpen(true)}>Set up your models</Button>
+							<Button variant="secondary" size="sm" label="Set up your models" data-testid="setup-cta" onClick={() => setSetupOpen(true)} />
 						)
 					)
 				}

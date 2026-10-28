@@ -1,12 +1,13 @@
 
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { MaximizeIcon, MinusIcon, PlusIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fitGraphView, fitZoomFor, zoomedGraphView, type Viewport } from "@/components/pan-zoom";
 import { renderMermaid } from "@/components/mermaid-render";
 import { MermaidError } from "@/components/mermaid-error";
-import { Hint } from "@/components/ui/hint";
+import { Tooltip } from "@astryxdesign/core/Tooltip";
+import { hintText, TOOLTIP_DELAY_MS } from "@/lib/shortcut-hint";
 import { SvgImage } from "@/components/artifacts/svg-image";
 
 /**
@@ -224,14 +225,14 @@ export function MermaidOverlay({
 			<div className="mb-2 flex items-center gap-2">
 				<span className="text-sm font-medium">Diagram</span>
 				<span className="text-xs text-secondary">from this lesson</span>
-				<Hint label="Close" binding="escape" side="left">
-<Button size="icon-sm" variant="ghost" onClick={onClose} aria-label="Close" data-testid="mermaid-overlay-close" className="ml-auto"><XIcon className="size-4" /></Button>
-</Hint>
+				<Tooltip content={hintText("Close", undefined, "escape")} placement="start" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<IconButton variant="ghost" size="sm" label="Close" icon={<XIcon className="size-4" />} className="ml-auto" onClick={onClose} data-testid="mermaid-overlay-close" />
+</Tooltip>
 			</div>
 			<div
 				ref={viewportRef}
 				className={cn(
-					"relative min-h-0 flex-1 touch-none overflow-hidden rounded-xl border select-none",
+					"relative min-h-0 flex-1 touch-none overflow-hidden rounded-lg border select-none",
 					atFloor ? "cursor-default" : "cursor-grab",
 				)}
 				onPointerDown={startDrag}
@@ -284,15 +285,15 @@ export function MermaidOverlay({
 						<div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between p-2">
 							<span className="text-xs text-secondary/60">Drag to pan · scroll to zoom</span>
 							<div className="flex gap-1">
-								<Hint label="Zoom out" side="bottom">
-<Button size="icon-sm" variant="secondary" aria-label="Zoom out" onClick={() => stepZoom(1 / 1.25)} className="pointer-events-auto"><MinusIcon className="size-4" /></Button>
-</Hint>
-								<Hint label="Fit diagram to view" side="bottom">
-<Button size="icon-sm" variant="secondary" aria-label="Fit diagram to view" onClick={fitView} className="pointer-events-auto"><MaximizeIcon className="size-4" /></Button>
-</Hint>
-								<Hint label="Zoom in" side="bottom">
-<Button size="icon-sm" variant="secondary" aria-label="Zoom in" onClick={() => stepZoom(1.25)} className="pointer-events-auto"><PlusIcon className="size-4" /></Button>
-</Hint>
+								<Tooltip content="Zoom out" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<IconButton variant="secondary" size="sm" label="Zoom out" icon={<MinusIcon className="size-4" />} className="pointer-events-auto" onClick={() => stepZoom(1 / 1.25)} />
+</Tooltip>
+								<Tooltip content="Fit diagram to view" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<IconButton variant="secondary" size="sm" label="Fit diagram to view" icon={<MaximizeIcon className="size-4" />} className="pointer-events-auto" onClick={fitView} />
+</Tooltip>
+								<Tooltip content="Zoom in" placement="below" delay={TOOLTIP_DELAY_MS} hasHoverIndication={false}>
+<IconButton variant="secondary" size="sm" label="Zoom in" icon={<PlusIcon className="size-4" />} className="pointer-events-auto" onClick={() => stepZoom(1.25)} />
+</Tooltip>
 							</div>
 						</div>
 					</>

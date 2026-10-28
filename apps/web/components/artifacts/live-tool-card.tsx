@@ -1,7 +1,10 @@
 
+import { Text } from "@astryxdesign/core/Text";
+import { Spinner } from "@astryxdesign/core/Spinner";
+import { CodeBlock } from "@astryxdesign/core/CodeBlock";
+import { HStack } from "@astryxdesign/core/HStack";
+import { Collapsible } from "@astryxdesign/core/Collapsible";
 import { ChevronRight } from "lucide-react";
-import { BrailleSpinner } from "@/components/braille-spinner";
-import { Shimmer } from "@/components/ai-elements/shimmer";
 import { toolActivityLabel } from "@/src/core";
 import type { ArtifactPartProps } from "@/src/core";
 
@@ -40,25 +43,20 @@ export function LiveToolCard({ part }: ArtifactPartProps) {
 	const hasInput = p.input != null && Object.keys(inp).length > 0;
 
 	return (
-		<details
-			data-testid="live-tool-card"
-			data-tool={tool}
-			className="group my-1 w-full max-w-2xl select-none"
-		>
-			<summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-secondary [&::-webkit-details-marker]:hidden">
-				<BrailleSpinner label={`${toolActivityLabel(tool)} — live`} />
-				<Shimmer duration={1} className="text-xs">
+		<Collapsible defaultIsOpen={false} data-testid="live-tool-card" data-tool={tool} trigger={
+<HStack gap={2} align="center" className="min-w-0 text-xs text-secondary">
+				<Spinner size="sm" label={`${toolActivityLabel(tool)} — live`} />
+				<Text type="supporting">
 					{toolActivityLabel(tool)}
-				</Shimmer>
+				</Text>
 				{arg && <span className="truncate">{arg}</span>}
-				<ChevronRight className="size-3 shrink-0 opacity-50 transition-transform group-open:rotate-90" />
-			</summary>
-			<div className="mt-2 rounded-xl border bg-card p-3 text-xs">
+			
+</HStack>
+}>
+			<div className="mt-2 rounded-lg border bg-card p-3 text-xs">
 				<div className="mb-1 font-medium text-secondary">Input (streaming)</div>
-				<pre className="max-h-32 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed">
-					{hasInput ? JSON.stringify(p.input, null, 2) : "…"}
-				</pre>
+				<CodeBlock code={hasInput ? JSON.stringify(p.input, null, 2) : "…"} language="json" isWrapped maxHeight={256} />
 			</div>
-		</details>
+		</Collapsible>
 	);
 }

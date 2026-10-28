@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Selector } from "@astryxdesign/core/Selector";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { NATIVE_SUBSCRIPTIONS, type NativeSubscriptionProviderId, type NativeSubscriptionStatus } from "@/src/core";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 import { notifySettingsSaved } from "@/components/settings-signal";
 import { ConnectionDialog, ConnectionFooter, ConnectionRow } from "./connection-controls";
 import { ChatGPTConnection } from "./chatgpt-connection";
@@ -99,23 +99,23 @@ export function NativeSubscriptionUIProvider({ children }: { children: React.Rea
 				{view === "connection" && interaction && <div className="mt-3 space-y-3 text-xs" data-testid="subscription-login-interaction">
 					{interaction.progress && <p role="status" className="text-secondary">{interaction.progress}</p>}
 					{interaction.userCode && <p>Device code: <code className="select-text font-mono">{interaction.userCode}</code></p>}
-					{interaction.browser && <Button variant="outline" size="sm" disabled={busy} onClick={() => bridge && void bridge.open(dialog, interaction.attemptId, interaction.browser!.id).catch(() => setError("The browser could not be opened. Try again."))}>Open browser</Button>}
+					{interaction.browser && <Button variant="secondary" size="sm" label="Open browser" isDisabled={busy} onClick={() => bridge && void bridge.open(dialog, interaction.attemptId, interaction.browser!.id).catch(() => setError("The browser could not be opened. Try again."))} />}
 					{prompt && <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); if (bridge) void bridge.respond(dialog, interaction.attemptId, prompt.id, promptValue).catch(() => setError(CONTROL_ERROR)); }}>
 						{prompt.type === "select"
 							? <Selector label={prompt.message} width="100%" placeholder="Select…" value={promptValue || undefined} options={(prompt.options ?? []).map((option) => ({ value: option.id, label: option.label }))} onChange={(next) => setPromptValue(next ?? "")} />
 							: <TextInput label={prompt.message} width="100%" type={prompt.type === "secret" ? "password" : "text"} autoComplete="off" value={promptValue} placeholder={prompt.placeholder} onChange={setPromptValue} />}
-						<Button type="submit" variant="outline" size="sm" disabled={busy || (prompt.type === "select" && !promptValue)}>Continue</Button>
+						<Button variant="secondary" size="sm" label="Continue" isDisabled={busy || (prompt.type === "select" && !promptValue)} type="submit" />
 					</form>}
 				</div>}
 			</>}
 			{(error || status.error) && <p role="alert" className="mt-3 text-xs text-red-400">{error || status.error}</p>}
-			<ConnectionFooter testid="subscription-connection-footer" leading={!confirm && management && status.connectionId && !status.pending && <Button variant="destructive" size="sm" disabled={busy || !!operation} onClick={() => setConfirm(true)}>Disconnect</Button>}>
+			<ConnectionFooter testid="subscription-connection-footer" leading={!confirm && management && status.connectionId && !status.pending && <Button variant="destructive" size="sm" label="Disconnect" isDisabled={busy || !!operation} onClick={() => setConfirm(true)} />}>
 				{!confirm && management && status.connectionId && status.available && !status.connected && !!status.error && !status.pending && <>
-					{status.error && <Button variant="outline" size="sm" disabled={busy || !!operation} onClick={() => bridge && void control(() => bridge.retry(dialog))}>Retry</Button>}
-					<Button variant="outline" size="sm" disabled={!status.available || busy || !!operation} onClick={beginSignIn}>Sign in again</Button>
+					{status.error && <Button variant="secondary" size="sm" label="Retry" isDisabled={busy || !!operation} onClick={() => bridge && void control(() => bridge.retry(dialog))} />}
+					<Button variant="secondary" size="sm" label="Sign in again" isDisabled={!status.available || busy || !!operation} onClick={beginSignIn} />
 				</>}
-				<Button variant={!confirm && management ? "outline" : "ghost"} size="sm" disabled={busy} onClick={close}>{confirm || !management ? "Cancel" : "Close"}</Button>
-				{confirm ? <Button variant="destructive" size="sm" disabled={busy} onClick={() => bridge && void control(() => bridge.disconnect(dialog), true)}>Disconnect</Button> : view === "notice" ? <Button variant="outline" size="sm" disabled={!status.available || !!operation} onClick={() => setView("connection")}>Continue</Button> : view === "connection" && <Button variant="outline" size="sm" disabled={!status.available || !!operation || status.pending} onClick={() => void login()}>Connect</Button>}
+				<Button variant={!confirm && management ? "secondary" : "ghost"} size="sm" label={confirm || !management ? "Cancel" : "Close"} isDisabled={busy} onClick={close} />
+				{confirm ? <Button variant="destructive" size="sm" label="Disconnect" isDisabled={busy} onClick={() => bridge && void control(() => bridge.disconnect(dialog), true)} /> : view === "notice" ? <Button variant="secondary" size="sm" label="Continue" isDisabled={!status.available || !!operation} onClick={() => setView("connection")} /> : view === "connection" && <Button variant="secondary" size="sm" label="Connect" isDisabled={!status.available || !!operation || status.pending} onClick={() => void login()} />}
 			</ConnectionFooter>
 		</ConnectionDialog>}
 	</Context.Provider>;
@@ -136,5 +136,5 @@ export function NativeSubscriptionBackgroundAccess({ provider }: { provider: str
 	const ui = useContext(Context), descriptor = NATIVE_SUBSCRIPTIONS.find((p) => p.logicalId === provider);
 	const status = ui.statuses.find((s) => s.providerId === descriptor?.providerId);
 	if (!descriptor || !status?.connected || status.allowBackgroundUse) return null;
-	return <Button type="button" size="xs" variant="ghost" disabled={ui.busy} onClick={() => ui.open(descriptor.providerId)}>Enable background use</Button>;
+	return <Button variant="ghost" size="sm" label="Enable background use" isDisabled={ui.busy} type="button" onClick={() => ui.open(descriptor.providerId)} />;
 }

@@ -1,5 +1,5 @@
 
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { cn } from "@/lib/utils";
 import type { LhViewMessage, LhViewPart } from "@/src/core";
 import { ArrowDownIcon, DownloadIcon } from "lucide-react";
@@ -68,7 +68,7 @@ export const ConversationEmptyState = ({
   </div>
 );
 
-export type ConversationScrollButtonProps = ComponentProps<typeof Button>;
+export type ConversationScrollButtonProps = { className?: string };
 
 export const ConversationScrollButton = ({
   className,
@@ -82,19 +82,10 @@ export const ConversationScrollButton = ({
 
   return (
     !isAtBottom && (
-      <Button
-        className={cn(
+      <IconButton variant="secondary" size="md" label="Scroll to bottom" icon={<ArrowDownIcon className="size-4" />} className={cn(
           "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full dark:bg-body dark:hover:bg-muted",
           className
-        )}
-        onClick={handleScrollToBottom}
-        size="icon"
-        type="button"
-        variant="outline"
-        {...props}
-      >
-        <ArrowDownIcon className="size-4" />
-      </Button>
+        )} onClick={handleScrollToBottom} type="button" {...props} />
     )
   );
 };

@@ -1,6 +1,6 @@
 
 import { SegmentedControl, SegmentedControlItem } from "@astryxdesign/core/SegmentedControl";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 import type { ReactNode } from "react";
 import { DumbbellIcon } from "lucide-react";
 
@@ -28,22 +28,16 @@ export function NodePickerControl({ count, onOpen, onClear }: {
 }) {
 	return (
 		<div className="flex items-center gap-1.5">
-			<button
-				type="button"
+			<Button
 				data-testid="practice-props-chip"
+				variant="secondary"
+				size="sm"
+				icon={<DumbbellIcon className="size-4" />}
+				label={count > 0 ? `${count} ${count === 1 ? "node" : "nodes"} selected` : "Pick nodes"}
 				onClick={onOpen}
-				className={
-					"flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 font-ui text-xs transition-colors " +
-					(count > 0
-						? "border-border bg-card text-primary hover:bg-overlay-hover"
-						: "border-dashed border-border/80 bg-transparent text-secondary hover:bg-overlay-hover hover:text-primary")
-				}
-			>
-				<DumbbellIcon aria-hidden="true" className="size-3.5 text-secondary" />
-				{count > 0 ? `${count} ${count === 1 ? "node" : "nodes"} selected` : "Pick nodes"}
-			</button>
+			/>
 			{count > 0 && (
-				<Button size="sm" variant="ghost" data-testid="practice-props-clear" onClick={onClear}>Clear</Button>
+				<Button variant="ghost" size="sm" label="Clear" data-testid="practice-props-clear" onClick={onClear} />
 			)}
 		</div>
 	);

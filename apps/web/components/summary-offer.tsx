@@ -1,5 +1,5 @@
 import { NotebookPenIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@astryxdesign/core/Button";
 import { derivePlanStatuses, nodeProgress } from "@/src/core";
 import type { PlanTree } from "@/src/core";
 import { blurAfterPointerClick } from "@/components/focus-hygiene";
@@ -36,20 +36,20 @@ export function SummaryOfferBar({ onSummarize, onDismiss }: { onSummarize: () =>
 	return (
 		<div
 			data-testid="summary-offer-bar"
-			className="lh-card-enter my-4 ml-10 flex flex-wrap items-center gap-3 rounded-2xl border border-strong/70 bg-card px-4 py-3"
+			className="lh-card-enter my-4 ml-10 flex flex-wrap items-center gap-3 rounded-lg border border-strong/70 bg-card px-4 py-3"
 		>
 			<div className="mr-auto min-w-0">
 				<div className="text-sm font-semibold text-primary">You've finished every concept 🎉</div>
 				<div className="text-xs text-secondary">Want a short summary note of everything you learned here?</div>
 			</div>
-			<Button size="sm" variant="secondary" data-testid="summary-dismiss" onClick={(e) => {
+			<Button variant="secondary" size="sm" label="No thanks" data-testid="summary-dismiss" onClick={(e) => {
 					blurAfterPointerClick(e);
 					onDismiss();
-				}}>No thanks</Button>
-			<Button size="sm" variant="primary" data-testid="summary-accept" onClick={(e) => {
+				}} />
+			<Button variant="primary" size="sm" label="Summarize" icon={<NotebookPenIcon className="size-4" />} data-testid="summary-accept" onClick={(e) => {
 					blurAfterPointerClick(e);
 					onSummarize();
-				}}><NotebookPenIcon className="size-4" />Summarize</Button>
+				}} />
 		</div>
 	);
 }
