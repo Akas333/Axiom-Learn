@@ -28,6 +28,8 @@ import { lsTool } from "./tools/ls.ts";
 import { findTool } from "./tools/find.ts";
 import { grepTool } from "./tools/grep.ts";
 import { healToolRecord } from "./tools/heal.ts";
+import { questionBankTools } from "./tools/question-bank.ts";
+import type { BankQuestion } from "../core/question-bank.ts";
 import type { GraphStore } from "../core/ports.ts";
 
 export { jobTools };
@@ -283,6 +285,9 @@ export interface ProberToolContext extends ProbeDoneContext {
 	/** What this chat may read of the learner's attached material
 	 *  (2026-10-29): present = material_read / material_search registered. */
 	readableMaterials?: (chatId: string) => MaterialRecord[];
+	/** The exam question bank (2026-10-30): present = find_questions /
+	 *  question_bank_topics registered. */
+	questionBank?: () => readonly BankQuestion[];
 }
 
 /** The prober's tool set: probe quiz (no nodeId) + ask + the learner-fs
@@ -347,6 +352,7 @@ export function createProberTools(
 					? proberGraphTools({ chatStore: ctx.chatStore, graphStore: ctx.graphStore })
 					: {}),
 				...(ctx.readableMaterials ? materialTools({ chatId: ctx.chatId, readable: ctx.readableMaterials }) : {}),
+				...(ctx.questionBank ? questionBankTools({ questions: ctx.questionBank }) : {}),
 				...done,
 			},
 				withoutMechanics(enabled),
@@ -414,6 +420,9 @@ export interface TeacherToolContext extends PlanToolContext {
 	/** What this chat may read of the learner's attached material:
 	 *  present = material_read / material_search registered. */
 	readableMaterials?: (chatId: string) => MaterialRecord[];
+	/** The exam question bank: present = find_questions /
+	 *  question_bank_topics registered. */
+	questionBank?: () => readonly BankQuestion[];
 }
 
 /**
@@ -476,6 +485,7 @@ export function createTeacherTools(
 			// Courses (2026-10-29): only in a chat whose probe found a course.
 			...courseTools(ctx),
 			...(ctx.readableMaterials ? materialTools({ chatId: ctx.chatId, readable: ctx.readableMaterials }) : {}),
+			...(ctx.questionBank ? questionBankTools({ questions: ctx.questionBank }) : {}),
 			...jobTools({ chatId: ctx.chatId, jobStore: ctx.jobStore, spawn: ctx.spawn, searchAvailable: ctx.searchAvailable }),
 		},
 		withoutMechanics(enabled),

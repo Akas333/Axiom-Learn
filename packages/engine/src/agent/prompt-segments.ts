@@ -40,7 +40,7 @@ const PROMPTS_DIR = path.join(PATHS.root, "src", "agent", "prompts");
  *  truth contract, and the thinking-fields doctrine are ONE law across
  *  every agent. The question/confidence/file mechanics stay out
  *  (practice has no such tools). */
-const PRACTICE_SHARED_FRAGMENTS = ["10-voice.md", "15-accuracy.md", "16-mental-model.md", "40-formatting.md", "45-materials.md"];
+const PRACTICE_SHARED_FRAGMENTS = ["10-voice.md", "15-accuracy.md", "16-mental-model.md", "40-formatting.md", "45-materials.md", "47-question-bank.md"];
 
 /** The guided teacher's fragments the TEXTBOOK agent also composes
  *  (2026-10-29): the method, the planning and plan-map mechanics, the

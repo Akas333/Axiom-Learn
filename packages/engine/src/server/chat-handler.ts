@@ -49,6 +49,7 @@ import { hasProbeDone, danglingQuestionOf } from "../core/native-messages.ts";
 import { composeInstructions, type AgentKind } from "../agent/teacher-agent.ts";
 import { ensureCompacted, kickCompaction, effectiveThresholdTokens } from "./compaction.ts";
 import { materialIdsForFolder, readableMaterials, refreshMaterialMarkers } from "./materials.ts";
+import { loadQuestionBank, questionBankAvailable } from "../store/question-bank.ts";
 import { catalogContextLimits, refreshConnectionCatalog } from "./model-catalog.ts";
 import { emit } from "../core/events.ts";
 import { settledTurnResponse } from "./turn-runs.ts";
@@ -428,6 +429,9 @@ export async function handleChatInput(
 	// split, no plan/question/job tools; the whole registry is
 	// problem + conclude. buildAgent stays honored (the test seam is
 	// uniform across kinds).
+	// The exam question bank (2026-10-30): every agent gets its readers when
+	// a bank is on disk (data/question-bank).
+	const bank = questionBankAvailable() ? { questionBank: loadQuestionBank } : {};
 	const constructed: TeachingAgent = buildAgent
 		? buildAgent({ ...agentOpts, teaching })
 		: record.kind === "practice"
@@ -452,6 +456,7 @@ export async function handleChatInput(
 						},
 						...(graphToolsEnabled(effective) ? { graph: { chatStore: stores.chatStore, graphStore: stores.graphStore } } : {}),
 						readableMaterials,
+						...bank,
 					},
 					agentOpts,
 				)
@@ -467,6 +472,7 @@ export async function handleChatInput(
 						searchAvailable,
 						readableMaterials,
 						materialIdsFor: materialIdsForFolder,
+						...bank,
 					},
 					agentOpts,
 				)
@@ -476,6 +482,7 @@ export async function handleChatInput(
 						chatStore: stores.chatStore,
 						deliver: (steer) => void deliverJobResult(steer),
 						readableMaterials,
+						...bank,
 						// Fix wave (2026-09-20): the prober carries research + pdf
 						// dispatch (owner ruling — phase-omnipresent), so its ctx
 						// needs the same job wiring as the teacher's.

@@ -29,6 +29,8 @@ import { concludeResult, invalidInputResult, problemResult } from "../tool-execu
 import { healEncodedArguments, healToolRecord } from "./heal.ts";
 import { materialTools } from "./materials.ts";
 import type { MaterialRecord } from "../../core/contracts/materials.ts";
+import { questionBankTools } from "./question-bank.ts";
+import type { BankQuestion } from "../../core/question-bank.ts";
 
 
 /** The record-reading context the gates need (the plan-tools idiom). */
@@ -49,6 +51,9 @@ export interface PracticeToolContext {
 	/** The learner's attached material (2026-10-29): present = the two
 	 *  material readers are registered. */
 	readableMaterials?: (chatId: string) => MaterialRecord[];
+	/** The exam question bank (2026-10-30): present = find_questions /
+	 *  question_bank_topics registered. */
+	questionBank?: () => readonly BankQuestion[];
 }
 
 /** TURN-SCOPED GATE STATE (the BKT incident, 2026-10-05): the gates used
@@ -251,5 +256,6 @@ export function practiceTools(ctx: PracticeToolContext): Record<string, AgentToo
 		...(jobs ? { pdf: jobs.pdf! } : {}),
 		...(ctx.graph ? proberGraphTools(ctx.graph) : {}),
 		...(ctx.readableMaterials ? materialTools({ chatId: ctx.chatId, readable: ctx.readableMaterials }) : {}),
+		...(ctx.questionBank ? questionBankTools({ questions: ctx.questionBank }) : {}),
 	});
 }
