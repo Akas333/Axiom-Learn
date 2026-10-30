@@ -74,27 +74,36 @@ export interface DerivedPlanStatuses {
 	visited: ReadonlySet<string>;
 	/** Nodes the teacher closed with concept_done. */
 	done: ReadonlySet<string>;
+	/** Textbook style only: nodes taught (a predict check, an illustration,
+	 *  an exercise) but not yet covered — waiting on an exercise. */
+	taught: ReadonlySet<string>;
 }
 
-/** A node's place in the learner's progress (the plan sidebar's view). */
-export type PlanNodeProgress = "done" | "current" | "upcoming";
+/** A node's place in the learner's progress (the plan sidebar's view).
+ *  "taught" is the textbook style's in-between: taught, not yet tested. */
+export type PlanNodeProgress = "done" | "taught" | "current" | "upcoming";
 
 /** Done = closed with concept_done, or taught and left behind (the teacher
- *  moved on without closing it — older sessions never close nodes). */
+ *  moved on without closing it — older sessions never close nodes). In a
+ *  textbook chat a node left behind is only taught until an exercise
+ *  covers it. */
 export function nodeProgress(statuses: DerivedPlanStatuses, nodeId: string): PlanNodeProgress {
 	if (statuses.current === nodeId) return "current";
 	if (statuses.done.has(nodeId) || statuses.visited.has(nodeId)) return "done";
+	if (statuses.taught.has(nodeId)) return "taught";
 	return "upcoming";
 }
 
 /** A plan-timeline event. `tag` (a quiz/explain about a node) and `done`
  *  (concept_done) are the guided loop's; the textbook style (2026-10-29)
  *  adds `at` (an illustration or exercise is about this node: position
- *  only) and `covered` (an exercise on it was solved unaided). */
+ *  only), `touch` (an exercise's other nodes: taught, no position) and
+ *  `covered` (an exercise on it was solved unaided). */
 type PlanEvent =
 	| { kind: "tag"; nodeId: string }
 	| { kind: "done"; nodeId: string; nextNodeId?: string }
 	| { kind: "at"; nodeId: string }
+	| { kind: "touch"; nodeId: string }
 	| { kind: "covered"; nodeId: string };
 
 /** One timeline fold shared by both message shapes: tagged checks move
@@ -104,11 +113,15 @@ type PlanEvent =
 function foldPlanEvents(ids: ReadonlySet<string>, events: Iterable<PlanEvent>): DerivedPlanStatuses {
 	const runs: string[] = []; // distinct tagged nodes, consecutive duplicates collapsed
 	const done = new Set<string>();
+	const touched = new Set<string>(); // every node a check, illustration or exercise was about
 	let current: string | null = null;
 	let textbook = false;
 	for (const e of events) {
 		if (!ids.has(e.nodeId)) continue; // untagged/unknown — moves nothing
-		if (e.kind === "at") {
+		if (e.kind === "tag" || e.kind === "at" || e.kind === "touch") touched.add(e.nodeId);
+		if (e.kind === "touch") {
+			textbook = true;
+		} else if (e.kind === "at") {
 			textbook = true;
 			current = e.nodeId;
 		} else if (e.kind === "covered") {
@@ -124,9 +137,11 @@ function foldPlanEvents(ids: ReadonlySet<string>, events: Iterable<PlanEvent>): 
 		}
 	}
 	// Visited = been there in an EARLIER stay (a revisit puts a node in both;
-	// current wins at render). Textbook progress is coverage alone.
+	// current wins at render). Textbook progress is coverage alone; what was
+	// taught but not covered yet is its own state.
 	const visited = textbook ? new Set<string>() : new Set(current === runs.at(-1) ? runs.slice(0, -1) : runs);
-	return { current, visited, done };
+	const taught = textbook ? new Set([...touched].filter((id) => !done.has(id))) : new Set<string>();
+	return { current, visited, done, taught };
 }
 
 /** The textbook events of one tool call, in record order: illustrations
@@ -146,6 +161,7 @@ function* textbookPlanEvents(
 		const nodeIds = input.nodeIds.filter((id): id is string => typeof id === "string");
 		active.nodeIds = nodeIds;
 		if (nodeIds[0]) yield { kind: "at", nodeId: nodeIds[0] };
+		for (const nodeId of nodeIds.slice(1)) yield { kind: "touch", nodeId };
 	} else if (name === "conclude" && active.nodeIds) {
 		const solved = input.outcome === "solved" || input.outcome === "solvedWithHints";
 		const unaided = input.rung == null || input.rung === "R0" || input.rung === "R1";
@@ -170,8 +186,12 @@ export function derivePlanStatuses(tree: PlanTree, messages: readonly PartsCarri
 		for (const m of messages) {
 			for (const part of m.parts) {
 				if (part.type.startsWith("tool-")) {
-					const clean = part.state === "output-available";
-					yield* textbookPlanEvents(part.type.slice("tool-".length), part.input as Record<string, unknown> | undefined, clean, active);
+					const name = part.type.slice("tool-".length);
+					// A posed exercise's part stays input-available for good (the
+					// view never flips the problem pose — core/view.ts), so posed
+					// counts as clean for it; only an errored one is skipped.
+					const clean = part.state === "output-available" || (name === "problem" && part.state === "input-available");
+					yield* textbookPlanEvents(name, part.input as Record<string, unknown> | undefined, clean, active);
 				}
 				const input = part.input as { nodeId?: unknown; nextNodeId?: unknown } | undefined;
 				if (typeof input?.nodeId !== "string") continue;

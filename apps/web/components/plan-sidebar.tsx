@@ -21,14 +21,14 @@ function recapsByNode(messages: readonly PopupMessage[]): Map<string, string[]> 
 	return out;
 }
 
-/** Has any check been tagged with this node yet? */
-function taught(messages: readonly PopupMessage[], nodeId: string): boolean {
+/** Has any check, illustration or exercise been about this node yet? */
+function startedOn(messages: readonly PopupMessage[], nodeId: string): boolean {
 	return messages.some((m) =>
-		((m as { parts?: Array<{ type: string; input?: unknown }> }).parts ?? []).some(
-			(part) =>
-				(part.type === "tool-quiz" || part.type === "tool-explain") &&
-				(part.input as { nodeId?: unknown } | undefined)?.nodeId === nodeId,
-		),
+		((m as { parts?: Array<{ type: string; input?: unknown }> }).parts ?? []).some((part) => {
+			const input = part.input as { nodeId?: unknown; nodeIds?: unknown } | undefined;
+			if (part.type === "tool-quiz" || part.type === "tool-explain" || part.type === "tool-illustration") return input?.nodeId === nodeId;
+			return part.type === "tool-problem" && Array.isArray(input?.nodeIds) && input.nodeIds.includes(nodeId);
+		}),
 	);
 }
 
@@ -145,9 +145,10 @@ function PlanCard({
 	const byId = new Map(tree.nodes.map((n) => [n.id, n]));
 	const progressOf = (id: string): PlanNodeProgress => (statuses ? nodeProgress(statuses, id) : "upcoming");
 	const doneCount = tree.nodes.filter((n) => progressOf(n.id) === "done").length;
+	const taughtCount = tree.nodes.filter((n) => progressOf(n.id) === "taught").length;
 	// Right after a concept_done the current node waits on Continue: nothing
 	// has been taught (tagged) on it yet.
-	const waitingOnContinue = doneCount > 0 && !!statuses?.current && !taught(messages, statuses.current);
+	const waitingOnContinue = doneCount > 0 && !!statuses?.current && !startedOn(messages, statuses.current);
 	const { order, number } = conceptNumbers(tree, layout, messages as Parameters<typeof conceptNumbers>[2], statuses?.current);
 
 	return (
@@ -164,6 +165,7 @@ function PlanCard({
 				</button>
 				<span className="ml-auto text-xs tabular-nums text-muted-foreground">
 					{doneCount} / {tree.nodes.length} done
+					{taughtCount > 0 && ` · ${taughtCount} taught`}
 				</span>
 				<IconButton label="Open the full map" onClick={onExpand}>
 					<Maximize2Icon className="size-3.5" />
@@ -211,6 +213,11 @@ function PlanCard({
 												{node.title}
 											</div>
 											{p === "current" && node.summary && <p className="mt-0.5 text-xs text-muted-foreground">{node.summary}</p>}
+											{p === "taught" && (
+												<p className="mt-0.5 text-xs text-muted-foreground" data-testid={`plan-step-taught-${id}`}>
+													Taught · an exercise will mark it done
+												</p>
+											)}
 											{p === "done" && recap && recap.length > 0 && (
 												<ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
 													{recap.map((line, li) => (
@@ -250,7 +257,8 @@ function IconButton({ label, onClick, testid, children }: { label: string; onCli
 }
 
 /** Same marker language as the map: solid white check when done, filled blue
- *  number when current, outlined number otherwise. */
+ *  number when current, a bright ring when taught (not yet tested), outlined
+ *  number otherwise. */
 function StepMarker({ progress, number }: { progress: PlanNodeProgress; number: number }) {
 	if (progress === "done") {
 		return (
@@ -263,7 +271,11 @@ function StepMarker({ progress, number }: { progress: PlanNodeProgress; number: 
 		<span
 			className={cn(
 				"mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] tabular-nums",
-				progress === "current" ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground",
+				progress === "current"
+					? "bg-primary text-primary-foreground"
+					: progress === "taught"
+						? "border border-foreground/80 text-foreground"
+						: "border border-border text-muted-foreground",
 			)}
 		>
 			{number}

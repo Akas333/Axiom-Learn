@@ -195,6 +195,7 @@ export function PlanMap({
 								"transition-colors duration-500",
 								progress === "done" && "fill-foreground stroke-foreground",
 								progress === "current" && "fill-primary stroke-primary",
+								progress === "taught" && "fill-card stroke-foreground/80",
 								progress === "upcoming" && "fill-card stroke-border",
 							)}
 						/>
@@ -205,7 +206,10 @@ export function PlanMap({
 								textAnchor="middle"
 								dy="0.35em"
 								fontSize={11}
-								className={cn("tabular-nums", progress === "current" ? "fill-primary-foreground font-medium" : "fill-muted-foreground")}
+								className={cn(
+									"tabular-nums",
+									progress === "current" ? "fill-primary-foreground font-medium" : progress === "taught" ? "fill-foreground" : "fill-muted-foreground",
+								)}
 							>
 								{n}
 							</text>

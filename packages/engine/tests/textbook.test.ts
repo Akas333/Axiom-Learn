@@ -15,7 +15,7 @@ import { textbookTools } from "../src/agent/tools/textbook.ts";
 import { conceptDoneTool } from "../src/agent/tools/concept.ts";
 import { composeInstructions, makeQuestionStopper } from "../src/agent/teacher-agent.ts";
 import { listSourceSegments } from "../src/agent/prompt-segments.ts";
-import { derivePlanStatusesLh, nodeProgress } from "../src/core/contracts/plan.ts";
+import { derivePlanStatuses, derivePlanStatusesLh, nodeProgress } from "../src/core/contracts/plan.ts";
 
 const STAMPS = {
 	api: "faux",
@@ -153,7 +153,54 @@ describe("plan progress in a textbook chat", () => {
 		const statuses = derivePlanStatusesLh(TREE, record);
 		assert.equal(statuses.current, "nonuniform-j");
 		assert.equal(nodeProgress(statuses, "enclosed-current"), "done");
-		assert.equal(nodeProgress(statuses, "partial-enclosure"), "upcoming", "illustrated is not covered");
+		assert.equal(nodeProgress(statuses, "partial-enclosure"), "taught", "illustrated is taught, not covered");
+	});
+
+	it("marks taught-but-untested nodes until an exercise covers them", () => {
+		const record: LhMessage[] = [
+			...call("quiz", { type: "predict", nodeId: "enclosed-current", question: "?" }),
+			...call("section", { title: "Ampère's law", body: SECTION_BODY }),
+			...call("illustration", { nodeId: "partial-enclosure", difficulty: "standard", statement: "s", steps: ["a", "b"] }),
+			...call("problem", { statement: "p", nodeIds: ["nonuniform-j", "enclosed-current"], modelSolution: "m" }),
+		];
+		let statuses = derivePlanStatusesLh(TREE, record);
+		assert.equal(nodeProgress(statuses, "nonuniform-j"), "current");
+		assert.equal(nodeProgress(statuses, "enclosed-current"), "taught", "the predict check taught it");
+		assert.equal(nodeProgress(statuses, "partial-enclosure"), "taught");
+
+		record.push(...call("conclude", { outcome: "solved", rung: "R1", verdict: "v", missClass: null, retest: false }));
+		statuses = derivePlanStatusesLh(TREE, record);
+		assert.equal(nodeProgress(statuses, "enclosed-current"), "done");
+		assert.equal(nodeProgress(statuses, "partial-enclosure"), "taught", "no exercise covered it yet");
+	});
+
+	it("reads the side panel's view parts the same way, where a posed exercise stays input-available", () => {
+		const tool = (name: string, input: Record<string, unknown>, state = "output-available") => ({ type: `tool-${name}`, state, input });
+		const parts = [
+			tool("quiz", { type: "predict", nodeId: "enclosed-current", question: "?" }, "output-available"),
+			tool("illustration", { nodeId: "partial-enclosure", difficulty: "standard", statement: "s", steps: ["a", "b"] }),
+			tool("problem", { statement: "p", nodeIds: ["nonuniform-j", "enclosed-current"], modelSolution: "m" }, "input-available"),
+		];
+		let statuses = derivePlanStatuses(TREE, [{ parts }]);
+		assert.equal(statuses.current, "nonuniform-j", "the open exercise is where the learner is");
+		assert.equal(nodeProgress(statuses, "enclosed-current"), "taught");
+
+		parts.push(tool("conclude", { outcome: "solved", rung: "R0", verdict: "v", missClass: null, retest: false }));
+		statuses = derivePlanStatuses(TREE, [{ parts }]);
+		assert.equal(nodeProgress(statuses, "enclosed-current"), "done");
+		assert.equal(nodeProgress(statuses, "nonuniform-j"), "current");
+		assert.equal(statuses.done.has("nonuniform-j"), true);
+		assert.equal(nodeProgress(statuses, "partial-enclosure"), "taught");
+	});
+
+	it("keeps the guided loop free of the taught state", () => {
+		const record: LhMessage[] = [
+			...call("quiz", { nodeId: "enclosed-current", question: "?" }),
+			...call("quiz", { nodeId: "partial-enclosure", question: "?" }),
+		];
+		const statuses = derivePlanStatusesLh(TREE, record);
+		assert.equal(statuses.taught.size, 0);
+		assert.equal(nodeProgress(statuses, "enclosed-current"), "done");
 	});
 });
 
