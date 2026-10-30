@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read Kapany propositions and recorded reasoning chains, without writes.
+"""Read TYSA propositions and recorded reasoning chains, without writes.
 
 These records describe what sources articulated, not mastery or guaranteed truth.
 Source file paths are labels only: this script never opens the imported originals.

@@ -1670,7 +1670,7 @@ export function Chat({
 										</div>
 									<Message from="assistant" className="min-w-0 max-w-full flex-1">
 									{messages[mi - 1]?.role !== "assistant" && (
-										<div className="flex h-7 items-center text-sm font-semibold text-foreground">Kapany</div>
+										<div className="flex h-7 items-center text-sm font-semibold text-foreground">TYSA</div>
 									)}
 									<MessageContent className="w-full">
 											{m.parts.map((part, pi) => [partOpenerFor(mi, pi), ((): ReactNode => {

@@ -37,7 +37,7 @@ class SkillFolderTest(unittest.TestCase):
         self.assertLess(len(text.splitlines()), 500)
         self.assertIn("references/data-format.md", text)
         self.assertTrue((SKILL / "references" / "data-format.md").is_file())
-        self.assertIn("Never modify Kapany's data", text)
+        self.assertIn("Never modify TYSA's data", text)
         self.assertIn("archival view", text)
         self.assertNotIn("/Users/amos/", text)
 

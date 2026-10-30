@@ -1,6 +1,6 @@
 # Development guide
 
-The developer README (split out of the storefront README, 2026-10-10). Everything below is for people working ON Kapany, not using it.
+The developer README (split out of the storefront README, 2026-10-10). Everything below is for people working ON TYSA, not using it.
 
 A web learning app: a **teacher agent** (React + Vite front end in `apps/web`, Hono API in `apps/server`, engine in `packages/engine`; the Vercel AI SDK's `UIMessage` protocol end-to-end, LLM engine [pi-ai](docs/pi-engine-swap.md) via OpenRouter), probe→teach lessons with graded quiz/ask interactions, a formal **session plan tree** the teacher authors once (`plan_init`) and whose progress is derived from tagged quiz calls, and a persistent cross-session **knowledge graph** of what the learner knows — the graph is the app's home page.
 

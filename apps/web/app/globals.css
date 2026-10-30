@@ -135,7 +135,7 @@
 	--font-prose: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
 	--font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
 	--font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
-	/* The Kapany wordmark only (sidebar band). Loaded in index.html. */
+	/* The TYSA wordmark only (sidebar band). Loaded in index.html. */
 	--font-brand: "Unbounded", var(--font-figtree), ui-sans-serif, sans-serif;
 	/* The modular type ladder — each size carries its own line-height.
 	   Component sizes must pull from this ladder. (owner, typography

@@ -198,6 +198,11 @@ export const FILES = {
 	get promptsOverrideDir() {
 		return path.join(dataRoot(), "prompts");
 	},
+	/** The learner's preference layers (onboarding): one .md per agent,
+	 *  composed AFTER the built-in prompts, never in place of them. */
+	get preferencesDir() {
+		return path.join(dataRoot(), "preferences");
+	},
 	/** Hosted: each user's own BYOK keys at <user dir>/auth.json. */
 	get auth() {
 		return hostedMode() ? path.join(dataRoot(), "auth.json") : AUTH_FILE;

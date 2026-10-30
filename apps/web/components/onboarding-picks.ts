@@ -1,6 +1,6 @@
 /**
  * Automatic model picks for onboarding: the learner connects one account
- * or key and Kapany fills all three model slots itself, so nobody has to
+ * or key and TYSA fills all three model slots itself, so nobody has to
  * know what "strong / cheap / vision" means on day one. The slot pickers
  * in Settings (and the setup dialog) stay available to change them later.
  *

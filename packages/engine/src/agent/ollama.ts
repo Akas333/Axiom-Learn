@@ -7,7 +7,7 @@
  * size and capabilities). Requests go through Ollama's OpenAI-compatible
  * endpoint (`/v1/chat/completions`) via pi-ai's openai-completions API.
  *
- * Only models that support tool calls are listed: every Kapany agent uses
+ * Only models that support tool calls are listed: every TYSA agent uses
  * tools, and a model without them would fail mid-lesson.
  *
  * The server address comes from OLLAMA_HOST (Ollama's own variable),
@@ -34,7 +34,7 @@ export interface OllamaStatus {
 	host: string;
 	/** The Ollama server answered. */
 	running: boolean;
-	/** Tool-capable models found (the ones Kapany can use). */
+	/** Tool-capable models found (the ones TYSA can use). */
 	models: string[];
 	/** Pulled models skipped because they can't call tools. */
 	skipped: string[];

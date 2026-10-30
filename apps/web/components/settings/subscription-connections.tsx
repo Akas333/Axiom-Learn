@@ -8,9 +8,9 @@ import { Toggle } from "./controls";
 import { useNativeSubscriptionBridge } from "./subscription-client";
 
 export const COPILOT_POLICY_NOTICE = "Pi's native Copilot sign-in may enable additional models whose policy is not yet configured. Models explicitly disabled by policy are not enabled. Organization restrictions still apply.";
-export const SUBSCRIPTION_BACKGROUND_HINT = "Allow Kapany helper agents and automatic follow-ups to use this connection.";
-export function subscriptionNotice(label: string): string { return `Your prompts, tool results, and relevant session context are sent to ${label} to run the work you select. Credentials are stored on the machine running Kapany in an owner-only plaintext file. Provider terms, data-use policies, and plan limits apply. This connection never falls back to an API key.`; }
-export function subscriptionDisconnectCopy(label: string): string { return `Disconnect ${label} from Kapany? This stops work using this connection and removes its saved credentials from the machine running Kapany. It does not cancel your subscription or revoke access at the provider. Saved model choices will remain unavailable until you reconnect or change them.`; }
+export const SUBSCRIPTION_BACKGROUND_HINT = "Allow TYSA helper agents and automatic follow-ups to use this connection.";
+export function subscriptionNotice(label: string): string { return `Your prompts, tool results, and relevant session context are sent to ${label} to run the work you select. Credentials are stored on the machine running TYSA in an owner-only plaintext file. Provider terms, data-use policies, and plan limits apply. This connection never falls back to an API key.`; }
+export function subscriptionDisconnectCopy(label: string): string { return `Disconnect ${label} from TYSA? This stops work using this connection and removes its saved credentials from the machine running TYSA. It does not cancel your subscription or revoke access at the provider. Saved model choices will remain unavailable until you reconnect or change them.`; }
 export function emptySubscriptionStatus(providerId: NativeSubscriptionProviderId): NativeSubscriptionStatus { return { providerId, available: false, connected: false, pending: false, allowBackgroundUse: true, connectionId: null, epoch: 0, authorityRevision: 0, revision: 0 }; }
 const Context = createContext({ statuses: [] as NativeSubscriptionStatus[], busy: false, open: (_providerId: NativeSubscriptionProviderId) => {} });
 const CONTROL_ERROR = "The connection could not be changed. Try again.";
@@ -117,11 +117,11 @@ export function NativeSubscriptionUIProvider({ children }: { children: React.Rea
 	</Context.Provider>;
 }
 
-export function NativeSubscriptionConnection({ providerId }: { providerId: NativeSubscriptionProviderId }) {
+export function NativeSubscriptionConnection({ providerId, hideLabel = false }: { providerId: NativeSubscriptionProviderId; hideLabel?: boolean }) {
 	const ui = useContext(Context), descriptor = NATIVE_SUBSCRIPTIONS.find((p) => p.providerId === providerId)!;
 	const status = ui.statuses.find((s) => s.providerId === providerId) ?? emptySubscriptionStatus(providerId);
 	return <div className="flex flex-col gap-2" data-testid={`${providerId}-connection`}>
-		<ConnectionRow label={descriptor.label} action={status.connectionId ? "Manage…" : "Connect"} disabled={ui.busy || !status.available || ui.statuses.some((s) => s.pending)} onAction={() => ui.open(providerId)} />
+		<ConnectionRow label={descriptor.label} hideLabel={hideLabel} action={status.connectionId ? "Manage…" : "Connect"} disabled={ui.busy || !status.available || ui.statuses.some((s) => s.pending)} onAction={() => ui.open(providerId)} />
 		{status.error && <p role="alert" className="text-xs text-red-400">{status.error}</p>}
 	</div>;
 }

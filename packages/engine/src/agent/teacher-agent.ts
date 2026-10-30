@@ -2,6 +2,7 @@ import { Agent } from "@earendil-works/pi-agent-core";
 import type { AgentEvent, AgentMessage, AgentTool } from "@earendil-works/pi-agent-core";
 import { invalidInputResult, questionResult } from "./tool-execute.ts";
 import { providerEventObserver } from "./provider-events.ts";
+import { preferenceLayer } from "./preferences.ts";
 import type { Usage } from "@earendil-works/pi-ai";
 import { PATHS } from "../../config.ts";
 import { APP_IDENTITY, piEngineFor, type PiEngine } from "./models.ts";
@@ -76,23 +77,40 @@ export type AgentKind = "prober" | "teacher" | "practice" | "textbook";
  *  chat/job machinery. */
 export function composeInstructions(kind: AgentKind, switches?: Record<string, boolean>): string {
 	const segments = effectivePromptSegments(kind, switches ?? {});
-	return segments
-		.map((s) => (s.enabled ? s.overrideText! : s.sourceText))
-		.map((t) => t.trim())
-		.filter(Boolean)
-		.join("\n\n---\n\n");
+	return withPreferences(
+		kind,
+		segments
+			.map((s) => (s.enabled ? s.overrideText! : s.sourceText))
+			.map((t) => t.trim())
+			.filter(Boolean)
+			.join("\n\n---\n\n"),
+	);
+}
+
+/** The learner's preference layer (agent/preferences.ts) goes LAST, after
+ *  the built-in prompt it may never override; none set = unchanged. */
+function withPreferences(kind: AgentKind, base: string): string {
+	const layer = preferenceLayer(kind);
+	return layer ? `${base}\n\n---\n\n${layer}` : base;
 }
 
 // The switch-free source composition, cached per kind (module-load once).
 // With promptSwitches provided, baseAgentOptions composes FRESH per turn —
 // an override file written while its switch is ON must flip the next
 // turn's composition; the cache serves only the switches-less path.
+// Cached WITHOUT the preference layer, which is read fresh per turn.
 const composedInstructions: Record<AgentKind, string> = {
-	prober: composeInstructions("prober"),
-	teacher: composeInstructions("teacher"),
-	practice: composeInstructions("practice"),
-	textbook: composeInstructions("textbook"),
+	prober: sourceInstructions("prober"),
+	teacher: sourceInstructions("teacher"),
+	practice: sourceInstructions("practice"),
+	textbook: sourceInstructions("textbook"),
 };
+function sourceInstructions(kind: AgentKind): string {
+	return effectivePromptSegments(kind, {})
+		.map((s) => s.sourceText.trim())
+		.filter(Boolean)
+		.join("\n\n---\n\n");
+}
 
 // Money channel (wave 4): the chat-handler passes a per-turn collector;
 // every model call's usage lands in the chat record's turns log
@@ -194,7 +212,7 @@ function baseAgentOptions(kind: AgentKind, opts: AgentBuildOptions, tools: Agent
 	const stopper = makeQuestionStopper(kind);
 	const systemPrompt = opts.promptSwitches
 		? composeInstructions(kind, opts.promptSwitches)
-		: composedInstructions[kind]!;
+		: withPreferences(kind, composedInstructions[kind]!);
 	// Debug recorder (owner, 2026-10-04): raw provider events when
 	// LH_PROVIDER_EVENTS=1 and the caller handed a chatId; undefined is
 	// the normal no-observer path (tests, env-off).

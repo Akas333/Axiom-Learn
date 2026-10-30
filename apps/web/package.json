@@ -1,7 +1,7 @@
 {
 	"name": "@axiom/web",
 	"version": "0.1.0",
-	"description": "Kapany web front end: React + Vite, served against the Hono API.",
+	"description": "TYSA web front end: React + Vite, served against the Hono API.",
 	"license": "AGPL-3.0-only",
 	"private": true,
 	"type": "module",

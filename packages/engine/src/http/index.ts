@@ -39,6 +39,7 @@ import * as search from "./routes/search.ts";
 import * as settingsSection from "./routes/settings-section.ts";
 import * as settingsPromptsSegment from "./routes/settings-prompts-segment.ts";
 import * as settingsPrompts from "./routes/settings-prompts.ts";
+import * as preferences from "./routes/preferences.ts";
 import * as settings from "./routes/settings.ts";
 import * as sttToken from "./routes/stt-token.ts";
 import * as subscriptionsBrowser from "./routes/subscriptions-browser.ts";
@@ -88,6 +89,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 	{ path: "/api/keys/:id", handlers: { PUT: keysId.PUT as RouteHandler, DELETE: keysId.DELETE as RouteHandler } },
 	{ path: "/api/keys", handlers: { GET: keys.GET as RouteHandler } },
 	{ path: "/api/models", handlers: { GET: models.GET as RouteHandler } },
+	{ path: "/api/preferences", handlers: { GET: preferences.GET as RouteHandler, PUT: preferences.PUT as RouteHandler, DELETE: preferences.DELETE as RouteHandler } },
 	{ path: "/api/search", handlers: { GET: search.GET as RouteHandler } },
 	{ path: "/api/settings/:section", handlers: { PUT: settingsSection.PUT as RouteHandler } },
 	{ path: "/api/settings/prompts/*", catchAll: "segment", handlers: { PUT: settingsPromptsSegment.PUT as RouteHandler, DELETE: settingsPromptsSegment.DELETE as RouteHandler } },

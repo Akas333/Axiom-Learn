@@ -1,7 +1,7 @@
 {
 	"name": "@axiom/server",
 	"version": "0.1.0",
-	"description": "Kapany API server: the engine's HTTP surface on Hono.",
+	"description": "TYSA API server: the engine's HTTP surface on Hono.",
 	"license": "AGPL-3.0-only",
 	"private": true,
 	"type": "module",

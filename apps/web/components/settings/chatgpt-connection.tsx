@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Toggle } from "./controls";
 import { useChatGPTBridge } from "./subscription-client";
 
-export const CHATGPT_NOTICE = "Kapany stores your ChatGPT account details and credentials in an unencrypted local file on the machine running Kapany. When this connection is used, relevant conversation context, learning material, and tool results are sent directly to OpenAI. ChatGPT plan limits apply; any additional credits are authorized and managed in ChatGPT, not Kapany. Complete ChatGPT sign-in in a browser on that same machine.";
+export const CHATGPT_NOTICE = "TYSA stores your ChatGPT account details and credentials in an unencrypted local file on the machine running TYSA. When this connection is used, relevant conversation context, learning material, and tool results are sent directly to OpenAI. ChatGPT plan limits apply; any additional credits are authorized and managed in ChatGPT, not TYSA. Complete ChatGPT sign-in in a browser on that same machine.";
 export const CHATGPT_BACKGROUND_HINT = "Background work counts toward your ChatGPT plan usage.";
 const BACKGROUND_LABEL = "Allow background use for all ChatGPT accounts";
 const REVOCATION_WARNING = "Account disconnected locally. Remote revocation could not be confirmed.";
-export const CHATGPT_DISCONNECT_COPY = { title: "Disconnect account?", body: "This removes the saved account and its credentials from the machine running Kapany." };
+export const CHATGPT_DISCONNECT_COPY = { title: "Disconnect account?", body: "This removes the saved account and its credentials from the machine running TYSA." };
 const empty: ChatGPTStatus = { available: false, pending: false, allowBackgroundUse: true, activeId: null, accounts: [], error: null };
 type Account = ChatGPTStatus["accounts"][number];
 type Dialog = { kind: "connect" } | { kind: "manage"; accountId: string; account: Account; confirm?: boolean } | { kind: "warning" };
@@ -325,12 +325,12 @@ function AccountDialog({ children, onClose, busy }: { children: React.ReactNode;
 }
 
 /** Shared compact settings/setup row; account selection precedes the quiet action. */
-export function ChatGPTConnection(_props: { setup?: boolean } = {}) {
+export function ChatGPTConnection({ hideLabel = false }: { setup?: boolean; hideLabel?: boolean } = {}) {
 	const ui = useContext(Context);
 	const active = ui.status.accounts.find((a) => a.id === ui.status.activeId && a.connected);
 	const accounts = ui.status.accounts.filter((a) => a.connected);
 	return <div className="flex flex-col gap-2" data-testid="chatgpt-connection">
-		<ConnectionRow label="ChatGPT" actionTestid={active ? undefined : "chatgpt-login"} action={active ? "Manage…" : "Connect"} disabled={!ui.status.available || ui.busy || ui.status.pending} onAction={() => active ? ui.manage(active.id) : ui.connect()}>
+		<ConnectionRow label="ChatGPT" hideLabel={hideLabel} actionTestid={active ? undefined : "chatgpt-login"} action={active ? "Manage…" : "Connect"} disabled={!ui.status.available || ui.busy || ui.status.pending} onAction={() => active ? ui.manage(active.id) : ui.connect()}>
 			{active && <select aria-label="ChatGPT account" value={active.id} disabled={ui.busy || ui.status.pending} onChange={(event) => ui.select(event.target.value)} className="min-w-0 rounded-sm border border-border bg-background px-2 py-1 text-xs text-foreground">
 				{accounts.map((a) => <option key={a.id} value={a.id}>{a.email || "ChatGPT account"}</option>)}
 			</select>}

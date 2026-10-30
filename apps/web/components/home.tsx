@@ -56,8 +56,9 @@ export function Home({
 	// provider has none — the same skip-everything treatment on send.
 	const strongKeyless = useStrongKeyless();
 	const [setupOpen, setSetupOpen] = useState(false);
-	// Onboarding: the guided first-run flow (connect an AI, auto-picked
-	// models, tips). The setup dialog stays for picking models by hand.
+	// Onboarding: the full-screen first-run flow (what TYSA is, how you'll
+	// learn, connect an AI, preferences). The setup dialog stays for
+	// the send interception.
 	const [onboarding, setOnboarding] = useState<OnboardingStep | null>(null);
 	// First launch: open onboarding straight away rather than waiting for
 	// the learner to find the pill. Once per page load, so closing it sticks.
@@ -65,12 +66,12 @@ export function Home({
 	useEffect(() => {
 		if (new URLSearchParams(window.location.search).has("setup")) {
 			firstRunSetupShown = true;
-			setOnboarding("welcome");
+			setOnboarding("about");
 			return;
 		}
 		if ((configured && !zeroKeys) || firstRunSetupShown) return;
 		firstRunSetupShown = true;
-		setOnboarding("welcome");
+		setOnboarding("about");
 	}, [configured, zeroKeys]);
 	// Voice dictation (STT wave, 2026-09-17): finals append at the end of the
 	// topic draft; the strip lives in the stats bar's middle slot.
@@ -308,13 +309,9 @@ export function Home({
 			    draft stays for the learner to send (owner 2026-10-09). */}
 			<Onboarding
 				open={onboarding !== null}
-				initialStep={onboarding ?? "welcome"}
+				initialStep={onboarding ?? "about"}
 				onClose={() => setOnboarding(null)}
 				onDone={() => setConfigured(true)}
-				onChooseModels={() => {
-					setOnboarding(null);
-					setSetupOpen(true);
-				}}
 			/>
 			<SetupDialog
 				open={setupOpen}

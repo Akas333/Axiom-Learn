@@ -1,10 +1,6 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/kapany_banner_dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/kapany_banner_light.png">
-    <img src="docs/assets/kapany_banner_light.png" alt="Kapany" width="640">
-  </picture>
-</p>
+<h1 align="center">TYSA</h1>
+
+<p align="center"><em>Teach Yourself Anything</em></p>
 
 <p align="center"><strong>An AI tutor that finds where your understanding ends, and teaches from there.</strong></p>
 
@@ -16,13 +12,13 @@
   <a href="#architecture">Architecture</a>
 </p>
 
-Most AI tutors explain. Kapany first measures what *you* already understand, plans a path from there to your goal, and teaches one reasoning step at a time, changing the plan as soon as your answers show it was wrong about you. Two people asking the same question get two different lessons, and the app shows why.
+Most AI tutors explain. TYSA first measures what *you* already understand, plans a path from there to your goal, and teaches one reasoning step at a time, changing the plan as soon as your answers show it was wrong about you. Two people asking the same question get two different lessons, and the app shows why.
 
 Built on Meta's Muse models for the **Meta Global AI Developer Hackathon** (Startup track).
 
 ## What was built during the hackathon
 
-Kapany builds on an existing codebase, as the Startup track allows. Commit [`802e0a6`](../../commit/802e0a6) (Oct 26, before the Oct 27 start of the building period) is the **pre-hackathon baseline**: the adaptive-teaching backend (`src/core`, `src/agent`, `src/server`: measuring understanding, planning, teaching, grading, the knowledge graph store) and an earlier Next.js interface. Everything after it is new work, listed here with `git log 802e0a6..HEAD`.
+TYSA builds on an existing codebase, as the Startup track allows. Commit [`802e0a6`](../../commit/802e0a6) (Oct 26, before the Oct 27 start of the building period) is the **pre-hackathon baseline**: the adaptive-teaching backend (`src/core`, `src/agent`, `src/server`: measuring understanding, planning, teaching, grading, the knowledge graph store) and an earlier Next.js interface. Everything after it is new work, listed here with `git log 802e0a6..HEAD`.
 
 **New during the hackathon**
 - **A new front end and monorepo.** The backend was split into a pnpm/Turborepo monorepo and served on Hono, with a new Vite + React web app in place of the old Next.js one, made to work on phones.
@@ -31,7 +27,7 @@ Kapany builds on an existing codebase, as the Startup track allows. Commit [`802
 - **Better measuring.** Required and spoken confidence, hands-free voice thinking and Meta dictation.
 - **Attachments.** Images and PDFs pasted into the composer.
 - **Models.** Local Ollama models alongside Meta's.
-- **Rebrand** from Axiom Learn to Kapany, plus settings, color themes and layout work throughout.
+- **Rebrand** from Axiom Learn to Kapany (now TYSA), plus settings, color themes and layout work throughout.
 
 ![A teaching session: Muse Spark plans a Kirchhoff's law lesson from what the learner already knows](docs/assets/web-teaching-session.png)
 
@@ -54,7 +50,7 @@ Everything you learn is stored as claims and the reasoning chains that connect t
 
 Each Meta model does a separate job in the teaching loop. All of them go through one Meta Model API key.
 
-| Model | Role in Kapany | Status |
+| Model | Role in TYSA | Status |
 |---|---|---|
 | **Muse Spark 1.3** | The tutor: measures understanding, plans, teaches, runs practice | Working |
 | **Muse Spark 1.3 Contributor** | Low-cost background agents: building the knowledge graph, grading, research | Working (pick it for the background model slot) |

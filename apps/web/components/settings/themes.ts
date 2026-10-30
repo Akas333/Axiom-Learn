@@ -36,7 +36,7 @@ export interface Theme {
 export const THEMES: readonly Theme[] = [
 	{
 		id: "kapany-dark",
-		label: "Kapany Dark",
+		label: "TYSA Dark",
 		mode: "dark",
 		palette: {
 			background: "#111112",
@@ -55,7 +55,7 @@ export const THEMES: readonly Theme[] = [
 	},
 	{
 		id: "kapany-light",
-		label: "Kapany Light",
+		label: "TYSA Light",
 		mode: "light",
 		palette: {
 			background: "#ffffff",
