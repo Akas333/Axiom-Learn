@@ -17,7 +17,6 @@ const CHROME_ICON =
 const NAV_ROW =
 	"flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[15px] text-foreground transition-colors hover:bg-(--pill) focus-visible:outline-2 focus-visible:outline-primary";
 const NAV_ROW_ACTIVE = "bg-(--pill) hover:bg-(--pill)";
-import { ActivitySection } from "@/components/activity-dock";
 import { CoverageMenuBlock } from "@/components/extraction-coverage";
 import { LhMark } from "@/components/lh-mark";
 import { BrailleSpinner } from "@/components/braille-spinner";
@@ -1166,13 +1165,6 @@ function SessionsSidebar() {
 						</>
 					)}
 				</div>
-
-					{/* Background agents (owner, sidebar round): the section is
-					    ALWAYS here — empty means empty (the header sits alone); it
-					    populates and grows when processes run. The session list is
-					    flex-1, so this pins to the bottom. Sidebar closed = the
-					    learner opted out (no ambient signal, user decision). */}
-					{!pathname.startsWith("/chat/") || pathname === "/chat/new" ? <ActivitySection /> : null}
 
 					{/* Settings entry (settings-app wave): same row language as
 					    New session — quiet, bottom-pinned, opens the centered
