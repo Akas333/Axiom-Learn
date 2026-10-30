@@ -388,10 +388,13 @@ export const MessageResponse = memo(
 MessageResponse.displayName = "MessageResponse";
 
 /** Recovery is a tool-text presentation concern, not a shape/answer-data
- * transform. Ordinary assistant/user prose keeps MessageResponse unchanged. */
+ * transform. Ordinary assistant/user prose keeps MessageResponse unchanged.
+ * Tool bodies arrive whole, so streamdown's incomplete-markdown repair (remend)
+ * is off by default: it misreads brackets such as `[0,1]` and appends a stray
+ * `](streamdown:incomplete-link)` to finished text. Callers can opt back in. */
 export function ToolContentResponse({ children, ...props }: MessageResponseProps) {
   return (
-    <MessageResponse {...props}>
+    <MessageResponse parseIncompleteMarkdown={false} {...props}>
       {typeof children === "string" ? repairMathForDisplay(children) : children}
     </MessageResponse>
   );
