@@ -122,7 +122,7 @@ export function StatsBar({
 			// (so its transparent gradient area never blocks scrolling) — this row
 			// must re-enable events or every control on it is dead (the model-
 			// control wave caught this live: buttons rendered, clicks never landed).
-			className="pointer-events-auto relative flex items-center justify-between gap-2 px-2 pt-2.5 sm:gap-3 sm:px-4 text-sm text-muted-foreground"
+			className="pointer-events-auto relative flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-2 pt-2.5 sm:gap-x-3 sm:px-4 text-sm text-muted-foreground"
 		>
 			{/* The summary button + its popover: the popover anchors to this
 			    wrapper, CENTERED over the button itself (owner, stats round 2)
@@ -212,7 +212,7 @@ export function StatsBar({
 			{/* The model + thinking control — one controller for the conversation
 			    agents (prober/teacher); the record's `turns` above still folds
 			    the ACTUAL models billed, regardless of what the picker says. */}
-			<div className="flex min-w-0 items-center gap-2.5">
+			<div className="ml-auto flex min-w-0 items-center gap-2.5">
 				<ModelControl chatId={chatId} onModelChange={setSelectedModel} variant="combined" />
 				{(chatId || turns.length > 0) && <ContextRing tokens={contextTokens} limit={limit} label={contextLabel} />}
 			</div>

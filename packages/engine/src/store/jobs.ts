@@ -17,7 +17,7 @@ import type { CreateJobInit, JobPatch } from "../core/ports.ts";
 import type { JobRecord } from "../core/contracts.ts";
 
 /** Background jobs (data/jobs). Not in config.ts PATHS (orchestrator-owned). */
-/** Read per call: the data dir is per user in hosted mode. */
+/** Read per call, like every PATHS getter. */
 function jobsDir(): string {
 	return path.join(PATHS.data, "jobs");
 }

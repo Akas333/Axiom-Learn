@@ -375,27 +375,6 @@ export interface CompactionSettings {
 	thresholdTokens?: number;
 }
 
-/** The local profile (2026-10-30): who the sidebar's account row shows on
- *  a local install, which has no sign-in. The hosted app keeps its profile
- *  server-side (/api/profile) instead. */
-export interface ProfileSettings {
-	/** The learner's name; absent = not set. */
-	name?: string;
-	/** A small square photo as an image data: URL (the client downsizes it
-	 *  before saving); absent = the name's initial. */
-	avatar?: string;
-}
-
-/** Bounds for the profile fields (sanitizer and PUT share them). */
-export const PROFILE_NAME_MAX = 80;
-export const PROFILE_AVATAR_MAX = 200_000;
-const AVATAR_DATA_URL = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/;
-
-/** A stored photo is a base64 png/jpeg/webp data: URL within the size cap. */
-export function isProfileAvatar(value: unknown): value is string {
-	return typeof value === "string" && value.length <= PROFILE_AVATAR_MAX && AVATAR_DATA_URL.test(value);
-}
-
 /** THE record. Every section optional (delta); unknown top-level keys are
  *  preserved verbatim by the sanitizer (forward-compat with newer records). */
 export interface UserSettings {
@@ -407,7 +386,6 @@ export interface UserSettings {
 	appearance?: AppearanceSettings;
 	graph?: GraphSettings;
 	compaction?: CompactionSettings;
-	profile?: ProfileSettings;
 	[key: string]: unknown;
 }
 
@@ -646,16 +624,6 @@ function sanitizeCompaction(raw: Record<string, unknown>): CompactionSettings {
 	return out;
 }
 
-function sanitizeProfile(raw: Record<string, unknown>): ProfileSettings {
-	const out: ProfileSettings = {};
-	if (typeof raw.name === "string") {
-		const name = raw.name.trim().slice(0, PROFILE_NAME_MAX);
-		if (name) out.name = name;
-	}
-	if (isProfileAvatar(raw.avatar)) out.avatar = raw.avatar;
-	return out;
-}
-
 /**
  * Coerce arbitrary JSON (disk file, network body) into a valid delta record:
  * known fields validated strictly (invalid ones drop/clamp per module doc),
@@ -686,9 +654,6 @@ export function sanitizeUserSettings(raw: unknown): UserSettings | null {
 		if (r.compaction !== undefined && r.compaction !== null && typeof r.compaction === "object") {
 			out.compaction = sanitizeCompaction(r.compaction as Record<string, unknown>);
 		}
-	}
-	if (r.profile !== null && typeof r.profile === "object" && !Array.isArray(r.profile)) {
-		out.profile = sanitizeProfile(r.profile as Record<string, unknown>);
 	}
 	// Unknown top-level keys ride along untouched (forward-compat). One
 	// known-DEAD key is stripped instead of riding: `chat` (the old

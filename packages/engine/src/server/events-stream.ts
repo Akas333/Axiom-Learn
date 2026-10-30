@@ -25,7 +25,6 @@
  * ui-stream subscribe() pattern.
  */
 import { subscribe, type ServerEvent } from "../core/events.ts";
-import { currentTenant } from "../../tenant.ts";
 
 /** One window's subscription as an SSE Response. */
 export function eventsResponse(): Response {
@@ -61,7 +60,7 @@ export function eventsResponse(): Response {
 			unsubscribe = subscribe((event: ServerEvent) => {
 				const { type, ...payload } = event;
 				frame(`event: ${type}\ndata: ${JSON.stringify(payload)}\n\n`);
-			}, currentTenant()?.userId);
+			});
 			heartbeat = setInterval(() => frame(": ping\n\n"), 25_000);
 
 			teardown = stop;

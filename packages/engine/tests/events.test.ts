@@ -56,7 +56,7 @@ describe("event bus", () => {
 		// (the original incident: page render vs route each held a private
 		// singleton). The key IS the contract.
 		const g = globalThis as { __lhEventBus?: unknown };
-		assert.ok(g.__lhEventBus instanceof Map, "the bus lives on globalThis");
+		assert.ok(g.__lhEventBus instanceof Set, "the bus lives on globalThis");
 	});
 
 	it("an unsubscribe DURING emit is safe (snapshot iteration)", () => {

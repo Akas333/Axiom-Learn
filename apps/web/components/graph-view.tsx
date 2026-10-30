@@ -1437,10 +1437,10 @@ export function GraphView({
 				<div className="relative flex h-full w-full items-center justify-center overflow-hidden px-4">
 					<SphereBackdrop />
 					<div className="relative flex flex-col items-center gap-4 text-center text-muted-foreground">
-						<h1 className="text-3xl font-medium text-foreground sm:text-5xl sm:leading-[1.15]">
+						<h1 className="text-3xl font-medium text-foreground sm:text-5xl sm:leading-[1.15] lh-hero-reveal">
 							Knowledge <span className="lh-outline-text">graph</span>
 						</h1>
-						<p className="max-w-md text-base sm:text-lg">
+						<p className="max-w-md text-base sm:text-lg lh-hero-reveal-late">
 							Everything you learn connects here. Start a session or import notes to build your graph.
 						</p>
 					</div>

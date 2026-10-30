@@ -1,0 +1,71 @@
+{
+	"name": "@axiom/desktop",
+	"productName": "TYSA",
+	"version": "0.1.0",
+	"description": "TYSA (Teach Yourself Anything): the desktop app.",
+	"license": "AGPL-3.0-only",
+	"private": true,
+	"main": "main.cjs",
+	"scripts": {
+		"build": "node scripts/build.mjs",
+		"start": "node scripts/build.mjs && electron .",
+		"dist": "node scripts/build.mjs && electron-builder --publish never"
+	},
+	"dependencies": {
+		"@napi-rs/canvas": "^1.0.9",
+		"@resvg/resvg-js": "^2.6.2",
+		"pdfjs-dist": "^6.3.289",
+		"puppeteer-core": "^25.8.0"
+	},
+	"devDependencies": {
+		"electron": "44.7.1",
+		"electron-builder": "26.17.0",
+		"esbuild": "^0.28.2"
+	},
+	"build": {
+		"appId": "app.tysa.desktop",
+		"productName": "TYSA",
+		"copyright": "AGPL-3.0-only",
+		"asar": false,
+		"directories": {
+			"output": "release",
+			"buildResources": "resources"
+		},
+		"files": [
+			"main.cjs",
+			"loading.html",
+			"build/**",
+			"package.json"
+		],
+		"mac": {
+			"category": "public.app-category.education",
+			"target": [
+				"dmg"
+			],
+			"extendInfo": {
+				"NSMicrophoneUsageDescription": "TYSA uses the microphone when you dictate answers."
+			}
+		},
+		"dmg": {
+			"title": "TYSA"
+		},
+		"win": {
+			"target": [
+				"nsis"
+			]
+		},
+		"nsis": {
+			"oneClick": true,
+			"perMachine": false,
+			"shortcutName": "TYSA"
+		},
+		"linux": {
+			"target": [
+				"AppImage"
+			],
+			"category": "Education"
+		},
+		"npmRebuild": false,
+		"artifactName": "TYSA-${version}-${os}-${arch}.${ext}"
+	}
+}

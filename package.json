@@ -9,6 +9,7 @@
 		"packages/*"
 	],
 	"scripts": {
+		"start": "node scripts/start.mjs",
 		"test": "turbo run test",
 		"typecheck": "turbo run typecheck",
 		"dev:server": "npm run dev -w @axiom/server",

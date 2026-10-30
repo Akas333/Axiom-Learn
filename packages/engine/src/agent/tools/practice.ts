@@ -97,6 +97,15 @@ export const problemInputObject = Type.Object({
 				"Names are normalized to ids at the seam; an unknown proposition is rejected.",
 		}),
 	),
+	difficulty: Type.Optional(
+		Type.Integer({
+			minimum: 1,
+			maximum: 5,
+			description:
+				"How hard this problem is for a learner at the target level: 1 = routine, 3 = typical, 5 = the hardest " +
+				"problems at that level. Logged with the learner's result to estimate their ability per node.",
+		}),
+	),
 	modelSolution: Type.String({
 		description: "REQUIRED — the full solution, moves in order, committed BEFORE the learner sees the problem. This IS the reveal — conclude shows it verbatim; never re-author it.",
 	}),

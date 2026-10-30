@@ -5,6 +5,7 @@
  */
 import * as activityAbort from "./routes/activity-abort.ts";
 import * as activity from "./routes/activity.ts";
+import * as answers from "./routes/answers.ts";
 import * as chat from "./routes/chat.ts";
 import * as chatsIdArtifactUi from "./routes/chats-id-artifact-ui.ts";
 import * as chatsIdDismiss from "./routes/chats-id-dismiss.ts";
@@ -16,6 +17,9 @@ import * as chatsIdSettings from "./routes/chats-id-settings.ts";
 import * as chatsIdSteer from "./routes/chats-id-steer.ts";
 import * as chatsIdStream from "./routes/chats-id-stream.ts";
 import * as chats from "./routes/chats.ts";
+import * as data from "./routes/data.ts";
+import * as dataExport from "./routes/data-export.ts";
+import * as dataImport from "./routes/data-import.ts";
 import * as events from "./routes/events.ts";
 import * as folders from "./routes/folders.ts";
 import * as foldersId from "./routes/folders-id.ts";
@@ -59,7 +63,11 @@ export interface ApiRoute {
 export const API_ROUTES: readonly ApiRoute[] = [
 	{ path: "/api/activity/abort", handlers: { POST: activityAbort.POST as RouteHandler } },
 	{ path: "/api/activity", handlers: { GET: activity.GET as RouteHandler } },
+	{ path: "/api/answers", handlers: { GET: answers.GET as RouteHandler } },
 	{ path: "/api/chat", handlers: { POST: chat.POST as RouteHandler } },
+	{ path: "/api/data", handlers: { GET: data.GET as RouteHandler } },
+	{ path: "/api/data/export", handlers: { POST: dataExport.POST as RouteHandler } },
+	{ path: "/api/data/import", handlers: { POST: dataImport.POST as RouteHandler } },
 	{ path: "/api/chats/:id/artifact-ui", handlers: { POST: chatsIdArtifactUi.POST as RouteHandler } },
 	{ path: "/api/chats/:id/dismiss", handlers: { POST: chatsIdDismiss.POST as RouteHandler } },
 	{ path: "/api/chats/:id/markdown", handlers: { GET: chatsIdMarkdown.GET as RouteHandler } },

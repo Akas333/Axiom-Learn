@@ -6,19 +6,20 @@ import { useSearchParams } from "react-router";
 import { MenuShell } from "@/components/menu-shell";
 import { DeleteSessionDialog } from "@/components/delete-session-dialog";
 import type { ChatDeleteMode, ChatFolder } from "@/src/core";
-import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, DumbbellIcon, FolderIcon, FolderPlusIcon, FolderTreeIcon, MoreHorizontalIcon, NetworkIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon, XIcon } from "lucide-react";
+import { BugIcon, CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, DumbbellIcon, FolderIcon, FolderPlusIcon, FolderTreeIcon, LightbulbIcon, MoreHorizontalIcon, NetworkIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon, XIcon } from "lucide-react";
 import { FolderMaterials } from "@/components/material-cards";
 
 /** Sidebar navigation rows (after the Meta Model API console): icon +
  *  label, grey hover, blue-tinted when active. */
 /** Square ghost icon button for the chrome rows (top row, bottom row). */
+/** Where the bottom row's bug report and feature request icons go. */
+const ISSUES_URL = "https://github.com/Akas333/Axiom-Learn/issues/new";
 const CHROME_ICON =
 	"flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground";
 const NAV_ROW =
 	"flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[15px] text-foreground transition-colors hover:bg-(--pill) focus-visible:outline-2 focus-visible:outline-primary";
 const NAV_ROW_ACTIVE = "bg-(--pill) hover:bg-(--pill)";
 import { CoverageMenuBlock } from "@/components/extraction-coverage";
-import { ProfileAvatar, useProfileView } from "@/components/profile";
 import { BrailleSpinner } from "@/components/braille-spinner";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { SettingsDialogProvider, useSettingsDialog } from "@/components/settings/settings-dialog.tsx";
@@ -378,7 +379,6 @@ function SessionsSidebar() {
 	const draftFolderId = pathname === "/chat/new" ? searchParams.get("folder") : null;
 	const router = useRouter();
 	const { open: openSettings } = useSettingsDialog();
-	const profile = useProfileView();
 
 	/* New session (owner, 2026-09-13): NO POST — the button opens the
 	   sessionless draft view; the session is created only when the first
@@ -1170,33 +1170,10 @@ function SessionsSidebar() {
 					{/* Settings entry (settings-app wave): same row language as
 					    New session — quiet, bottom-pinned, opens the centered
 					    dialog (also mod+, in the keyboard registry). */}
-					{/* Bottom row: the learner's profile on the left (2026-10-30 —
-					    it replaced the Kapany brand row; opens the profile
-					    settings), settings on the right — the account-row
-					    pattern. */}
+					{/* Bottom row (2026-10-30): Settings on the left, then the
+					    GitHub issue forms for a bug report or a feature request
+					    (.github/ISSUE_TEMPLATE) as icons on the right. */}
 					<div className="mx-2 flex items-center gap-1 border-t border-input px-1 pb-3 pt-2">
-						<Hint label="Profile" side="top">
-							<button
-								type="button"
-								onClick={() => {
-									close();
-									openSettings(profile.section);
-								}}
-								data-testid="profile-entry"
-								aria-label="Profile"
-								className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-(--pill)"
-							>
-								<ProfileAvatar src={profile.avatar} name={profile.name} className="size-9 text-sm" />
-								<span className="min-w-0">
-									<span className="block truncate text-[15px] font-medium text-foreground">
-										{profile.name ?? "Add your name"}
-									</span>
-									{profile.detail && (
-										<span className="block truncate text-xs text-muted-foreground">{profile.detail}</span>
-									)}
-								</span>
-							</button>
-						</Hint>
 						<Hint label="Settings" action="open-settings" side="top">
 							<button
 								type="button"
@@ -1205,11 +1182,35 @@ function SessionsSidebar() {
 									openSettings();
 								}}
 								data-testid="settings-entry"
-								aria-label="Settings"
+								className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-(--pill)"
+							>
+								<SettingsIcon className="size-[18px] shrink-0 text-muted-foreground" />
+								<span className="truncate text-[15px] text-foreground">Settings</span>
+							</button>
+						</Hint>
+						<Hint label="Report a bug" side="top">
+							<a
+								href={`${ISSUES_URL}?template=bug_report.yml`}
+								target="_blank"
+								rel="noreferrer"
+								data-testid="bug-report-entry"
+								aria-label="Report a bug"
 								className={CHROME_ICON}
 							>
-								<SettingsIcon className="size-[18px]" />
-							</button>
+								<BugIcon className="size-[18px]" />
+							</a>
+						</Hint>
+						<Hint label="Request a feature" side="top">
+							<a
+								href={`${ISSUES_URL}?template=feature_request.yml`}
+								target="_blank"
+								rel="noreferrer"
+								data-testid="feature-request-entry"
+								aria-label="Request a feature"
+								className={CHROME_ICON}
+							>
+								<LightbulbIcon className="size-[18px]" />
+							</a>
 						</Hint>
 					</div>
 				</div>

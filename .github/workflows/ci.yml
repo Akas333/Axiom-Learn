@@ -25,6 +25,9 @@ jobs:
           node-version: "26"
           cache: npm
       - run: npm ci
+        env:
+          # The desktop app's Electron binary isn't needed to test.
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - run: npm run typecheck
       - run: npm test
       - run: npm run lint

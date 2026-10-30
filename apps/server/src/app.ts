@@ -1,17 +1,13 @@
 import { Hono } from "hono";
 import { API_ROUTES, type ApiRoute, type HttpMethod } from "@axiom/engine/src/http/index.ts";
-import { mountHosted, type HostedOptions } from "./hosted.ts";
 
 /**
  * The Hono app: mounts every engine API route. Handlers are the engine's own
  * (packages/engine/src/http), so this file only adapts Hono's request and
  * params to the `(Request, { params })` shape they expect.
  */
-export function createApp(routes: readonly ApiRoute[] = API_ROUTES, hosted?: HostedOptions): Hono {
+export function createApp(routes: readonly ApiRoute[] = API_ROUTES): Hono {
 	const app = new Hono();
-
-	// Multi-user cloud mode: sign-in, quotas and billing wrap every route.
-	const finishHosted = hosted ? mountHosted(app, hosted) : undefined;
 
 	for (const route of routes) {
 		for (const [method, handler] of Object.entries(route.handlers) as [HttpMethod, NonNullable<ApiRoute["handlers"][HttpMethod]>][]) {
@@ -23,7 +19,6 @@ export function createApp(routes: readonly ApiRoute[] = API_ROUTES, hosted?: Hos
 		}
 	}
 
-	finishHosted?.();
 	app.notFound((c) => c.json({ error: "Not found" }, 404));
 	return app;
 }

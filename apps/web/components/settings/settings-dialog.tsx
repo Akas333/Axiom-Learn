@@ -35,7 +35,6 @@ import {
 	type AppearanceSettings,
 	type CompactionSettings,
 	type GraphSettings,
-	type ProfileSettings,
 	type UserSettings,
 } from "@/src/core";
 import { useAppearance } from "./appearance.tsx";
@@ -49,13 +48,11 @@ import { KeysSection } from "./keys-section.tsx";
 import { Hint } from "@/components/ui/hint";
 import { AppearanceSection, GraphSection } from "./appearance-section.tsx";
 import { KeyboardSection } from "./keyboard-section.tsx";
-import { AccountSection } from "./account-section.tsx";
-import { ProfileSection } from "./profile-section.tsx";
-import { useAuth } from "@/lib/auth";
+import { DataSection } from "./data-section.tsx";
 import { ChatGPTUIProvider } from "./chatgpt-connection.tsx";
 import { NativeSubscriptionUIProvider } from "./subscription-connections.tsx";
 import { SettingsSkinContext } from "./controls.tsx";
-import { BotIcon, CircleUserIcon, KeyboardIcon, KeyRoundIcon, NetworkIcon, PaletteIcon, SearchIcon, SettingsIcon, XIcon } from "lucide-react";
+import { BotIcon, HardDriveIcon, KeyboardIcon, KeyRoundIcon, NetworkIcon, PaletteIcon, SearchIcon, SettingsIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Owner (2026-09-20): hints earn their place — mechanics-explaining
@@ -64,14 +61,13 @@ import { cn } from "@/lib/utils";
 const APP_VERSION = process.env.LH_VERSION ?? "";
 
 const SECTIONS = [
-	{ id: "account", label: "Account", group: "Preferences", Icon: CircleUserIcon, keywords: "account plan billing upgrade pro subscription sign out log out email usage" },
-	{ id: "profile", label: "Profile", group: "Preferences", Icon: CircleUserIcon, keywords: "profile name picture photo avatar" },
 	{ id: "general", label: "General", group: "Preferences", Icon: SettingsIcon, keywords: "updates automatic voice hands-free dictation" },
 	{ id: "appearance", label: "Appearance", group: "Preferences", Icon: PaletteIcon, keywords: "theme mode dark light background font reading size bold italic heading serif colors" },
 	{ id: "keyboard", label: "Keyboard", hint: "Stored on this device", group: "Preferences", Icon: KeyboardIcon, keywords: "shortcuts keys bindings hotkeys" },
 	{ id: "agent", label: "Agent", group: "Learning", Icon: BotIcon, keywords: "models tools prompts instructions quizzing quiz compaction context search engine" },
 	{ id: "graph", label: "Graph", group: "Learning", Icon: NetworkIcon, keywords: "knowledge graph rendering extraction chunk" },
 	{ id: "keys", label: "Providers", group: "Connections", Icon: KeyRoundIcon, keywords: "api keys model provider local ollama meta subscriptions chatgpt dictation tavily brave" },
+	{ id: "data", label: "Your data", group: "Connections", Icon: HardDriveIcon, keywords: "data export import backup move transfer computer machine encrypted file passphrase" },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]["id"];
 const SECTION_GROUPS = ["Preferences", "Learning", "Connections"] as const;
@@ -191,13 +187,9 @@ export function SettingsDialogBody({
 	const [active, setActive] = useState<SectionId>(initialSection);
 	const [search, setSearch] = useState("");
 	const q = search.trim().toLowerCase();
-	// Account (sign-in and plan) only exists in the hosted app, which edits
-	// its profile there; a local install gets the Profile section instead.
-	const hosted = useAuth().supabase !== null;
-	const available = SECTIONS.filter((s) => s.id !== (hosted ? "profile" : "account"));
 	const matches = q
-		? available.filter((s) => `${s.label} ${s.keywords}`.toLowerCase().includes(q))
-		: available;
+		? SECTIONS.filter((s) => `${s.label} ${s.keywords}`.toLowerCase().includes(q))
+		: SECTIONS;
 	// A deep-link fired while the dialog is ALREADY open (first exercised by
 	// the wave-6 embedding picker's "Add a provider key first…" link — the
 	// picker itself died with wave 7, the mechanism is general) changes
@@ -244,7 +236,7 @@ export function SettingsDialogBody({
 	 *  schema mistake caught by the validation surface). */
 	const write = useCallback(
 		async (
-			section: "general" | "agent" | "models" | "appearance" | "graph" | "compaction" | "profile",
+			section: "general" | "agent" | "models" | "appearance" | "graph" | "compaction",
 			body: object,
 		) => {
 			setError(null);
@@ -398,17 +390,9 @@ export function SettingsDialogBody({
 									<VoiceSettings />
 								</SettingsSection>
 							)}
-							{active === "account" && (
-								<SettingsSection title="Account" hint="Your sign-in and plan." testid="section-account">
-									<AccountSection />
-								</SettingsSection>
-							)}
-							{active === "profile" && (
-								<SettingsSection title="Profile" hint="Shown in the sidebar. Stays on this computer." testid="section-profile">
-									<ProfileSection
-										profile={record.profile}
-										onSectionChange={(next: ProfileSettings) => void write("profile", next)}
-									/>
+							{active === "data" && (
+								<SettingsSection title="Your data" hint="Move your lessons, knowledge graph and materials to another computer." testid="section-data">
+									<DataSection />
 								</SettingsSection>
 							)}
 							{active === "keys" && (

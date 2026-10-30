@@ -7,7 +7,6 @@ import {
 	metaAsrKey,
 	type MetaAsrRelay,
 } from "@axiom/engine/src/server/meta-asr.ts";
-import { currentTenant, runAsTenant } from "@axiom/engine/tenant.ts";
 
 /**
  * GET /api/stt/realtime (WebSocket): browser dictation relayed to Meta
@@ -22,9 +21,6 @@ export function mountDictation(app: Hono) {
 		"/api/stt/realtime",
 		upgradeWebSocket(() => {
 			let relay: MetaAsrRelay | null = null;
-			// Socket events fire outside the request, so carry the signed-in
-			// user (hosted mode) into them explicitly for the key lookup.
-			const tenant = currentTenant();
 			const open = (ws: WSContext) => {
 				const key = metaAsrKey();
 				if (!key) {
@@ -38,8 +34,7 @@ export function mountDictation(app: Hono) {
 			};
 			return {
 				onOpen(_event, ws) {
-					if (tenant) runAsTenant(tenant, () => open(ws));
-					else open(ws);
+					open(ws);
 				},
 				onMessage(event) {
 					relay?.fromClient(event.data as string | ArrayBuffer);

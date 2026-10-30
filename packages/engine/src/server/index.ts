@@ -10,11 +10,13 @@ export * from "./chats.ts";
 export * from "./courses.ts";
 export * from "./materials.ts";
 export * from "./graph.ts";
+export * from "./answers.ts";
+export { dataSummary, exportData, importData, DataBusyError } from "./data-transfer.ts";
+export { BUNDLE_EXTENSION, BundleError } from "../core/data-bundle.ts";
 export { NotesImportError } from "../agent/subagents/extraction.ts";
 export * from "./commit-positions.ts";
 export * from "./jobs.ts";
 export * from "./stores.ts";
-export * from "./hosted.ts";
 export { readRenderSettings, writeRenderSettings } from "../store/render-settings.ts";
 // The settings record + prompt overrides (settings-storage wave, 2026-09-19).
 // The *Record aliases keep the app/api/settings routes explicit about which

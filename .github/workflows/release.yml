@@ -1,0 +1,75 @@
+name: Desktop release
+
+# Builds the TYSA desktop installers. Push a tag like v0.1.0 to publish them
+# on a GitHub Release, or run this by hand to get them as build artifacts.
+#
+# Unsigned until these repository secrets are added (electron-builder picks
+# them up): CSC_LINK + CSC_KEY_PASSWORD (Apple Developer ID certificate) with
+# APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID for notarization;
+# WIN_CSC_LINK + WIN_CSC_KEY_PASSWORD for Windows.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Each build runs on its own processor type: the PDF and image
+          # libraries ship native binaries for the machine that installs them.
+          - { name: macOS (Apple Silicon), runner: macos-latest, args: --mac dmg --arm64 }
+          - { name: macOS (Intel), runner: macos-15-intel, args: --mac dmg --x64 }
+          - { name: Windows, runner: windows-latest, args: --win nsis --x64 }
+          - { name: Linux, runner: ubuntu-24.04, args: --linux AppImage --x64 }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @axiom/desktop
+      - name: Package
+        working-directory: apps/desktop
+        run: npx electron-builder ${{ matrix.args }} --publish never
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TYSA-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.AppImage
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: installers/*
+          generate_release_notes: true

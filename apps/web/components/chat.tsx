@@ -187,18 +187,6 @@ export function parseProviderKeyRefusal(message: string | undefined): boolean {
 	}
 }
 
-/** The hosted app's lesson-limit refusal (402 quota_exceeded): its own
- *  sentence instead of the raw JSON body. Exported pure for tests. */
-export function quotaRefusal(message: string | undefined): string | null {
-	if (!message) return null;
-	try {
-		const body = JSON.parse(message) as { code?: unknown; error?: unknown };
-		return body.code === "quota_exceeded" && typeof body.error === "string" ? body.error : null;
-	} catch {
-		return null;
-	}
-}
-
 /** useLayoutEffect that is silent during SSR (client components still render on the server in Next). */
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -1845,7 +1833,7 @@ export function Chat({
 							)}
 							{error && (
 								<div className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm">
-									{quotaRefusal(error.message) ?? `Something went wrong: ${error.message}`}
+									{`Something went wrong: ${error.message}`}
 								</div>
 							)}
 						</div>

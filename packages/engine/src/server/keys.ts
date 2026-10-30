@@ -54,7 +54,6 @@ import {
 } from "../core/auth-keys.ts";
 import { authStore } from "../store/auth.ts";
 import { isSubscriptionProvider, subscriptionConnected } from "../agent/subscription-connections.ts";
-import { hostedMode } from "../../tenant.ts";
 
 // The once-per-process boot record — globalThis anchor (HMR re-imports the
 // module; the snapshot must not re-run and misread fill-gapped vars as real
@@ -103,9 +102,6 @@ export function envKeysIgnored(): boolean {
  * resurrects (its file entry is gone too).
  */
 export function initAuthEnv(): void {
-	// Hosted: keys are resolved per user at read time (server/hosted.ts),
-	// never copied into the shared process env.
-	if (hostedMode()) return;
 	const record = boot();
 	const fileVars = authStore.authVars();
 	const managed = new Set<string>([
@@ -185,8 +181,6 @@ export function resolveKeyStatuses(
 
 /** The GET view: every curated key (present or not) + unknown file vars. */
 export function keyStatuses(): AuthKeyStatus[] {
-	// Hosted: only the user's own saved keys — platform keys stay invisible.
-	if (hostedMode()) return resolveKeyStatuses(authStore.authVars(), {}, new Set(), AUTH_PROVIDER_ENV_VARS);
 	return resolveKeyStatuses(authStore.authVars(), process.env, boot().realEnv, AUTH_PROVIDER_ENV_VARS);
 }
 

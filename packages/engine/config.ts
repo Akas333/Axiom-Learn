@@ -1,6 +1,5 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { hostedMode, requireTenant } from "./tenant.ts";
 
 /** Repository root (this file is at <root>/config.ts). */
 export const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -19,15 +18,9 @@ const DATA_ROOT = process.env.LH_DATA_DIR
 	? path.resolve(process.env.LH_DATA_DIR)
 	: path.join(ROOT, "data");
 
-/**
- * The data directory for whoever the current code runs for. Desktop and dev:
- * DATA_ROOT. Hosted (KAPANY_HOSTED=1): DATA_ROOT/users/<userId>, read per
- * call from the request's tenant (tenant.ts), so every store below is scoped
- * to the signed-in user. No user in hosted mode throws (fail closed).
- */
+/** The data directory: DATA_ROOT (LH_DATA_DIR, else the repo's data/). */
 export function dataRoot(): string {
-	if (!hostedMode()) return DATA_ROOT;
-	return path.join(DATA_ROOT, "users", requireTenant().userId);
+	return DATA_ROOT;
 }
 
 /** Path properties are getters: they resolve against dataRoot() on every
@@ -175,9 +168,9 @@ export const AUTH_FILE = process.env.LH_AUTH_FILE
 	: path.join(ROOT, "auth.json");
 
 /**
- * The single-file records, resolved for the current user (see dataRoot()).
- * Stores read these; the *_FILE constants above are the desktop/dev values
- * (identical outside hosted mode) and remain for tests and tools.
+ * The single-file records, resolved against dataRoot() at read time.
+ * Stores read these; the *_FILE constants above hold the same paths and
+ * remain for tests and tools.
  */
 export const FILES = {
 	get sources() {
@@ -203,8 +196,7 @@ export const FILES = {
 	get preferencesDir() {
 		return path.join(dataRoot(), "preferences");
 	},
-	/** Hosted: each user's own BYOK keys at <user dir>/auth.json. */
 	get auth() {
-		return hostedMode() ? path.join(dataRoot(), "auth.json") : AUTH_FILE;
+		return AUTH_FILE;
 	},
 };

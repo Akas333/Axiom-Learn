@@ -7,7 +7,6 @@ import RootLayout from "./app/layout";
 import HomePage from "./app/page";
 import NewSessionPage from "./app/chat/new/page";
 import ChatPage from "./app/chat/[id]/page";
-import { AuthGate } from "./lib/auth";
 
 const router = createBrowserRouter([
 	{
@@ -25,8 +24,6 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
-		<AuthGate>
-			<RouterProvider router={router} />
-		</AuthGate>
+		<RouterProvider router={router} />
 	</StrictMode>,
 );

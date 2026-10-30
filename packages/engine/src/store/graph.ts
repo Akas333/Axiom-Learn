@@ -32,7 +32,6 @@
  * sync fs, no framework.
  */
 
-import { hostedMode } from "../../tenant.ts";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { LEDGER_FILES, FILES } from "../../config.ts";
@@ -312,9 +311,8 @@ function writeSourceMap(map: Record<string, NotesSource>): void {
 
 // ─── one-way purges at adapter load: dead ledgers are exactly the confusion
 // the cleanup removes (owner doctrine — nothing reads them, nothing writes
-// them, a stale file lying around is a lie). Desktop data only: hosted
-// users never had these files, and there is no user at load time. ─────────
-if (!hostedMode()) {
+// them, a stale file lying around is a lie). ────────────────────────────────
+{
 	const graphDir = path.dirname(LEDGER_FILES.nodes);
 	for (const legacy of ["edges.jsonl", "events.jsonl"]) {
 		const file = path.join(graphDir, legacy);

@@ -57,7 +57,6 @@
  * be a different object in each).
  */
 
-import { currentTenant } from "../../tenant.ts";
 import {
 	buildAbortSteer,
 	buildSubagentSteer,
@@ -124,8 +123,6 @@ interface WakeState {
 	pumping: Set<string>;
 	/** Throttle bookkeeping for the stale-job sweep. */
 	lastSweepAt: number;
-	/** Hosted mode: last sweep per user id. */
-	lastSweepAtBy?: Map<string, number>;
 	stopConnectionWatch?: () => void;
 	automaticDeferred: WeakSet<Agent>;
 }
@@ -737,16 +734,8 @@ const SWEEP_THROTTLE_MS = 30_000;
 export function recoverStaleJobs(): void {
 	const s = state();
 	const now = Date.now();
-	// Throttled per user in hosted mode (the sweep only sees that user's chats).
-	const userId = currentTenant()?.userId;
-	if (userId) {
-		s.lastSweepAtBy ??= new Map();
-		if (now - (s.lastSweepAtBy.get(userId) ?? 0) < SWEEP_THROTTLE_MS) return;
-		s.lastSweepAtBy.set(userId, now);
-	} else {
-		if (now - s.lastSweepAt < SWEEP_THROTTLE_MS) return;
-		s.lastSweepAt = now;
-	}
+	if (now - s.lastSweepAt < SWEEP_THROTTLE_MS) return;
+	s.lastSweepAt = now;
 	try {
 		for (const chat of stores.chatStore.listChats()) {
 			for (const job of stores.jobStore.listJobs(chat.id)) {

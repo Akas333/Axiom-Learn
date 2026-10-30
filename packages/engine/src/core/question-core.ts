@@ -187,6 +187,15 @@ export const quizInputBase = Type.Object({
 			"Always pass the value, not a position number — this is self-checking and prevents miscounting. " +
 			"A value that matches no option fails validation and the call is returned to you to fix.",
 	}),
+	difficulty: Type.Optional(
+		Type.Integer({
+			minimum: 1,
+			maximum: 5,
+			description:
+				"How hard this item is for a learner at the target level: 1 = routine, 3 = typical, 5 = the hardest " +
+				"items at that level. Logged with the learner's result to estimate their ability per node.",
+		}),
+	),
 	details: Type.Optional(
 		Type.String({ description: "Optional extra context or instructions shown under the question." }),
 	),

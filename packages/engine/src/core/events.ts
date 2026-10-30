@@ -80,36 +80,23 @@ export type ServerEvent<K extends ServerEventType = ServerEventType> = {
 export type ServerEventListener = (event: ServerEvent) => void;
 
 interface LhEventsGlobal {
-	__lhEventBus?: Map<ServerEventListener, string | undefined>;
-	__lhEventScope?: () => string | undefined;
-}
-
-function bus(): LhEventsGlobal {
-	return globalThis as typeof globalThis & LhEventsGlobal;
+	__lhEventBus?: Set<ServerEventListener>;
 }
 
 /** The shared listener set — globalThis-backed so every Next module entry
  *  (and every layer) sees ONE bus. Ephemeral by design: a process restart
- *  drops the listeners with their connections; emitters never queue.
- *  Each listener carries its scope (hosted mode: a user id), or undefined. */
-function listeners(): Map<ServerEventListener, string | undefined> {
-	return (bus().__lhEventBus ??= new Map());
-}
-
-/** Hosted mode: tell the bus how to read the current scope (the signed-in
- *  user). Core stays IO-free; the server installs this once at boot. */
-export function setEventScopeResolver(resolve: () => string | undefined): void {
-	bus().__lhEventScope = resolve;
+ *  drops the listeners with their connections; emitters never queue. */
+function listeners(): Set<ServerEventListener> {
+	const g = globalThis as typeof globalThis & LhEventsGlobal;
+	return (g.__lhEventBus ??= new Set());
 }
 
 /** Listen. Returns the unsubscribe function — the SSE route's cancel and
- *  any test cleanup call it; a dropped listener leaks nothing. A `scope`d
- *  listener only hears events emitted in that same scope, so one user's
- *  window never sees another user's activity. */
-export function subscribe(listener: ServerEventListener, scope?: string): () => void {
-	const map = listeners();
-	map.set(listener, scope);
-	return () => map.delete(listener);
+ *  any test cleanup call it; a dropped listener leaks nothing. */
+export function subscribe(listener: ServerEventListener): () => void {
+	const set = listeners();
+	set.add(listener);
+	return () => set.delete(listener);
 }
 
 /** Notify every listener. Zero subscribers is a no-op (no window open —
@@ -117,11 +104,9 @@ export function subscribe(listener: ServerEventListener, scope?: string): () => 
  *  listener throwing must never break the others or the emitter: each
  *  call is isolated, the failure logged, the loop continues. */
 export function emit<K extends ServerEventType>(type: K, payload: ServerEvents[K]): void {
-	const scope = bus().__lhEventScope?.();
 	// Snapshot: a listener that unsubscribes (or subscribes) mid-emit must
 	// not mutate the set under iteration.
-	for (const [listener, listenerScope] of [...listeners()]) {
-		if (listenerScope !== undefined && listenerScope !== scope) continue;
+	for (const listener of [...listeners()]) {
 		try {
 			listener({ type, ...payload } as ServerEvent);
 		} catch (err) {
