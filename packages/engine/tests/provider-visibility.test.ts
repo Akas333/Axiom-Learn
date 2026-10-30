@@ -6,12 +6,14 @@ import { allProvidersEnabled, providerVisible } from "../src/core/provider-visib
 import { ollamaModel } from "../src/agent/ollama.ts";
 
 describe("provider visibility", () => {
-	it("shows only Meta and Ollama by default", () => {
+	it("shows the featured providers and subscriptions by default", () => {
 		assert.equal(allProvidersEnabled({}), false);
 		assert.equal(providerVisible("meta", {}), true);
 		assert.equal(providerVisible("ollama", {}), true);
+		assert.equal(providerVisible("google", {}), true);
+		assert.equal(providerVisible("chatgpt", {}), true);
+		assert.equal(providerVisible("github-copilot-subscription", {}), true);
 		assert.equal(providerVisible("openrouter", {}), false);
-		assert.equal(providerVisible("chatgpt", {}), false);
 	});
 
 	it("AXIOM_ALL_PROVIDERS=1 shows everything", () => {
@@ -73,7 +75,7 @@ describe("the catalog with a local Ollama server", { concurrency: false }, () =>
 		delete process.env.OLLAMA_HOST;
 	});
 
-	it("lists only Meta + Ollama, and Ollama's usable models", async () => {
+	it("hides non-featured providers, and lists Ollama's usable models", async () => {
 		await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 		process.env.OLLAMA_HOST = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 		delete process.env.AXIOM_ALL_PROVIDERS;
@@ -85,9 +87,10 @@ describe("the catalog with a local Ollama server", { concurrency: false }, () =>
 		assert.deepEqual(status.skipped, ["tinyllama"]);
 
 		const catalog = modelCatalog();
-		assert.deepEqual(catalog.providers.map((p) => p.id), ["meta", "ollama"]);
+		assert.ok(!catalog.providers.some((p) => p.id === "openrouter"));
+		assert.ok(catalog.providers.some((p) => p.id === "meta"));
 		assert.equal(catalog.providers.find((p) => p.id === "ollama")?.keyPresent, true);
-		assert.ok(catalog.models.every((m) => m.provider === "meta" || m.provider === "ollama"));
+		assert.ok(catalog.models.every((m) => m.provider !== "openrouter"));
 		assert.ok(catalog.models.some((m) => m.provider === "ollama" && m.id === "llama3.1:8b"));
 		assert.deepEqual(validateModelsSettings({ strong: { model: { provider: "ollama", id: "llama3.1:8b" } } }), { ok: true });
 	});

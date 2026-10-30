@@ -155,7 +155,7 @@ export function catalogProviders(includeHidden = false): CatalogProvider[] {
 		// Keyless: "present" means a local Ollama server is up with a usable model.
 		{ id: OLLAMA_PROVIDER_ID, envVar: "", keyPresent: ollamaAvailable() },
 	])
-		// Meta + Ollama only unless AXIOM_ALL_PROVIDERS=1 (core/provider-visibility.ts).
+		// Featured providers only unless AXIOM_ALL_PROVIDERS=1 (core/provider-visibility.ts).
 		.filter((p) => includeHidden || providerVisible(p.id))
 		.sort((a, b) => a.id.localeCompare(b.id));
 }

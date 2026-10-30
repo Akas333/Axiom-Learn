@@ -64,7 +64,7 @@ Each Meta model does a separate job in the teaching loop. All of them go through
 | **Muse Image** | Pictures drawn for the learner's specific confusion, checked by Muse Spark before they're shown | In progress |
 | **Meta open-weights models** (Llama, via Ollama) | The same tutor running fully offline on your laptop, no key needed | Working (pick a model that supports tools) |
 
-The app offers two ways in: the Meta Model API and local models through [Ollama](https://ollama.com). Other providers are still supported underneath but hidden by default; start the server with `AXIOM_ALL_PROVIDERS=1` to show them in Settings.
+The app offers the Meta Model API, local models through [Ollama](https://ollama.com), Google Gemini, Claude and OpenAI keys, and sign-in with ChatGPT, GitHub Copilot or Grok subscriptions. Other providers are still supported underneath but hidden by default; start the server with `AXIOM_ALL_PROVIDERS=1` to show them in Settings.
 
 ## Run it locally
 

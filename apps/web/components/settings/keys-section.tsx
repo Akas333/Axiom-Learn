@@ -382,7 +382,6 @@ export function KeysSection({
 	const [statuses, setStatuses] = useState<AuthKeyStatus[] | null>(null);
 	const [providers, setProviders] = useState<ProviderKeyInfo[] | undefined>(undefined);
 	const [ollama, setOllama] = useState<OllamaInfo | undefined>(undefined);
-	const [allProviders, setAllProviders] = useState(false);
 	const [loading, setLoading] = useState(true);
 	/** The unfolded row (its id), null = all folded. Seeded by the
 	 *  deep-link (initialRow) and re-followed when it retargets. */
@@ -415,7 +414,6 @@ export function KeysSection({
 				setStatuses(body.keys ?? []);
 				if (body.providers) setProviders(body.providers);
 				setOllama(body.ollama);
-				setAllProviders(body.allProviders === true);
 			})
 			.catch(() => setStatuses([]))
 			.finally(() => setLoading(false));
@@ -526,11 +524,9 @@ export function KeysSection({
 				/>
 			</SettingsGroup>
 
-			{allProviders && (
-				<SettingsGroup label="Subscriptions" testid="group-subscriptions">
-					<SubscriptionConnections />
-				</SettingsGroup>
-			)}
+			<SettingsGroup label="Subscriptions" testid="group-subscriptions">
+				<SubscriptionConnections />
+			</SettingsGroup>
 
 			<SettingsGroup label="Dictation" testid="group-dictation">
 				<div className="flex items-center justify-between gap-3 px-1 py-1.5" data-testid="dictation-engine">

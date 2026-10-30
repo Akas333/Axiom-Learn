@@ -4,6 +4,7 @@ import { useRouter } from "@/lib/navigation";
 import { GraphView } from "@/components/graph-view";
 import { MinimalHome } from "@/components/minimal-home";
 import { SetupDialog } from "@/components/setup-dialog";
+import { Onboarding, type OnboardingStep } from "@/components/onboarding";
 import { ComposerActions, NodePickerControl, SessionModeToggle, type SessionMode } from "@/components/composer-actions";
 import { AttachMaterialControl, uploadMaterial } from "@/components/material-cards";
 import { XIcon } from "lucide-react";
@@ -14,6 +15,9 @@ import { useFieldCycle } from "@/components/field-cycle";
 import { SidebarToggle } from "@/components/sidebar";
 import { StatsBar } from "@/components/stats-bar";
 import type { TurnUsage } from "@/src/core";
+
+/** The first-run onboarding opened itself already this page load. */
+let firstRunSetupShown = false;
 
 /**
  * Home — the knowledge graph is the main view, full-bleed edge to edge
@@ -52,6 +56,22 @@ export function Home({
 	// provider has none — the same skip-everything treatment on send.
 	const strongKeyless = useStrongKeyless();
 	const [setupOpen, setSetupOpen] = useState(false);
+	// Onboarding: the guided first-run flow (connect an AI, auto-picked
+	// models, tips). The setup dialog stays for picking models by hand.
+	const [onboarding, setOnboarding] = useState<OnboardingStep | null>(null);
+	// First launch: open onboarding straight away rather than waiting for
+	// the learner to find the pill. Once per page load, so closing it sticks.
+	// `/?setup` reopens it on demand, set up or not.
+	useEffect(() => {
+		if (new URLSearchParams(window.location.search).has("setup")) {
+			firstRunSetupShown = true;
+			setOnboarding("welcome");
+			return;
+		}
+		if ((configured && !zeroKeys) || firstRunSetupShown) return;
+		firstRunSetupShown = true;
+		setOnboarding("welcome");
+	}, [configured, zeroKeys]);
 	// Voice dictation (STT wave, 2026-09-17): finals append at the end of the
 	// topic draft; the strip lives in the stats bar's middle slot.
 	const dictation = useDictation({
@@ -221,7 +241,7 @@ export function Home({
 							/>
 						)}
 						setup={zeroKeys ? (
-							<ZeroKeysPill inline onOpen={() => setSetupOpen(true)} />
+							<ZeroKeysPill inline onOpen={() => setOnboarding("connect")} />
 						) : (
 							!configured && (
 								<button
@@ -286,6 +306,16 @@ export function Home({
 			    interception's landing surface — stage 1 is the self-contained
 			    first-key screen (zero-keys wave); Save never sends — the
 			    draft stays for the learner to send (owner 2026-10-09). */}
+			<Onboarding
+				open={onboarding !== null}
+				initialStep={onboarding ?? "welcome"}
+				onClose={() => setOnboarding(null)}
+				onDone={() => setConfigured(true)}
+				onChooseModels={() => {
+					setOnboarding(null);
+					setSetupOpen(true);
+				}}
+			/>
 			<SetupDialog
 				open={setupOpen}
 				onClose={() => setSetupOpen(false)}
