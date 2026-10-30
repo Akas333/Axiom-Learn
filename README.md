@@ -5,10 +5,16 @@
 <p align="center"><strong>An AI tutor that finds where your understanding ends, and teaches from there.</strong></p>
 
 <p align="center">
-  <a href="#what-was-built-during-the-hackathon">Built during the hackathon</a> ·
+  <a href="https://github.com/Akas333/Axiom-Learn/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Akas333/Axiom-Learn?label=download"></a>
+  <a href="https://github.com/Akas333/Axiom-Learn/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Akas333/Axiom-Learn/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue"></a>
+</p>
+
+<p align="center">
+  <a href="#download">Download</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#built-with-meta-models">Meta models</a> ·
-  <a href="#run-it-locally">Run it</a> ·
+  <a href="#run-from-source">Run from source</a> ·
   <a href="#architecture">Architecture</a>
 </p>
 
@@ -16,35 +22,51 @@ Most AI tutors explain. TYSA first measures what *you* already understand, plans
 
 Built on Meta's Muse models for the **Meta Global AI Developer Hackathon** (Startup track).
 
-## What was built during the hackathon
+![The lesson plan: a dependency map from what the learner already knows to the goal, waiting for them to confirm it](docs/assets/screenshot-plan.png)
 
-TYSA builds on an existing codebase, as the Startup track allows. Commit [`802e0a6`](../../commit/802e0a6) (Oct 26, before the Oct 27 start of the building period) is the **pre-hackathon baseline**: the adaptive-teaching backend (`src/core`, `src/agent`, `src/server`: measuring understanding, planning, teaching, grading, the knowledge graph store) and an earlier Next.js interface. Everything after it is new work, listed here with `git log 802e0a6..HEAD`.
+## Download
 
-**New during the hackathon**
-- **A new front end and monorepo.** The backend was split into a pnpm/Turborepo monorepo and served on Hono, with a new Vite + React web app in place of the old Next.js one, made to work on phones.
-- **The plan and the knowledge graph.** A visible plan map with confirm buttons and a sidebar, concept-done flow, an Obsidian-style network graph (including picking nodes by clicking them), session summaries and a search palette.
-- **A textbook learning loop.** Courses, materials and folders, a "Planning your course" state, the probe explained in a side panel, and a node-trail loader.
-- **Better measuring.** Required and spoken confidence, hands-free voice thinking and Meta dictation.
-- **Attachments.** Images and PDFs pasted into the composer.
-- **Models.** Local Ollama models alongside Meta's.
-- **Rebrand** from Axiom Learn to Kapany (now TYSA), plus settings, color themes and layout work throughout.
+TYSA is a desktop app for Mac, Windows and Linux. Get it from the **[latest release](https://github.com/Akas333/Axiom-Learn/releases/latest)**:
 
-![A teaching session: Muse Spark plans a Kirchhoff's law lesson from what the learner already knows](docs/assets/web-teaching-session.png)
+| Your computer | File |
+|---|---|
+| Mac with Apple Silicon (M1 and newer) | `TYSA-…-mac-arm64.dmg` |
+| Mac with Intel | `TYSA-…-mac-x64.dmg` |
+| Windows | `TYSA-…-win-x64.exe` |
+| Linux | `TYSA-…-linux-x86_64.AppImage` |
+
+Not sure which Mac you have? Apple menu → **About This Mac**: "Chip: Apple M…" means Apple Silicon.
+
+Open the `.dmg` and drag **TYSA** into **Applications** (Mac), or run the `.exe` (Windows). The first time it opens, TYSA walks you through connecting an AI and picking models. You need a [Meta Model API key](https://dev.meta.ai/docs/overview), or [Ollama](https://ollama.com) to run fully offline with no key.
+
+> [!NOTE]
+> The app isn't code-signed yet, so your computer warns you the first time you open it.
+> - **Mac:** "Apple could not verify TYSA". Click **Done**, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+> - **Windows:** "Windows protected your PC". Click **More info**, then **Run anyway**.
 
 ## How it works
 
-1. **Measure.** Before teaching, the agent probes each idea the goal depends on. Your answers, your confidence and your own explanation of your thinking show it where your understanding ends.
-2. **Plan.** It builds a visible dependency map from that starting point to the goal. In the session above, it anchors on what the learner already holds ("charge doesn't vanish in wires") and targets the part they were unsure about (signs of voltage rises and drops).
+1. **Measure.** Before teaching, the tutor asks what the lesson is for, then probes each idea the goal depends on. Your answer, how sure you are, and your own explanation of your thinking show it where your understanding ends.
+2. **Plan.** It builds a visible dependency map from that starting point to the goal. You confirm it or ask for changes before anything is taught.
 3. **Teach.** Each step builds on something you already understand. You predict, get an explanation, then check your understanding. Confusions are repaired before anything is built on them, and the plan changes when your answers surprise it.
 4. **Practice.** Separate sessions pose varied problems where you must recall the right idea without being told which one. Hints adapt to how you reason.
 
-**Think out loud.** Every question has a thinking field for your reasoning and doubts, typed or dictated. That gives the agent a picture of *how* you think, not just a record of right and wrong answers.
+![Measuring: a probe question with a confidence slider and a field for the learner's reasoning](docs/assets/screenshot-probe.png)
+
+**Think out loud.** Every question has a field for your reasoning and doubts, typed or dictated. That gives the tutor a picture of *how* you think, not just a record of right and wrong answers.
+
+![Teaching: the tutor works through the confirmed plan one concept at a time, with a check before the answer options appear](docs/assets/screenshot-teaching.png)
 
 ## Knowledge that carries forward
 
 Everything you learn is stored as claims and the reasoning chains that connect them, linked back to the session where you learned them. Later lessons read this knowledge graph instead of starting from scratch, and practice sessions draw their problems from it. You can also import your own notes.
 
-![The home screen: the knowledge graph and a new lesson prompt](docs/assets/web-home.png)
+Three ways to learn:
+- **Guided:** the measure → plan → teach loop above.
+- **Textbook:** courses built from your own materials (PDFs, images, notes), taught chapter by chapter.
+- **Practice:** mixed problems drawn from your knowledge graph.
+
+![The home screen: start a lesson, or explore the knowledge graph](docs/assets/screenshot-home.png)
 
 ## Built with Meta models
 
@@ -52,62 +74,61 @@ Each Meta model does a separate job in the teaching loop. All of them go through
 
 | Model | Role in TYSA | Status |
 |---|---|---|
-| **Muse Spark 1.3** | The tutor: measures understanding, plans, teaches, runs practice | Working |
-| **Muse Spark 1.3 Contributor** | Low-cost background agents: building the knowledge graph, grading, research | Working (pick it for the background model slot) |
-| **Muse Wonder** | Optional upgrade for the hardest planning | Available in the model picker |
-| **Muse Voice Transcribe** | Dictation: speak your answers and thinking. Streamed in real time, sentence by sentence | Working |
+| **Muse Spark** | The tutor: measures understanding, plans, teaches, runs practice | Working |
+| **Muse Spark Contributor** | Low-cost background agents: building the knowledge graph, grading, research | Working |
+| **Muse Wonder** | Optional upgrade for the hardest planning | Working |
+| **Muse Voice Transcribe** | Dictation: speak your answers and thinking, streamed in real time | Working |
 | **SAM 3.1** | "Tap the part that…" questions on diagrams, graded against the real outline | In progress |
-| **Muse Image** | Pictures drawn for the learner's specific confusion, checked by Muse Spark before they're shown | In progress |
-| **Meta open-weights models** (Llama, via Ollama) | The same tutor running fully offline on your laptop, no key needed | Working (pick a model that supports tools) |
+| **Muse Image** | Pictures drawn for the learner's specific confusion, checked before they're shown | In progress |
+| **Llama** (open weights, via Ollama) | The same tutor running fully offline, no key needed | Working (pick a model that supports tools) |
 
-The app offers the Meta Model API, local models through [Ollama](https://ollama.com), Google Gemini, Claude and OpenAI keys, and sign-in with ChatGPT, GitHub Copilot or Grok subscriptions. Other providers are still supported underneath but hidden by default; start the server with `AXIOM_ALL_PROVIDERS=1` to show them in Settings.
+TYSA also works with Google Gemini, Claude and OpenAI keys, and with ChatGPT, GitHub Copilot or Grok subscriptions. Other providers are supported underneath but hidden by default; set `AXIOM_ALL_PROVIDERS=1` to show them in Settings.
 
-## Run it locally
+## Your keys, your data
 
-You need **Node.js 22+** and a [Meta Model API key](https://dev.meta.ai/docs/overview).
+- **No account, no subscription.** Bring your own keys and pay providers only for what you use. A live meter shows the cost of each session.
+- **Stored locally.** Lessons, the knowledge graph, settings and keys live on your computer as plain files (`~/Library/Application Support/TYSA` on a Mac, `%APPDATA%\TYSA` on Windows).
+- **What leaves your machine.** Model requests send the context each task needs to the provider you picked. Dictation sends audio to Meta. Web research contacts search providers.
+- **Portable.** **Settings → Your data → Export** saves everything except your API keys into one passphrase-encrypted `.tysa` file. **Import** it on another computer; the data already there is backed up first.
+- **Inspectable.** The tutor's system prompts are visible and editable in Settings.
+
+## Run from source
+
+With Node.js 22+ and git:
 
 ```bash
 git clone https://github.com/Akas333/Axiom-Learn.git
 cd Axiom-Learn
-npm install
+npm start
 ```
 
-Start the API server and the web app, each in its own terminal:
+`npm start` installs dependencies, builds the web app and serves everything from one server at http://localhost:8787. For hot reload, run `npm run dev:server` and `npm run dev:web` in two terminals and open http://localhost:5173.
 
-```bash
-npm run dev:server
-```
+From source, keys are saved in `packages/engine/auth.json` (ignored by git) and data in `packages/engine/data`. You can also set `META_API_KEY` in the environment.
 
-```bash
-npm run dev:web
-```
+**Offline with Ollama:** install [Ollama](https://ollama.com), run `ollama pull llama3.1`, and pick the local model in **Settings → Agent**. Set `OLLAMA_HOST` if Ollama isn't at `http://127.0.0.1:11434`. Small local models handle the tutor's tool calls less reliably than Muse Spark.
 
-Open http://localhost:5173, then:
-
-1. Open **Settings → Providers → Add provider key**, choose **Meta**, and paste your key.
-2. Open **Settings → Agent** and pick models for the three slots, for example `muse-spark-1.3` for the main tutor.
-3. Type what you want to learn and press Enter.
-
-**Running offline instead:** install [Ollama](https://ollama.com), run `ollama pull llama3.1`, and pick the local model in **Settings → Agent**. No key is needed. Set `OLLAMA_HOST` if Ollama isn't at `http://127.0.0.1:11434`. Small local models handle the agent's tool calls less reliably than Muse Spark.
-
-Keys are saved on your machine only, in `packages/engine/auth.json`, which git ignores. You can also set `META_API_KEY` as an environment variable instead.
+**Desktop app:** `npm start -w @axiom/desktop` runs it; `npm run dist -w @axiom/desktop` builds an installer for your computer. Pushing a `v*` tag builds every installer and publishes a GitHub release ([workflow](.github/workflows/release.yml), which also explains how to add code signing).
 
 ## Architecture
 
 ```
-Browser ── apps/web (React + Vite) ──/api──▶ apps/server (Hono) ──▶ packages/engine ──▶ Meta Model API
-                                     ws:/api/stt/realtime ─────────────────────────────▶ Muse Voice Transcribe
+Desktop (Electron) ─┐
+Browser ────────────┴─ apps/web (React + Vite) ──/api──▶ apps/server (Hono) ──▶ packages/engine ──▶ model providers
+                                                ws:/api/stt/realtime ─────────────────────────────▶ Muse Voice Transcribe
 ```
 
-The repo is an npm-workspaces monorepo, built with Turborepo:
+An npm-workspaces monorepo built with Turborepo:
 
 | Folder | What it is |
 |---|---|
 | [`packages/engine`](packages/engine) | The backend: domain core, teaching agents and prompts, stores, and every `/api` route handler ([`src/http`](packages/engine/src/http/index.ts)) |
-| [`apps/server`](apps/server) | Hono server that mounts the engine's routes, plus the live dictation relay to Meta |
+| [`apps/server`](apps/server) | Hono server that mounts the engine's routes, serves the built web app, and relays live dictation to Meta |
 | [`apps/web`](apps/web) | The front end: React, Vite, Tailwind and React Router |
+| [`apps/desktop`](apps/desktop) | The Electron app: runs the server in the background and shows the web app in a window |
+| [`skills/axiom-learn`](skills/axiom-learn) | An agent skill for reading TYSA's data folder from other AI tools |
 
-The engine is transport-neutral: each API route is a plain `Request → Response` function, so any server can mount the same code. Your API key never reaches the browser. Dictation audio goes through the server, which adds the key when it connects to Meta.
+The engine is transport-neutral: each API route is a plain `Request → Response` function, so any server can mount the same code. Your API key never reaches the browser; dictation audio goes through the server, which adds the key when it connects to Meta.
 
 ```bash
 npm test             # every package; deterministic, no model calls, no network
@@ -115,14 +136,21 @@ npm run typecheck
 npm run lint
 ```
 
-More detail: [architecture](docs/architecture.md), [teaching method](docs/teaching-methodology.md), [development guide](docs/development.md).
+More detail: [architecture](docs/architecture.md), [teaching method](docs/teaching-methodology.md), [development guide](docs/development.md), [keyboard shortcuts](docs/keyboard.md).
 
-## Your keys, your data
+## Hackathon disclosure
 
-- **Your keys and models.** No subscription or markup. You pay providers for what you use, and a live meter shows the cost of each session.
-- **Stored locally.** Sessions, the knowledge graph, settings and keys live on your machine as plain files you can inspect.
-- **What leaves your machine.** Model requests send the context each task needs to your chosen provider. Dictation sends audio to Meta. Web research contacts search providers.
-- **Inspectable.** The system prompts are visible and editable in Settings.
+TYSA builds on an existing codebase, as the Startup track allows. Before the building period (Oct 27, 2026) the project already had the adaptive-teaching backend (measuring understanding, planning, teaching, grading, and the knowledge-graph store) and an earlier Next.js interface. New during the hackathon:
+
+- **New front end and monorepo.** The backend was split into a Turborepo monorepo served on Hono, with a new Vite + React web app that works on phones.
+- **The desktop app.** One-click installers for Mac, Windows and Linux, built and published by CI.
+- **The plan and the knowledge graph.** A visible plan map with confirm buttons, a concept-done flow, a network graph you can click through, session summaries and a search palette.
+- **Textbook learning.** Courses, materials and folders, a "Planning your course" state, and an exam question bank the tutor can search.
+- **Better measuring.** Required and spoken confidence, a "why these questions?" guide, hands-free voice thinking and Meta dictation.
+- **Attachments.** Images and PDFs pasted into the composer.
+- **Models.** Meta's Muse models end to end, plus local Ollama models.
+- **Your data.** Encrypted export and import of everything TYSA knows about you.
+- **Rebrand** from Axiom Learn to TYSA, with onboarding, settings and color themes.
 
 ## License
 

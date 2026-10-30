@@ -21,3 +21,12 @@ xai-credentials.json*
 
 # hosted deployment secrets
 deploy/hosted.env
+
+# desktop app build output (apps/desktop)
+apps/desktop/build/
+apps/desktop/release/
+
+# local editor / agent tooling
+.claude/
+.vscode/
+.idea/
