@@ -16,6 +16,7 @@ import {
 	parseGeneralSettingsBody,
 	parseCompactionSettingsBody,
 	parseGraphSettingsBody,
+	parseProfileSettingsBody,
 	SETTINGS_SECTIONS,
 } from "../src/server/settings-body.ts";
 
@@ -234,13 +235,42 @@ describe("parseCompactionSettingsBody (owner round 14)", () => {
 });
 
 describe("SETTINGS_SECTIONS (the route's section map)", () => {
-	it("maps exactly the seven record sections", () => {
+	it("maps exactly the eight record sections", () => {
 		// compaction joined (owner round 14): its own section PUT — the
-		// threshold is engine behavior, not an agent-section key.
+		// threshold is engine behavior, not an agent-section key. profile
+		// joined 2026-10-30 (the sidebar's local account row).
 		assert.deepEqual(
 			Object.keys(SETTINGS_SECTIONS),
-			["general", "chat", "agent", "appearance", "graph", "compaction", "models"],
+			["general", "chat", "agent", "appearance", "graph", "compaction", "models", "profile"],
 		);
+	});
+});
+
+describe("parseProfileSettingsBody (the local profile, 2026-10-30)", () => {
+	const photo = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==";
+
+	it("parses name and photo replace-whole; {} clears both", () => {
+		const full = parseProfileSettingsBody({ name: "  Akash JR  ", avatar: photo });
+		assert.ok(full.ok);
+		assert.deepEqual(full.settings, { name: "Akash JR", avatar: photo });
+		const empty = parseProfileSettingsBody({});
+		assert.ok(empty.ok);
+		assert.deepEqual(empty.settings, {});
+	});
+
+	it("a blank name means no name", () => {
+		const blank = parseProfileSettingsBody({ name: "   " });
+		assert.ok(blank.ok);
+		assert.deepEqual(blank.settings, {});
+	});
+
+	it("rejects wrong types, long names and anything but a small image data URL", () => {
+		assert.equal(parseProfileSettingsBody({ name: 7 }).ok, false);
+		assert.equal(parseProfileSettingsBody({ name: "x".repeat(81) }).ok, false);
+		assert.equal(parseProfileSettingsBody({ avatar: "https://example.com/me.png" }).ok, false);
+		assert.equal(parseProfileSettingsBody({ avatar: "data:image/svg+xml;base64,PHN2Zz4=" }).ok, false);
+		assert.equal(parseProfileSettingsBody({ avatar: `data:image/png;base64,${"A".repeat(200_001)}` }).ok, false);
+		assert.equal(parseProfileSettingsBody("nope").ok, false);
 	});
 });
 

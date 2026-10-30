@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { notifySettingsSaved } from "@/components/settings-signal";
 import { CommitInput, SettingsGroup, SettingsRow } from "./controls.tsx";
 
 interface Profile {
@@ -44,6 +45,8 @@ export function AccountSection() {
 		const body = (await res.json().catch(() => ({}))) as { profile?: Profile; error?: string };
 		if (!res.ok || !body.profile) return setError(body.error ?? "Couldn't save your profile.");
 		setMe((prev) => (prev ? { ...prev, profile: body.profile ?? prev.profile } : prev));
+		// The sidebar's account row re-reads.
+		notifySettingsSaved("profile");
 	};
 
 	const goToBilling = async (endpoint: "checkout" | "portal") => {

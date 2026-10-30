@@ -21,9 +21,10 @@ import type {
 	GeneralSettings,
 	GraphSettings,
 	ModelsSettings,
+	ProfileSettings,
 	RoleModelOverride,
 } from "../core/settings.ts";
-import { BACKGROUND_MODEL_ROLES, COMPACTION_THRESHOLD_FLOOR, EXTRACTION_CHUNK_TOKENS_FLOOR, MODEL_SLOTS, THEME_IDS } from "../core/settings.ts";
+import { BACKGROUND_MODEL_ROLES, COMPACTION_THRESHOLD_FLOOR, EXTRACTION_CHUNK_TOKENS_FLOOR, isProfileAvatar, MODEL_SLOTS, PROFILE_AVATAR_MAX, PROFILE_NAME_MAX, THEME_IDS } from "../core/settings.ts";
 import { WRITABLE_TOOL_KEYS } from "../core/pending.ts";
 
 /** Parsed-or-rejected — `ok: false` carries the 400's error message. */
@@ -381,6 +382,30 @@ export function parseCompactionSettingsBody(body: unknown): SettingsBodyResult<C
 	return { ok: true, settings };
 }
 
+/** profile: { name?, avatar? } — the local profile the sidebar shows.
+ *  Replace-whole, like every section: an omitted field clears it. */
+export function parseProfileSettingsBody(body: unknown): SettingsBodyResult<ProfileSettings> {
+	const raw = asRecord(body);
+	if (!raw) return { ok: false, error: "Invalid JSON body" };
+	const settings: ProfileSettings = {};
+	if (raw.name !== undefined) {
+		if (typeof raw.name !== "string") return { ok: false, error: "name must be a string" };
+		const name = raw.name.trim();
+		if (name.length > PROFILE_NAME_MAX) return { ok: false, error: `name must be at most ${PROFILE_NAME_MAX} characters` };
+		if (name) settings.name = name;
+	}
+	if (raw.avatar !== undefined) {
+		if (!isProfileAvatar(raw.avatar)) {
+			return {
+				ok: false,
+				error: `avatar must be a base64 png, jpeg or webp data: URL of at most ${PROFILE_AVATAR_MAX} characters`,
+			};
+		}
+		settings.avatar = raw.avatar;
+	}
+	return { ok: true, settings };
+}
+
 /** The section→parser map for PUT /api/settings/[section] (the route also
  *  carries the special prompts sub-resource). */
 export const SETTINGS_SECTIONS = {
@@ -391,6 +416,7 @@ export const SETTINGS_SECTIONS = {
 	graph: parseGraphSettingsBody,
 	compaction: parseCompactionSettingsBody,
 	models: parseModelsSettingsBody,
+	profile: parseProfileSettingsBody,
 } as const;
 
 export type SettingsSectionName = keyof typeof SETTINGS_SECTIONS;

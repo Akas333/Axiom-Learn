@@ -35,6 +35,7 @@ import {
 	type AppearanceSettings,
 	type CompactionSettings,
 	type GraphSettings,
+	type ProfileSettings,
 	type UserSettings,
 } from "@/src/core";
 import { useAppearance } from "./appearance.tsx";
@@ -49,6 +50,7 @@ import { Hint } from "@/components/ui/hint";
 import { AppearanceSection, GraphSection } from "./appearance-section.tsx";
 import { KeyboardSection } from "./keyboard-section.tsx";
 import { AccountSection } from "./account-section.tsx";
+import { ProfileSection } from "./profile-section.tsx";
 import { useAuth } from "@/lib/auth";
 import { ChatGPTUIProvider } from "./chatgpt-connection.tsx";
 import { NativeSubscriptionUIProvider } from "./subscription-connections.tsx";
@@ -63,6 +65,7 @@ const APP_VERSION = process.env.LH_VERSION ?? "";
 
 const SECTIONS = [
 	{ id: "account", label: "Account", group: "Preferences", Icon: CircleUserIcon, keywords: "account plan billing upgrade pro subscription sign out log out email usage" },
+	{ id: "profile", label: "Profile", group: "Preferences", Icon: CircleUserIcon, keywords: "profile name picture photo avatar" },
 	{ id: "general", label: "General", group: "Preferences", Icon: SettingsIcon, keywords: "updates automatic voice hands-free dictation" },
 	{ id: "appearance", label: "Appearance", group: "Preferences", Icon: PaletteIcon, keywords: "theme mode dark light background font reading size bold italic heading serif colors" },
 	{ id: "keyboard", label: "Keyboard", hint: "Stored on this device", group: "Preferences", Icon: KeyboardIcon, keywords: "shortcuts keys bindings hotkeys" },
@@ -188,9 +191,10 @@ export function SettingsDialogBody({
 	const [active, setActive] = useState<SectionId>(initialSection);
 	const [search, setSearch] = useState("");
 	const q = search.trim().toLowerCase();
-	// Account (sign-in and plan) only exists in the hosted app.
+	// Account (sign-in and plan) only exists in the hosted app, which edits
+	// its profile there; a local install gets the Profile section instead.
 	const hosted = useAuth().supabase !== null;
-	const available = hosted ? SECTIONS : SECTIONS.filter((s) => s.id !== "account");
+	const available = SECTIONS.filter((s) => s.id !== (hosted ? "profile" : "account"));
 	const matches = q
 		? available.filter((s) => `${s.label} ${s.keywords}`.toLowerCase().includes(q))
 		: available;
@@ -240,7 +244,7 @@ export function SettingsDialogBody({
 	 *  schema mistake caught by the validation surface). */
 	const write = useCallback(
 		async (
-			section: "general" | "agent" | "models" | "appearance" | "graph" | "compaction",
+			section: "general" | "agent" | "models" | "appearance" | "graph" | "compaction" | "profile",
 			body: object,
 		) => {
 			setError(null);
@@ -397,6 +401,14 @@ export function SettingsDialogBody({
 							{active === "account" && (
 								<SettingsSection title="Account" hint="Your sign-in and plan." testid="section-account">
 									<AccountSection />
+								</SettingsSection>
+							)}
+							{active === "profile" && (
+								<SettingsSection title="Profile" hint="Shown in the sidebar. Stays on this computer." testid="section-profile">
+									<ProfileSection
+										profile={record.profile}
+										onSectionChange={(next: ProfileSettings) => void write("profile", next)}
+									/>
 								</SettingsSection>
 							)}
 							{active === "keys" && (

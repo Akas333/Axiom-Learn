@@ -89,6 +89,14 @@ describe("sanitizeUserSettings", () => {
 		assert.equal(sanitizeUserSettings([1, 2]), null);
 	});
 
+	it("profile keeps a trimmed name and a valid photo, dropping anything else", () => {
+		const photo = "data:image/png;base64,iVBORw0KGgo=";
+		const ok = sanitizeUserSettings({ version: 1, profile: { name: "  Akash JR ", avatar: photo } });
+		assert.deepEqual(ok?.profile, { name: "Akash JR", avatar: photo });
+		const junk = sanitizeUserSettings({ version: 1, profile: { name: 3, avatar: "https://example.com/me.png" } });
+		assert.deepEqual(junk?.profile, {});
+	});
+
 	it("absent version defaults to CURRENT; unknown keys ride along VERBATIM", () => {
 		const out = sanitizeUserSettings({ futureSection: { knob: 3 }, general: { autoUpdate: true } });
 		assert.ok(out);

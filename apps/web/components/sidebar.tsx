@@ -18,7 +18,7 @@ const NAV_ROW =
 	"flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[15px] text-foreground transition-colors hover:bg-(--pill) focus-visible:outline-2 focus-visible:outline-primary";
 const NAV_ROW_ACTIVE = "bg-(--pill) hover:bg-(--pill)";
 import { CoverageMenuBlock } from "@/components/extraction-coverage";
-import { LhMark } from "@/components/lh-mark";
+import { ProfileAvatar, useProfileView } from "@/components/profile";
 import { BrailleSpinner } from "@/components/braille-spinner";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { SettingsDialogProvider, useSettingsDialog } from "@/components/settings/settings-dialog.tsx";
@@ -378,6 +378,7 @@ function SessionsSidebar() {
 	const draftFolderId = pathname === "/chat/new" ? searchParams.get("folder") : null;
 	const router = useRouter();
 	const { open: openSettings } = useSettingsDialog();
+	const profile = useProfileView();
 
 	/* New session (owner, 2026-09-13): NO POST — the button opens the
 	   sessionless draft view; the session is created only when the first
@@ -1169,20 +1170,32 @@ function SessionsSidebar() {
 					{/* Settings entry (settings-app wave): same row language as
 					    New session — quiet, bottom-pinned, opens the centered
 					    dialog (also mod+, in the keyboard registry). */}
-					{/* Bottom row: the app's identity on the left (home), settings
-					    on the right — the account-row pattern. */}
+					{/* Bottom row: the learner's profile on the left (2026-10-30 —
+					    it replaced the Kapany brand row; opens the profile
+					    settings), settings on the right — the account-row
+					    pattern. */}
 					<div className="mx-2 flex items-center gap-1 border-t border-input px-1 pb-3 pt-2">
-						<Hint label="Home" action="jump-graph" side="top">
-							<Link
-								href="/"
-								aria-label="Home"
-								className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-(--pill)"
+						<Hint label="Profile" side="top">
+							<button
+								type="button"
+								onClick={() => {
+									close();
+									openSettings(profile.section);
+								}}
+								data-testid="profile-entry"
+								aria-label="Profile"
+								className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-(--pill)"
 							>
-								<span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-input bg-card">
-									<LhMark className="size-4" />
+								<ProfileAvatar src={profile.avatar} name={profile.name} className="size-9 text-sm" />
+								<span className="min-w-0">
+									<span className="block truncate text-[15px] font-medium text-foreground">
+										{profile.name ?? "Add your name"}
+									</span>
+									{profile.detail && (
+										<span className="block truncate text-xs text-muted-foreground">{profile.detail}</span>
+									)}
 								</span>
-								<span className="truncate font-brand text-[15px] font-semibold text-foreground">Kapany</span>
-							</Link>
+							</button>
 						</Hint>
 						<Hint label="Settings" action="open-settings" side="top">
 							<button
