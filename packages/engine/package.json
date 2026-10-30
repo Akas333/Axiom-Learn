@@ -1,0 +1,45 @@
+{
+	"name": "@axiom/engine",
+	"version": "0.3.8",
+	"description": "Kapany backend: domain core, teaching agents, stores, and the transport-neutral HTTP surface.",
+	"license": "AGPL-3.0-only",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./package.json": "./package.json",
+		"./*": "./*"
+	},
+	"scripts": {
+		"test": "NODE_ENV=test tsx --test --import ./tests/support/isolated-env.ts tests/*.test.ts",
+		"typecheck": "tsc --noEmit",
+		"lint": "eslint ."
+	},
+	"dependencies": {
+		"@earendil-works/pi-agent-core": "1.4.0",
+		"@earendil-works/pi-ai": "1.4.0",
+		"@mozilla/readability": "^0.6.0",
+		"@resvg/resvg-js": "^2.6.2",
+		"d3-force": "^3.0.0",
+		"jose": "^6.2.12",
+		"katex": "0.18.2",
+		"linkedom": "^0.18.13",
+		"mdast-util-from-markdown": "2.0.3",
+		"mdast-util-math": "3.0.0",
+		"micromark-extension-math": "3.1.0",
+		"pdfjs-dist": "^6.3.289",
+		"puppeteer-core": "^25.8.0",
+		"turndown": "^7.2.4",
+		"typebox": "^1.3.27",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.0",
+		"@types/turndown": "^5.0.6",
+		"@typescript-eslint/parser": "^8.68.0",
+		"eslint": "^9.39.5",
+		"eslint-import-resolver-typescript": "^4.4.5",
+		"eslint-plugin-import": "^2.32.0",
+		"tsx": "^4.19.0",
+		"typescript": "^5.6.0"
+	}
+}

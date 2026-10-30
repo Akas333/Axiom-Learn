@@ -1,0 +1,242 @@
+/**
+ * Plan-tree contracts — the session-scoped dependency tree
+ *
+ * Part of the domain-split contracts (src/core/contracts/): each domain file
+ * is owned outright by its stream — cross-domain schema changes go through
+ * master. Pure types + protocol docs + tiny pure helpers; type-only imports
+ * of "ai" (safe everywhere: server, client, tests). See docs/vision.md.
+ */
+// ─── Plan tree (vision §2 "formal plan tree") ────────────────────────────────
+// A session-scoped dependency tree authored by the teacher via plan tools.
+// One substrate with the global graph: tree nodes fold into graph nodes.
+
+export interface PlanNode {
+	/** Opaque, agent-chosen slug, stable across edits: "chain-rule-intuition". */
+	id: string;
+	/** Short label for the tree panel. */
+	title: string;
+	/** 1-2 sentences: what this node covers. */
+	summary?: string;
+}
+
+export interface PlanEdge {
+	/** Prerequisite node id. */
+	from: string;
+	/** Node that depends on `from`. */
+	to: string;
+}
+
+export interface PlanTree {
+	nodes: PlanNode[];
+	edges: PlanEdge[];
+	/** Increments on every mutation — lets the UI animate/react to changes. */
+	version: number;
+}
+
+// NOTE (2026-09-11 pivot, docs/probe-teach-split.md): the tree once carried
+// `currentNodeId` / `doneNodeIds` — progress fields. They are GONE by
+// design: the tree carries structure ONLY; position and visited-ness derive
+// from the transcript at render time (derivePlanStatuses below). There is no
+// done ledger of any kind. No backwards compatibility for old records.
+
+/** Derived, never stored: status of a node for the panel (vision §2). */
+export type PlanNodeStatus = "current" | "visited" | "upcoming";
+
+// ─── derived statuses: position from CALLS, never from results ─────────────
+//
+// (2026-09-11 pivot — docs/probe-teach-split.md §3.) The teacher AUTHORS the
+// map (plan_init, mermaid — re-callable rewrite) and never tracks progress.
+// The quiz `nodeId` means "this question is ABOUT this node" — a position
+// signal, never a completion signal. Derivation reads CALLS only:
+//   current — the node of the most RECENT tagged quiz call (any state)
+//   visited — every node referenced by an EARLIER tagged call
+// Consequences: a node spans multiple turns/checks naturally (several
+// questions may tag the same node — the map holds still); moving to a new
+// node is the teacher's judgment the previous one is finished, regardless of
+// check outcomes (a failed check then a move-on is still visited); results
+// feed nothing; there is NO fallback current (before the first tagged check
+// nothing is current). Untagged checks no longer exist (nodeId is required
+// on the teach quiz, owner ruling 2026-09-26). NodeIds missing from the
+// current tree are ignored (a rewrite may have dropped the node).
+
+/** Minimal structural message slice — anything with typed parts (mirrors
+ * phases.ts: pure, no runtime deps, safe on server, client, and in tests). */
+interface PartsCarrier {
+	parts: Array<{ type: string; state?: string; input?: unknown; output?: unknown }>;
+}
+
+export interface DerivedPlanStatuses {
+	/** The node the most recent tagged quiz call is about; null before any.
+	 *  Right after a concept_done it is the node that call named next (the
+	 *  learner is about to start it). */
+	current: string | null;
+	/** Nodes referenced by earlier tagged calls — been there, monotonic. */
+	visited: ReadonlySet<string>;
+	/** Nodes the teacher closed with concept_done. */
+	done: ReadonlySet<string>;
+}
+
+/** A node's place in the learner's progress (the plan sidebar's view). */
+export type PlanNodeProgress = "done" | "current" | "upcoming";
+
+/** Done = closed with concept_done, or taught and left behind (the teacher
+ *  moved on without closing it — older sessions never close nodes). */
+export function nodeProgress(statuses: DerivedPlanStatuses, nodeId: string): PlanNodeProgress {
+	if (statuses.current === nodeId) return "current";
+	if (statuses.done.has(nodeId) || statuses.visited.has(nodeId)) return "done";
+	return "upcoming";
+}
+
+/** A plan-timeline event. `tag` (a quiz/explain about a node) and `done`
+ *  (concept_done) are the guided loop's; the textbook style (2026-10-29)
+ *  adds `at` (an illustration or exercise is about this node: position
+ *  only) and `covered` (an exercise on it was solved unaided). */
+type PlanEvent =
+	| { kind: "tag"; nodeId: string }
+	| { kind: "done"; nodeId: string; nextNodeId?: string }
+	| { kind: "at"; nodeId: string }
+	| { kind: "covered"; nodeId: string };
+
+/** One timeline fold shared by both message shapes: tagged checks move
+ *  `current`; a concept_done closes its node and hands `current` to the
+ *  node it names next. In a textbook transcript a node is done only once
+ *  covered — being taught about is not progress there. */
+function foldPlanEvents(ids: ReadonlySet<string>, events: Iterable<PlanEvent>): DerivedPlanStatuses {
+	const runs: string[] = []; // distinct tagged nodes, consecutive duplicates collapsed
+	const done = new Set<string>();
+	let current: string | null = null;
+	let textbook = false;
+	for (const e of events) {
+		if (!ids.has(e.nodeId)) continue; // untagged/unknown — moves nothing
+		if (e.kind === "at") {
+			textbook = true;
+			current = e.nodeId;
+		} else if (e.kind === "covered") {
+			textbook = true;
+			done.add(e.nodeId);
+		} else if (e.kind === "tag") {
+			if (runs.at(-1) !== e.nodeId) runs.push(e.nodeId);
+			current = e.nodeId;
+		} else {
+			done.add(e.nodeId);
+			if (runs.at(-1) !== e.nodeId) runs.push(e.nodeId);
+			current = e.nextNodeId && ids.has(e.nextNodeId) ? e.nextNodeId : null;
+		}
+	}
+	// Visited = been there in an EARLIER stay (a revisit puts a node in both;
+	// current wins at render). Textbook progress is coverage alone.
+	const visited = textbook ? new Set<string>() : new Set(current === runs.at(-1) ? runs.slice(0, -1) : runs);
+	return { current, visited, done };
+}
+
+/** The textbook events of one tool call, in record order: illustrations
+ *  and exercises move the position; a clean conclude of an exercise
+ *  solved at rung R1 or less covers its nodes (minus missedTargets). The
+ *  caller holds `active` — the open exercise's nodes — across calls. */
+function* textbookPlanEvents(
+	name: string,
+	input: Record<string, unknown> | undefined,
+	clean: boolean,
+	active: { nodeIds: string[] | null },
+): Generator<PlanEvent> {
+	if (!clean || !input) return;
+	if (name === "illustration" && typeof input.nodeId === "string") {
+		yield { kind: "at", nodeId: input.nodeId };
+	} else if (name === "problem" && Array.isArray(input.nodeIds)) {
+		const nodeIds = input.nodeIds.filter((id): id is string => typeof id === "string");
+		active.nodeIds = nodeIds;
+		if (nodeIds[0]) yield { kind: "at", nodeId: nodeIds[0] };
+	} else if (name === "conclude" && active.nodeIds) {
+		const solved = input.outcome === "solved" || input.outcome === "solvedWithHints";
+		const unaided = input.rung == null || input.rung === "R0" || input.rung === "R1";
+		const missed = new Set(Array.isArray(input.missedTargets) ? input.missedTargets : []);
+		if (solved && unaided) for (const id of active.nodeIds) if (!missed.has(id)) yield { kind: "covered", nodeId: id };
+		active.nodeIds = null;
+	}
+}
+
+/** Statuses of a node: the derived view the plan panel should render. */
+export function derivedNodeStatus(statuses: DerivedPlanStatuses, nodeId: string): PlanNodeStatus {
+	if (statuses.current === nodeId) return "current";
+	// done covers the textbook style's covered nodes (no visited set there).
+	if (statuses.visited.has(nodeId) || statuses.done.has(nodeId)) return "visited";
+	return "upcoming";
+}
+
+export function derivePlanStatuses(tree: PlanTree, messages: readonly PartsCarrier[]): DerivedPlanStatuses {
+	const ids = new Set(tree.nodes.map((n) => n.id));
+	function* events() {
+		const active = { nodeIds: null as string[] | null };
+		for (const m of messages) {
+			for (const part of m.parts) {
+				if (part.type.startsWith("tool-")) {
+					const clean = part.state === "output-available";
+					yield* textbookPlanEvents(part.type.slice("tool-".length), part.input as Record<string, unknown> | undefined, clean, active);
+				}
+				const input = part.input as { nodeId?: unknown; nextNodeId?: unknown } | undefined;
+				if (typeof input?.nodeId !== "string") continue;
+				// Either quizzing tool (quiz/explain) tags position — the mechanic
+				// is a settings switch; the fold recognizes both (owner 2026-09-27).
+				if (part.type === "tool-quiz" || part.type === "tool-explain") yield { kind: "tag" as const, nodeId: input.nodeId };
+				else if (part.type === "tool-concept_done" && part.state !== "output-error")
+					yield { kind: "done" as const, nodeId: input.nodeId, nextNodeId: typeof input.nextNodeId === "string" ? input.nextNodeId : undefined };
+			}
+		}
+	}
+	return foldPlanEvents(ids, events());
+}
+
+/**
+ * The plan tool result (author-once protocol, 2026-09-03): ONE server-side
+ * tool, plan_init (tools/plan.ts) — a mermaid `graph TD` block canonicalized
+ * into the structured tree, called once at the probe→teach seam and
+ * re-callable to rewrite. The former mutation/tracking tools are gone:
+ * statuses derive from check outcomes (derivePlanStatuses above), so the
+ * tree carries structure, never progress. The tree panel still derives its
+ * display from the LATEST plan tool output in the transcript — plus the
+ * derived statuses — with no separate state channel.
+ */
+export interface PlanToolResult {
+	ok: boolean;
+	error?: string;
+	/** The saved tree — SUCCESS results only (owner, context diet
+	 *  2026-10-09): this is the record/UI-facing `details` value. The
+	 *  agent-facing content never carries it — content is the validated
+	 *  nodeIds + reminder; failures carry just the error. The plan
+	 *  popup's latestTree seam reads this field. */
+	tree?: PlanTree;
+}
+
+
+// ─── the native fold (Wave D: derivePlanStatuses over LhMessage[]) ───────────
+
+import type { LhMessage } from "../native-messages.ts";
+
+/** The same derivation over the NATIVE record: quiz CALLS only (any state —
+ *  a dangling call still moves position; results feed nothing). */
+export function derivePlanStatusesLh(tree: PlanTree, messages: readonly LhMessage[]): DerivedPlanStatuses {
+	const ids = new Set(tree.nodes.map((n) => n.id));
+	const clean = new Set<string>();
+	for (const m of messages) {
+		const r = m as { role?: string; toolCallId?: string; isError?: boolean };
+		if (r.role === "toolResult" && !r.isError && r.toolCallId) clean.add(r.toolCallId);
+	}
+	function* events() {
+		const active = { nodeIds: null as string[] | null };
+		for (const m of messages) {
+			if ((m as { role?: string }).role !== "assistant") continue;
+			const content = (m as { content?: unknown }).content;
+			if (!Array.isArray(content)) continue;
+			for (const block of content as Array<{ type?: string; id?: string; name?: string; arguments?: unknown }>) {
+				if (block.type !== "toolCall") continue;
+				yield* textbookPlanEvents(block.name ?? "", block.arguments as Record<string, unknown> | undefined, clean.has(block.id ?? ""), active);
+				const args = block.arguments as { nodeId?: unknown; nextNodeId?: unknown } | undefined;
+				if (typeof args?.nodeId !== "string") continue;
+				if (block.name === "quiz" || block.name === "explain") yield { kind: "tag" as const, nodeId: args.nodeId };
+				else if (block.name === "concept_done")
+					yield { kind: "done" as const, nodeId: args.nodeId, nextNodeId: typeof args.nextNodeId === "string" ? args.nextNodeId : undefined };
+			}
+		}
+	}
+	return foldPlanEvents(ids, events());
+}

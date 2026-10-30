@@ -1,0 +1,21 @@
+{
+	"name": "axiom-learn-monorepo",
+	"private": true,
+	"type": "module",
+	"license": "AGPL-3.0-only",
+	"packageManager": "npm@10.9.8",
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"test": "turbo run test",
+		"typecheck": "turbo run typecheck",
+		"dev:server": "npm run dev -w @axiom/server",
+		"lint": "turbo run lint",
+		"dev:web": "npm run dev -w @axiom/web"
+	},
+	"devDependencies": {
+		"turbo": "^2.5.0"
+	}
+}

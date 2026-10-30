@@ -1,0 +1,43 @@
+{
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "api",
+			"runtimeExecutable": "npm",
+			"runtimeArgs": [
+				"run",
+				"dev:server"
+			],
+			"port": 8787
+		},
+		{
+			"name": "web",
+			"runtimeExecutable": "npm",
+			"runtimeArgs": [
+				"run",
+				"dev",
+				"-w",
+				"@axiom/web"
+			],
+			"port": 5173,
+			"autoPort": true
+		},
+		{
+			"name": "hosted",
+			"runtimeExecutable": "env",
+			"runtimeArgs": [
+				"KAPANY_HOSTED=1",
+				"PORT=8790",
+				"LH_DATA_DIR=./data/hosted-local",
+				"SUPABASE_URL=https://erlilgdhlobgteehmkzq.supabase.co",
+				"SUPABASE_ANON_KEY=sb_publishable_8b4Pveo8Oskl7fQGMR5pBA_qZzctC9C",
+				"npm",
+				"run",
+				"start",
+				"-w",
+				"@axiom/server"
+			],
+			"port": 8790
+		}
+	]
+}
