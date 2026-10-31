@@ -63,7 +63,8 @@
 			"target": [
 				"AppImage"
 			],
-			"category": "Education"
+			"category": "Education",
+			"executableName": "tysa"
 		},
 		"npmRebuild": false,
 		"artifactName": "TYSA-${version}-${os}-${arch}.${ext}"
