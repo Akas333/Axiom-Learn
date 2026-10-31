@@ -5,6 +5,8 @@
 	"description": "TYSA (Teach Yourself Anything): the desktop app.",
 	"license": "AGPL-3.0-only",
 	"private": true,
+	"author": "Akas333 <Akas333@users.noreply.github.com>",
+	"homepage": "https://github.com/Akas333/Axiom-Learn",
 	"main": "main.cjs",
 	"scripts": {
 		"build": "node scripts/build.mjs",
@@ -61,8 +63,12 @@
 		},
 		"linux": {
 			"target": [
-				"AppImage"
+				"AppImage",
+				"deb",
+				"rpm"
 			],
+			"maintainer": "Akas333 <Akas333@users.noreply.github.com>",
+			"synopsis": "An AI tutor that teaches from what you already know",
 			"category": "Education",
 			"executableName": "tysa"
 		},

@@ -30,7 +30,8 @@ jobs:
           - { name: macOS (Apple Silicon), runner: macos-latest, args: --mac dmg --arm64 }
           - { name: macOS (Intel), runner: macos-15-intel, args: --mac dmg --x64 }
           - { name: Windows, runner: windows-latest, args: --win nsis --x64 }
-          - { name: Linux, runner: ubuntu-24.04, args: --linux AppImage --x64 }
+          - { name: Linux (x64), runner: ubuntu-24.04, args: --linux AppImage deb rpm --x64 }
+          - { name: Linux (ARM64), runner: ubuntu-24.04-arm, args: --linux AppImage deb rpm --arm64 }
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -39,6 +40,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build -w @axiom/desktop
+      - name: Install rpm tooling
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
       - name: Package
         working-directory: apps/desktop
         shell: bash
@@ -64,6 +68,8 @@ jobs:
             apps/desktop/release/*.dmg
             apps/desktop/release/*.exe
             apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/*.rpm
           if-no-files-found: error
 
   publish:
