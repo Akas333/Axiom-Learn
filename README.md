@@ -20,7 +20,7 @@
 
 Most AI tutors explain. TYSA first measures what *you* already understand, plans a path from there to your goal, and teaches one reasoning step at a time, changing the plan as soon as your answers show it was wrong about you. Two people asking the same question get two different lessons, and the app shows why.
 
-Built on Meta's Muse models for the **Meta Global AI Developer Hackathon** (Startup track).
+Built on Meta's Muse models for the **Meta Global AI Developer Hackathon** (Indie Devloper Track).
 
 ![The lesson plan: a dependency map from what the learner already knows to the goal, waiting for them to confirm it](docs/assets/screenshot-plan.png)
 
@@ -139,20 +139,6 @@ npm run lint
 ```
 
 More detail: [architecture](docs/architecture.md), [teaching method](docs/teaching-methodology.md), [development guide](docs/development.md), [keyboard shortcuts](docs/keyboard.md).
-
-## Hackathon disclosure
-
-TYSA builds on an existing codebase, as the Startup track allows. Before the building period (Oct 27, 2026) the project already had the adaptive-teaching backend (measuring understanding, planning, teaching, grading, and the knowledge-graph store) and an earlier Next.js interface. New during the hackathon:
-
-- **New front end and monorepo.** The backend was split into a Turborepo monorepo served on Hono, with a new Vite + React web app that works on phones.
-- **The desktop app.** One-click installers for Mac, Windows and Linux, built and published by CI.
-- **The plan and the knowledge graph.** A visible plan map with confirm buttons, a concept-done flow, a network graph you can click through, session summaries and a search palette.
-- **Textbook learning.** Courses, materials and folders, a "Planning your course" state, and an exam question bank the tutor can search.
-- **Better measuring.** Required and spoken confidence, a "why these questions?" guide, hands-free voice thinking and Meta dictation.
-- **Attachments.** Images and PDFs pasted into the composer.
-- **Models.** Meta's Muse models end to end, plus local Ollama models.
-- **Your data.** Encrypted export and import of everything TYSA knows about you.
-- **Rebrand** from Axiom Learn to TYSA, with onboarding, settings and color themes.
 
 ## License
 
