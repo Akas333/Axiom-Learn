@@ -340,13 +340,51 @@
 		/* Star prompts: live count from the GitHub API, shown once it loads. */
 		.stars { margin-left: 2px; padding-left: 10px; border-left: 1px solid rgba(242, 244, 246, .25); font-variant-numeric: tabular-nums; }
 		.btn-primary .stars { border-left-color: rgba(255, 255, 255, .35); }
-		.star-card { text-align: center; padding: 72px 24px; border-radius: 24px; border: 1px solid var(--border);
-			background: radial-gradient(ellipse at 50% 0%, rgba(0, 100, 224, .18), transparent 65%), var(--card); }
-		.star-card .sub { margin-left: auto; margin-right: auto; }
-		.star-big { width: 56px; height: 56px; margin: 0 auto 8px; border-radius: 16px; display: grid; place-items: center; background: var(--accent); color: #f5c451; }
-		.star-big svg { width: 26px; height: 26px; }
 		.btn svg[viewBox="0 0 16 16"] { width: 16px; height: 16px; }
-		@media (max-width: 640px) { .star-card { padding: 56px 20px; } }
+		/* Closing star band: the sphere's dot grid, flat and fading out, behind a
+		   big two-line heading and a composer-shaped pill holding the repo. */
+		.star-band { position: relative; padding: 144px 0 152px; text-align: center; overflow: hidden; }
+		.star-band::before {
+			content: ""; position: absolute; inset: 0;
+			background-image: radial-gradient(rgba(242, 244, 246, .22) 1px, transparent 1.4px);
+			background-size: 22px 22px; background-position: center;
+			mask-image: radial-gradient(ellipse 60% 70% at center, black 10%, transparent 75%);
+			-webkit-mask-image: radial-gradient(ellipse 60% 70% at center, black 10%, transparent 75%);
+		}
+		.star-band .wrap { position: relative; }
+		.star-band h2 { font-size: clamp(40px, 7vw, 80px); line-height: 1.02; letter-spacing: -.02em; }
+		.star-band h2 .outline { -webkit-text-stroke-width: 1.5px; }
+		.star-band .sub { margin: 20px auto 0; max-width: 480px; }
+		.repo-pill {
+			display: flex; align-items: center; gap: 12px; max-width: 520px; margin: 40px auto 0;
+			height: 64px; padding: 0 8px 0 24px; border-radius: 999px;
+			border: 1px solid var(--input); background: rgba(31, 31, 34, .92);
+			box-shadow: 0 12px 40px rgba(0, 0, 0, .45);
+			transition: border-color .15s ease;
+		}
+		.repo-pill:hover { border-color: var(--muted-foreground); }
+		.repo-pill > svg { width: 20px; height: 20px; flex: none; color: var(--muted-foreground); }
+		.repo-pill code { flex: 1; min-width: 0; text-align: left; font-size: 15px; color: var(--foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		.repo-pill code span { color: var(--muted-foreground); }
+		.star-btn {
+			display: inline-flex; align-items: center; gap: 8px; flex: none;
+			height: 48px; padding: 0 20px; border-radius: 999px;
+			background: var(--foreground); color: var(--background); font: 600 15px/1 var(--font-ui);
+			transition: transform .15s ease;
+		}
+		.star-btn svg { width: 16px; height: 16px; }
+		.repo-pill:hover .star-btn { transform: scale(1.03); }
+		.star-btn .stars { border-left-color: rgba(17, 17, 18, .25); }
+		.star-links { margin-top: 20px; font-size: 14px; color: var(--muted-foreground); }
+		.star-links a { text-decoration: underline; text-decoration-color: var(--input); text-underline-offset: 3px; }
+		.star-links a:hover { color: var(--foreground); }
+		@media (max-width: 640px) {
+			.star-band { padding: 96px 0 104px; }
+			.repo-pill { height: 56px; padding: 0 6px 0 18px; }
+			.repo-pill code { font-size: 14px; }
+			.repo-pill code span { display: none; }
+			.star-btn { height: 44px; padding: 0 16px; }
+		}
 
 		footer { border-top: 1px solid var(--border); padding: 40px 0 56px; }
 		footer .wrap { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: center; justify-content: space-between; }
@@ -602,17 +640,17 @@
 			</div>
 		</section>
 
-		<section class="star-band" style="padding-top: 0">
-			<div class="wrap">
-				<div class="star-card reveal">
-					<div class="star-big" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg></div>
-					<h2>Made you think <span class="outline">harder?</span></h2>
-					<p class="sub">TYSA is built in the open by one indie developer. A star on GitHub is the easiest way to help other learners find it.</p>
-					<div class="hero-cta">
-						<a class="btn btn-primary" href="https://github.com/Akas333/TYSA"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>Star TYSA on GitHub<span class="stars" data-stars hidden></span></a>
-						<a class="btn btn-pill" href="https://github.com/Akas333/TYSA/issues/new/choose">Report an issue</a>
-					</div>
-				</div>
+		<section class="star-band">
+			<div class="wrap reveal">
+				<span class="kicker">Open source</span>
+				<h2>Made you think<br /><span class="outline">harder?</span></h2>
+				<p class="sub">TYSA is built in the open by one indie developer. A star is the easiest way to help other learners find it.</p>
+				<a class="repo-pill" href="https://github.com/Akas333/TYSA" aria-label="Star TYSA on GitHub">
+					<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+					<code><span>github.com/</span>Akas333/TYSA</code>
+					<span class="star-btn"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>Star<span class="stars" data-stars hidden></span></span>
+				</a>
+				<p class="star-links">Found a bug or have an idea? <a href="https://github.com/Akas333/TYSA/issues/new/choose">Open an issue</a></p>
 			</div>
 		</section>
 	</main>
