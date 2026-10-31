@@ -68,7 +68,7 @@
 				"rpm"
 			],
 			"maintainer": "Akas333 <Akas333@users.noreply.github.com>",
-			"synopsis": "An AI tutor that teaches from what you already know",
+			"synopsis": "A learning harness that teaches from what you already know",
 			"category": "Education",
 			"executableName": "tysa"
 		},

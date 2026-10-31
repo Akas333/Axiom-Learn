@@ -29,7 +29,7 @@ export interface PreferencesView {
 const REQUEST_FILE = () => path.join(FILES.preferencesDir, "request.txt");
 const REQUEST_MAX_CHARS = 4000;
 
-const SYSTEM_PROMPT = `You configure an AI tutoring app from a learner's description of how they like to learn.
+const SYSTEM_PROMPT = `You configure TYSA, a learning harness, from a learner's description of how they like to learn.
 
 The app has these agents:
 - prober: asks diagnostic questions to find what the learner already understands, before any teaching.

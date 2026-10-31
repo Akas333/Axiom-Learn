@@ -2,7 +2,7 @@
 
 <p align="center"><em>Teach Yourself Anything</em></p>
 
-<p align="center"><strong>An AI tutor that finds where your understanding ends, and teaches from there.</strong></p>
+<p align="center"><strong>A learning harness that finds where your understanding ends, and teaches from there.</strong></p>
 
 <p align="center">
   <a href="https://github.com/Akas333/TYSA/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Akas333/TYSA?label=download"></a>
@@ -18,9 +18,9 @@
   <a href="#architecture">Architecture</a>
 </p>
 
-Most AI tutors explain. TYSA first measures what *you* already understand, plans a path from there to your goal, and teaches one reasoning step at a time, changing the plan as soon as your answers show it was wrong about you. Two people asking the same question get two different lessons, and the app shows why.
+Most AI learning tools just explain. TYSA is an engineered learning harness: it first measures what *you* already understand, plans a path from there to your goal, and teaches one reasoning step at a time, changing the plan as soon as your answers show it was wrong about you. Two people asking the same question get two different lessons, and the app shows why.
 
-Built on Meta's Muse models for the **Meta Global AI Developer Hackathon** (Indie Devloper Track).
+Built on Meta's Muse models for the **Meta Global AI Developer Hackathon** (Indie Developer track).
 
 ![The lesson plan: a dependency map from what the learner already knows to the goal, waiting for them to confirm it](docs/assets/screenshot-plan.png)
 
@@ -48,16 +48,16 @@ Open the `.dmg` and drag **TYSA** into **Applications** (Mac), or run the `.exe`
 
 ## How it works
 
-1. **Measure.** Before teaching, the tutor asks what the lesson is for, then probes each idea the goal depends on. Your answer, how sure you are, and your own explanation of your thinking show it where your understanding ends.
+1. **Measure.** Before teaching, TYSA asks what the lesson is for, then probes each idea the goal depends on. Your answer, how sure you are, and your own explanation of your thinking show it where your understanding ends.
 2. **Plan.** It builds a visible dependency map from that starting point to the goal. You confirm it or ask for changes before anything is taught.
 3. **Teach.** Each step builds on something you already understand. You predict, get an explanation, then check your understanding. Confusions are repaired before anything is built on them, and the plan changes when your answers surprise it.
 4. **Practice.** Separate sessions pose varied problems where you must recall the right idea without being told which one. Hints adapt to how you reason.
 
 ![Measuring: a probe question with a confidence slider and a field for the learner's reasoning](docs/assets/screenshot-probe.png)
 
-**Think out loud.** Every question has a field for your reasoning and doubts, typed or dictated. That gives the tutor a picture of *how* you think, not just a record of right and wrong answers.
+**Think out loud.** Every question has a field for your reasoning and doubts, typed or dictated. That gives TYSA a picture of *how* you think, not just a record of right and wrong answers.
 
-![Teaching: the tutor works through the confirmed plan one concept at a time, with a check before the answer options appear](docs/assets/screenshot-teaching.png)
+![Teaching: TYSA works through the confirmed plan one concept at a time, with a check before the answer options appear](docs/assets/screenshot-teaching.png)
 
 ## Knowledge that carries forward
 
@@ -76,13 +76,13 @@ Each Meta model does a separate job in the teaching loop. All of them go through
 
 | Model | Role in TYSA | Status |
 |---|---|---|
-| **Muse Spark** | The tutor: measures understanding, plans, teaches, runs practice | Working |
+| **Muse Spark** | The teaching agent: measures understanding, plans, teaches, runs practice | Working |
 | **Muse Spark Contributor** | Low-cost background agents: building the knowledge graph, grading, research | Working |
 | **Muse Wonder** | Optional upgrade for the hardest planning | Working |
 | **Muse Voice Transcribe** | Dictation: speak your answers and thinking, streamed in real time | Working |
 | **SAM 3.1** | "Tap the part that…" questions on diagrams, graded against the real outline | In progress |
 | **Muse Image** | Pictures drawn for the learner's specific confusion, checked before they're shown | In progress |
-| **Llama** (open weights, via Ollama) | The same tutor running fully offline, no key needed | Working (pick a model that supports tools) |
+| **Llama** (open weights, via Ollama) | The same harness running fully offline, no key needed | Working (pick a model that supports tools) |
 
 TYSA also works with Google Gemini, Claude and OpenAI keys, and with ChatGPT, GitHub Copilot or Grok subscriptions. Other providers are supported underneath but hidden by default; set `AXIOM_ALL_PROVIDERS=1` to show them in Settings.
 
@@ -92,7 +92,7 @@ TYSA also works with Google Gemini, Claude and OpenAI keys, and with ChatGPT, Gi
 - **Stored locally.** Lessons, the knowledge graph, settings and keys live on your computer as plain files (`~/Library/Application Support/TYSA` on a Mac, `%APPDATA%\TYSA` on Windows).
 - **What leaves your machine.** Model requests send the context each task needs to the provider you picked. Dictation sends audio to Meta. Web research contacts search providers.
 - **Portable.** **Settings → Your data → Export** saves everything except your API keys into one passphrase-encrypted `.tysa` file. **Import** it on another computer; the data already there is backed up first.
-- **Inspectable.** The tutor's system prompts are visible and editable in Settings.
+- **Inspectable.** Every agent's system prompts are visible and editable in Settings.
 
 ## Run from source
 
@@ -108,7 +108,7 @@ npm start
 
 From source, keys are saved in `packages/engine/auth.json` (ignored by git) and data in `packages/engine/data`. You can also set `META_API_KEY` in the environment.
 
-**Offline with Ollama:** install [Ollama](https://ollama.com), run `ollama pull llama3.1`, and pick the local model in **Settings → Agent**. Set `OLLAMA_HOST` if Ollama isn't at `http://127.0.0.1:11434`. Small local models handle the tutor's tool calls less reliably than Muse Spark.
+**Offline with Ollama:** install [Ollama](https://ollama.com), run `ollama pull llama3.1`, and pick the local model in **Settings → Agent**. Set `OLLAMA_HOST` if Ollama isn't at `http://127.0.0.1:11434`. Small local models handle the agents' tool calls less reliably than Muse Spark.
 
 **Desktop app:** `npm start -w @axiom/desktop` runs it; `npm run dist -w @axiom/desktop` builds an installer for your computer. Pushing a `v*` tag builds every installer and publishes a GitHub release ([workflow](.github/workflows/release.yml), which also explains how to add code signing).
 

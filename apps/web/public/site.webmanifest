@@ -1,7 +1,7 @@
 {
 	"name": "TYSA",
 	"short_name": "TYSA",
-	"description": "An AI tutor that finds where your understanding ends, and teaches from there.",
+	"description": "A learning harness that finds where your understanding ends, and teaches from there.",
 	"icons": [
 		{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
 		{ "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }

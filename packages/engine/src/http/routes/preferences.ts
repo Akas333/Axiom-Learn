@@ -24,7 +24,7 @@ export async function PUT(req: Request) {
 	try {
 		return Response.json(await generatePreferences(body.text, { signal: req.signal }));
 	} catch (error) {
-		const message = error instanceof PreferencesError ? error.message : "The preferences could not be saved. Your tutor keeps its default prompts.";
+		const message = error instanceof PreferencesError ? error.message : "The preferences could not be saved. TYSA keeps its default prompts.";
 		return Response.json({ error: message }, { status: 400 });
 	}
 }

@@ -73,7 +73,7 @@ function Models() {
 function Preferences() {
 	return (
 		<>
-			{/* A speech bubble over three sliders: say it, and the tutor adjusts. */}
+			{/* A speech bubble over three sliders: say it, and TYSA adjusts. */}
 			<rect x="72" y="60" width="256" height="116" rx="32" {...line} />
 			<rect x="104" y="96" width="140" height="10" rx="5" {...solid} />
 			<rect x="104" y="120" width="96" height="10" rx="5" {...soft} />

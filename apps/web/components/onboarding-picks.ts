@@ -23,7 +23,7 @@ const PROVIDER_ORDER: readonly string[] = [
 	"ollama",
 ];
 
-/** Names that mark a small, fast model — wrong for the tutor, right for
+/** Names that mark a small, fast model — wrong for the teacher, right for
  *  the helpers. */
 const SMALL = /(mini|nano|lite|flash|haiku|small|tiny|fast|contributor|\b[1-9]b\b|:[1-9]b)/i;
 /** Names that mark a model nobody should get by default. */
@@ -34,7 +34,7 @@ export function providerRank(provider: string): number {
 	return i === -1 ? PROVIDER_ORDER.length : i;
 }
 
-/** Higher = better for the tutor: reasoning, big context, not small,
+/** Higher = better for the teacher: reasoning, big context, not small,
  *  pricier (a rough proxy for capability within one provider). */
 function strongScore(m: ModelCatalogEntry): number {
 	return (

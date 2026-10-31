@@ -23,7 +23,7 @@ const QUIET_PILL =
 	"inline-flex h-8 items-center gap-1.5 rounded-full bg-(--pill) px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-(--pill-hover)";
 
 /** The waiting pose's Continue, repeated at the transcript's end once a
- *  delivered figure (and the tutor's reply to it) pushed the card up. */
+ *  delivered figure (and the teacher's reply to it) pushed the card up. */
 export function TextbookContinueBar({
 	tool,
 	onContinue,

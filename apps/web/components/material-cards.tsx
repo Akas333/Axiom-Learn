@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 /**
  * Materials (2026-10-29): images and PDFs the learner attaches to a chat or
  * a course folder. The card follows a material's transcription live and
- * lets the learner read and correct the text the tutor will teach from;
+ * lets the learner read and correct the text TYSA will teach from;
  * the paperclip uploads into a chat or a folder (or, before a chat exists,
  * hands the picked files back to be attached once it does).
  */
@@ -123,7 +123,7 @@ export function MaterialCard({ data }: { data: MaterialMarkerData }) {
 			)}
 			{draft !== null && (
 				<div className="mt-3">
-					<p className="mb-1.5 text-xs text-muted-foreground">Fix any misread symbol or number — the tutor reads your version from the next message on.</p>
+					<p className="mb-1.5 text-xs text-muted-foreground">Fix any misread symbol or number — TYSA reads your version from the next message on.</p>
 					<Textarea aria-label="Transcription" value={draft} onChange={(e) => setDraft(e.target.value)} rows={16} className="font-mono text-xs" />
 					{saveError && <p className="mt-1 text-xs text-red-400">{saveError}</p>}
 					<div className="mt-2 flex justify-end gap-2">

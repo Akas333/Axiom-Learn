@@ -75,13 +75,13 @@ async function startServer() {
 		if (quitting) return;
 		dialog.showErrorBox(
 			"TYSA stopped unexpectedly",
-			`The tutor's background process exited (code ${code}).\n\nDetails are in:\n${path.join(logs, "server.log")}`,
+			`TYSA's background process exited (code ${code}).\n\nDetails are in:\n${path.join(logs, "server.log")}`,
 		);
 		app.quit();
 	});
 
 	const url = `http://127.0.0.1:${port}`;
-	if (!(await waitUntilUp(url))) throw new Error(`The tutor didn't start. Details are in ${path.join(logs, "server.log")}`);
+	if (!(await waitUntilUp(url))) throw new Error(`TYSA didn't start. Details are in ${path.join(logs, "server.log")}`);
 	return url;
 }
 

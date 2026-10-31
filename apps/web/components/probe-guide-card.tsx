@@ -4,7 +4,7 @@ import type { PopupMessage } from "@/components/plan-block";
 import { cn } from "@/lib/utils";
 
 /**
- * The probe guide (2026-10-29): while the tutor is probing, the side panel
+ * The probe guide (2026-10-29): while TYSA is probing, the side panel
  * says why the session opens with questions instead of teaching — a first
  * session otherwise starts with an unexplained quiz. Its three steps follow
  * the probe live from the transcript: the goal (ask_user_question), the
@@ -137,7 +137,7 @@ export function ProbeGuideCard({ messages }: { messages: readonly PopupMessage[]
 			{!collapsed && (
 				<div className="mt-2">
 					<p className="text-sm text-foreground/90">
-						Before teaching, your tutor finds out what this is for and what you already know — so the lesson
+						Before teaching, TYSA finds out what this is for and what you already know — so the lesson
 						starts where you are, instead of re-teaching what you have or skipping what you're missing.
 					</p>
 

@@ -735,7 +735,7 @@ export function AgentSection({
 					return (
 						<SettingsRow
 							label="Graph tools"
-							hint={graphOn ? "Lets the tutor consult your knowledge map between sessions" : "Graph is disabled"}
+							hint={graphOn ? "Lets TYSA consult your knowledge map between sessions" : "Graph is disabled"}
 							testid="graph-tools-row"
 							dimmed={!graphOn}
 						>
@@ -757,7 +757,7 @@ export function AgentSection({
 					return (
 						<SettingsRow
 							label="Quizzing"
-							hint="How both tutors check your understanding"
+							hint="How the teaching and practice agents check your understanding"
 							testid="quiz-mechanics-row"
 						>
 							<div

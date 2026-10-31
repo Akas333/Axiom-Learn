@@ -1,6 +1,6 @@
 /**
  * First-run onboarding: a full-screen, four-step flow that takes a new
- * learner from a fresh install to a tutor that already knows how they like
+ * learner from a fresh install to a harness that already knows how they like
  * to learn.
  *
  *   1. About — what TYSA is and what it's for.
@@ -105,7 +105,7 @@ const KEY_OPTIONS: { id: string; title: string; detail: string; url: string; url
 	},
 ];
 
-const SLOT_COPY: Record<ModelSlotName, string> = { strong: "Tutor", cheap: "Helpers", vision: "Pictures and PDFs" };
+const SLOT_COPY: Record<ModelSlotName, string> = { strong: "Teacher", cheap: "Helpers", vision: "Pictures and PDFs" };
 const SLOT_ORDER: readonly ModelSlotName[] = ["strong", "cheap", "vision"];
 
 const PREFERENCE_IDEAS = [
@@ -264,7 +264,7 @@ function AboutStep() {
 	return (
 		<div className="flex flex-col gap-10" data-testid="onboarding-about">
 			<Hero plain="Teach yourself" outlined="anything">
-				TYSA is a tutor that starts from what you already know. Tell it what you want to understand and it builds the lesson around you.
+				TYSA is a learning harness that starts from what you already know. Tell it what you want to understand and it builds the lesson around you.
 			</Hero>
 			<div className="flex flex-col gap-5">
 				{facts.map(([Icon, title, detail]) => (
@@ -791,7 +791,7 @@ function PreferencesStep({
 				</div>
 				<div className="flex items-center gap-3 pt-2">
 					<Button variant="ghost" className={PILL} disabled={busy || !text.trim()} onClick={onSave} data-testid="onboarding-preferences-save">
-						{busy ? "Tailoring…" : saved?.request ? "Update my tutor" : "Tailor my tutor"}
+						{busy ? "Tailoring…" : saved?.request ? "Update my teaching" : "Tailor my teaching"}
 					</Button>
 					{busy && <span className="text-xs text-muted-foreground">Your AI is writing a note for each part of TYSA.</span>}
 				</div>
