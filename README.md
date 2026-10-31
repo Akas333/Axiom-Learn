@@ -5,8 +5,8 @@
 <p align="center"><strong>An AI tutor that finds where your understanding ends, and teaches from there.</strong></p>
 
 <p align="center">
-  <a href="https://github.com/Akas333/Axiom-Learn/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Akas333/Axiom-Learn?label=download"></a>
-  <a href="https://github.com/Akas333/Axiom-Learn/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Akas333/Axiom-Learn/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/Akas333/TYSA/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Akas333/TYSA?label=download"></a>
+  <a href="https://github.com/Akas333/TYSA/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Akas333/TYSA/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue"></a>
 </p>
 
@@ -26,18 +26,20 @@ Built on Meta's Muse models for the **Meta Global AI Developer Hackathon** (Star
 
 ## Download
 
-TYSA is a desktop app for Mac, Windows and Linux. Get it from the **[latest release](https://github.com/Akas333/Axiom-Learn/releases/latest)**:
+TYSA is a desktop app for Mac, Windows and Linux. Get it from the **[latest release](https://github.com/Akas333/TYSA/releases/latest)**:
 
 | Your computer | File |
 |---|---|
 | Mac with Apple Silicon (M1 and newer) | `TYSA-…-mac-arm64.dmg` |
 | Mac with Intel | `TYSA-…-mac-x64.dmg` |
 | Windows | `TYSA-…-win-x64.exe` |
-| Linux | `TYSA-…-linux-x86_64.AppImage` |
+| Linux, any distribution | `TYSA-…-linux-x86_64.AppImage` (or `…-linux-arm64.AppImage`) |
+| Debian, Ubuntu | `TYSA-…-linux-amd64.deb` (or `…-linux-arm64.deb`) |
+| Fedora, RHEL, openSUSE | `TYSA-…-linux-x86_64.rpm` (or `…-linux-aarch64.rpm`) |
 
 Not sure which Mac you have? Apple menu → **About This Mac**: "Chip: Apple M…" means Apple Silicon.
 
-Open the `.dmg` and drag **TYSA** into **Applications** (Mac), or run the `.exe` (Windows). The first time it opens, TYSA walks you through connecting an AI and picking models. You need a [Meta Model API key](https://dev.meta.ai/docs/overview), or [Ollama](https://ollama.com) to run fully offline with no key.
+Open the `.dmg` and drag **TYSA** into **Applications** (Mac), or run the `.exe` (Windows). On Linux, make the AppImage executable (`chmod +x`) and run it, or install the package (`sudo apt install ./TYSA-…deb` or `sudo dnf install ./TYSA-…rpm`). The first time it opens, TYSA walks you through connecting an AI and picking models. You need a [Meta Model API key](https://dev.meta.ai/docs/overview), or [Ollama](https://ollama.com) to run fully offline with no key.
 
 > [!NOTE]
 > The app isn't code-signed yet, so your computer warns you the first time you open it.
@@ -97,8 +99,8 @@ TYSA also works with Google Gemini, Claude and OpenAI keys, and with ChatGPT, Gi
 With Node.js 22+ and git:
 
 ```bash
-git clone https://github.com/Akas333/Axiom-Learn.git
-cd Axiom-Learn
+git clone https://github.com/Akas333/TYSA.git
+cd TYSA
 npm start
 ```
 

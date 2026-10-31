@@ -13,7 +13,7 @@ import { FolderMaterials } from "@/components/material-cards";
  *  label, grey hover, blue-tinted when active. */
 /** Square ghost icon button for the chrome rows (top row, bottom row). */
 /** Where the bottom row's bug report and feature request icons go. */
-const ISSUES_URL = "https://github.com/Akas333/Axiom-Learn/issues/new";
+const ISSUES_URL = "https://github.com/Akas333/TYSA/issues/new";
 const CHROME_ICON =
 	"flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-(--pill) hover:text-foreground";
 const NAV_ROW =

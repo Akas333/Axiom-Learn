@@ -1,12 +1,12 @@
 {
 	"name": "@axiom/desktop",
 	"productName": "TYSA",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"description": "TYSA (Teach Yourself Anything): the desktop app.",
 	"license": "AGPL-3.0-only",
 	"private": true,
 	"author": "Akas333 <Akas333@users.noreply.github.com>",
-	"homepage": "https://github.com/Akas333/Axiom-Learn",
+	"homepage": "https://github.com/Akas333/TYSA",
 	"main": "main.cjs",
 	"scripts": {
 		"build": "node scripts/build.mjs",
